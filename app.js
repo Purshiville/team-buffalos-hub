@@ -747,6 +747,7 @@ function refreshStatsPeriod(){
     renderStatsManagerPreview(window._currentPeriodStats||{advisors:{}});
     if(loading)loading.style.display='none';
   }
+  prefillTop3Form();
 }
 function loadStatsForAdvisor(){
   const code=document.getElementById('statsAdvisorSelect')?.value;
@@ -3549,6 +3550,33 @@ function populateTop3Selects(){
   const advisors=Object.values(getUsers()).filter(u=>!u.isManager&&!u.isOps);
   const opts='<option value="">—</option>'+[...ADVISOR_LIST,...advisors.filter(u=>!ADVISOR_LIST.find(a=>a.code===u.code))].map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['top3_first','top3_second','top3_third'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts.replace('<option value="">—</option>',`<option value="">${el.options[0]?.text||'—'}</option>`);});
+  prefillTop3Form();
+}
+
+function prefillTop3Form(){
+  const mo=document.getElementById('statsPeriodMonth')?.value||('0'+(new Date().getMonth()+1)).slice(-2);
+  const yr=document.getElementById('statsPeriodYear')?.value||new Date().getFullYear();
+  const periodKey=`${yr}-${mo}`;
+  const data=getTop3Data();
+  const rec=data[periodKey];
+  const _fill=(pos,selectId,noteId,ntu4Id,ntu15Id,persId,imgId,fileId)=>{
+    const r=rec?.[pos];
+    const sel=document.getElementById(selectId);
+    if(sel)sel.value=r?.code||'';
+    const noteEl=document.getElementById(noteId);
+    if(noteEl)noteEl.value=r?.note||'';
+    const ntu4El=document.getElementById(ntu4Id);
+    if(ntu4El)ntu4El.value=r?.ntu4!=null?r.ntu4:'';
+    const ntu15El=document.getElementById(ntu15Id);
+    if(ntu15El)ntu15El.value=r?.ntu15!=null?r.ntu15:'';
+    const persEl=document.getElementById(persId);
+    if(persEl)persEl.value=r?.persistency!=null?r.persistency:'';
+    if(r?.code)loadTop3ProfilePhoto(selectId,imgId,fileId);
+    else{const imgEl=document.getElementById(imgId);if(imgEl)imgEl.innerHTML='📷';}
+  };
+  _fill('first','top3_first','top3_first_note','top3_first_ntu4','top3_first_ntu15','top3_first_pers','top3_first_img','top3_first_photo');
+  _fill('second','top3_second','top3_second_note','top3_second_ntu4','top3_second_ntu15','top3_second_pers','top3_second_img','top3_second_photo');
+  _fill('third','top3_third','top3_third_note','top3_third_ntu4','top3_third_ntu15','top3_third_pers','top3_third_img','top3_third_photo');
 }
 
 // ── DAILY BRIEF ───────────────────────────────────────────────────────────────
