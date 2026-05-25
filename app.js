@@ -1919,6 +1919,7 @@ function showPage(p){
   if(p==='opsland')renderOpsLand();
   if(p==='competitor')renderCompetitors('');
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
+  if(p==='dailyregion')initDailyRegion();
   if(p==='standard')setupStandardHero();
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
@@ -8810,3 +8811,216 @@ function toggleMoreDropdown(){
   else openMoreDropdown();
 }
 function moreShowPage(p){closeMoreDropdown();showPage(p);}
+
+// ── DAILY BY REGION ──────────────────────────────────────────────────────────
+const DR={allRows:[],filtered:[],page:1,perPage:100,filters:{team:'all',status:'all',q:''}};
+
+function initDailyRegion(){
+  const el=document.getElementById('dailyRegionContent');
+  if(!el)return;
+  if(DR.allRows.length){renderDailyRegion();return;}
+  el.innerHTML=`
+    <div style="text-align:center;padding:50px 20px;">
+      <div style="font-size:52px;margin-bottom:14px;">📈</div>
+      <h3 style="margin:0 0 6px;color:#0d1f3c;font-size:16px;">Daily By Region</h3>
+      <p style="color:#6b7280;font-size:13px;margin:0 0 22px;line-height:1.5;">Upload the 2-Year Excel file — Lions &amp; Mavericks data will load automatically.</p>
+      <input type="file" id="drFileInput" accept=".xlsx,.xls" style="display:none;" onchange="drFileSelected(this)"/>
+      <button onclick="document.getElementById('drFileInput').click()" style="background:#0d1f3c;color:#fff;border:none;border-radius:12px;padding:13px 28px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(13,31,60,.25);">📂 Upload Excel File</button>
+      <p style="color:#9ca3af;font-size:11px;margin-top:12px;">2 Year file (.xlsx)</p>
+    </div>`;
+}
+
+async function drFileSelected(input){
+  if(!input.files||!input.files[0])return;
+  const el=document.getElementById('dailyRegionContent');
+  if(el)el.innerHTML=`<div style="text-align:center;padding:50px 20px;"><div style="font-size:40px;margin-bottom:12px;">⏳</div><p style="color:#6b7280;font-size:13px;font-weight:600;">Loading &amp; filtering data…</p><p style="color:#9ca3af;font-size:11px;margin-top:4px;">This may take a few seconds</p></div>`;
+  if(!window.XLSX){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+      s.onload=res;s.onerror=rej;document.head.appendChild(s);
+    });
+  }
+  try{
+    const buf=await input.files[0].arrayBuffer();
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:null,raw:false});
+    const headers=(raw[2]||[]).map(h=>String(h||'').trim());
+    const rows=[];
+    for(let i=3;i<raw.length;i++){
+      const row=raw[i];
+      if(!row||row.length<6)continue;
+      const teamIdx=headers.indexOf('Sales Team');
+      const team=String(row[teamIdx]||'').trim();
+      if(!team.toLowerCase().includes('lion')&&!team.toLowerCase().includes('maverick'))continue;
+      const obj={};
+      headers.forEach((h,idx)=>{obj[h]=row[idx];});
+      rows.push(obj);
+    }
+    DR.allRows=rows;DR.filtered=[...rows];DR.page=1;
+    renderDailyRegion();
+  }catch(e){
+    console.error('DR parse error:',e);
+    if(el)el.innerHTML=`<div style="text-align:center;padding:40px;color:#dc2626;"><p>Could not read file. Please use the 2-Year .xlsx export.</p><button onclick="initDailyRegion()" style="margin-top:10px;padding:8px 16px;border:none;background:#0d1f3c;color:#fff;border-radius:8px;cursor:pointer;">Try Again</button></div>`;
+  }
+}
+
+function drApplyFilters(){
+  const{team,status,q}=DR.filters;
+  const ql=q.toLowerCase();
+  DR.filtered=DR.allRows.filter(r=>{
+    const t=String(r['Sales Team']||'').toLowerCase();
+    if(team==='lions'&&!t.includes('lion'))return false;
+    if(team==='mavericks'&&!t.includes('maverick'))return false;
+    const s=String(r['Policy Status']||'').trim();
+    if(status!=='all'&&s!==status)return false;
+    if(ql){
+      const name=String(r['Main Life']||r['Payer']||'').toLowerCase();
+      const pol=String(r['Policy No']||'').toLowerCase();
+      const emp=String(r['PayPoint Name']||'').toLowerCase();
+      const rep=String(r['Rep Name']||'').toLowerCase();
+      if(!name.includes(ql)&&!pol.includes(ql)&&!emp.includes(ql)&&!rep.includes(ql))return false;
+    }
+    return true;
+  });
+  DR.page=1;
+}
+
+function drFmtDate(v){
+  if(!v)return'—';
+  const s=String(v);
+  if(s.startsWith('1901')||s.startsWith('1900')||s==='null')return'—';
+  if(s.length>=10)return s.substring(0,10);
+  return s;
+}
+function drFmtMoney(v){
+  const n=parseFloat(String(v).replace(/[^0-9.-]/g,''));
+  if(isNaN(n))return'—';
+  return'R '+n.toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function drStatusBadge(s){
+  const map={'In-Force':'#059669','Pending In-Force':'#0284c7','Lapsed':'#ea580c','Cancelled':'#dc2626','Not Taken Up':'#6b7280','Out-of-Force':'#7c3aed','Surrendered':'#92400e','Paid Up':'#374151'};
+  const col=map[s]||'#9ca3af';
+  return`<span style="background:${col};color:#fff;padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;white-space:nowrap;">${s||'—'}</span>`;
+}
+
+function renderDailyRegion(){
+  const el=document.getElementById('dailyRegionContent');
+  if(!el)return;
+  const rows=DR.filtered;
+  // KPIs
+  let totalPrem=0,inForce=0,stopOrders=0;
+  const clients=new Set();
+  rows.forEach(r=>{
+    const p=parseFloat(String(r['Monthly Prem']||'0').replace(/[^0-9.-]/g,''))||0;
+    totalPrem+=p;
+    if(String(r['Policy Status']||'')==='In-Force')inForce++;
+    const bt=String(r['Bill Type']||r['Pol OBill Type']||'').toLowerCase();
+    if(bt.includes('stop order')||bt.includes('persal'))stopOrders++;
+    const id=String(r['Main Life ID No']||r['Payer  ID No']||r['Payer ID No']||'').trim();
+    if(id&&id.length>5)clients.add(id);
+  });
+  const stopPct=rows.length?((stopOrders/rows.length)*100).toFixed(1):'0.0';
+  const lionsCount=rows.filter(r=>String(r['Sales Team']||'').toLowerCase().includes('lion')).length;
+  const mavCount=rows.length-lionsCount;
+  // Pagination
+  const total=rows.length,pages=Math.max(1,Math.ceil(total/DR.perPage));
+  DR.page=Math.min(DR.page,pages);
+  const start=(DR.page-1)*DR.perPage;
+  const pageRows=rows.slice(start,start+DR.perPage);
+
+  const kpi=(label,val,sub)=>`<div style="background:#fff;border-radius:10px;padding:10px 12px;box-shadow:0 1px 4px rgba(0,0,0,.08);flex:1;min-width:100px;"><div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px;">${label}</div><div style="font-size:14px;font-weight:800;color:#0d1f3c;line-height:1.2;">${val}</div>${sub?`<div style="font-size:9px;color:#9ca3af;margin-top:1px;">${sub}</div>`:''}</div>`;
+
+  const tableRows=pageRows.map((r,i)=>{
+    const team=String(r['Sales Team']||'').trim();
+    const isLion=team.toLowerCase().includes('lion');
+    const status=String(r['Policy Status']||'').trim();
+    const repFull=String(r['Rep Name']||'').trim();
+    const repShort=repFull.split(' ').filter(Boolean).slice(-2).join(' ');
+    const employer=String(r['PayPoint Name']||'').trim();
+    const product=String(r['Product']||'').replace('Sanlam ','').replace('Enhanced Priority Funeral Plans','EPFP').replace('All In One Funeral Plan','AIO FP').replace('Invest to Graduate Plan','I2G').replace('Funeral Plan','FP').replace('Priority Funeral','PFP');
+    const bt=String(r['Bill Type']||r['Pol OBill Type']||'—').replace('Stop Order','SO').replace('Debit Order','DO').replace('Advanceable','Adv').replace('As And When','AAW');
+    const pers=parseFloat(r['Rep Pers']);
+    return`<tr style="background:${i%2?'#f9fafb':'#fff'};border-bottom:1px solid #f0f0f0;">
+      <td style="padding:6px 5px;color:#374151;font-size:10px;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${repFull}">${repShort}</td>
+      <td style="padding:6px 5px;font-family:monospace;color:#0d1f3c;font-size:10px;white-space:nowrap;">${r['Policy No']||'—'}</td>
+      <td style="padding:6px 5px;font-weight:600;color:#111;font-size:11px;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${String(r['Main Life']||r['Payer']||'').trim()}">${String(r['Main Life']||r['Payer']||'').trim()}</td>
+      <td style="padding:6px 5px;color:#6b7280;font-size:10px;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${employer}">${employer||'—'}</td>
+      <td style="padding:6px 5px;text-align:right;font-weight:700;color:#059669;font-size:11px;white-space:nowrap;">${drFmtMoney(r['Monthly Prem'])}</td>
+      <td style="padding:6px 5px;text-align:center;color:#6b7280;font-size:10px;white-space:nowrap;">${bt}</td>
+      <td style="padding:6px 5px;text-align:center;color:#6b7280;font-size:10px;white-space:nowrap;">${drFmtDate(r['Pol Signed Date'])}</td>
+      <td style="padding:6px 5px;text-align:center;color:#6b7280;font-size:10px;white-space:nowrap;">${drFmtDate(r['Issue Date'])}</td>
+      <td style="padding:6px 5px;text-align:center;color:#6b7280;font-size:10px;white-space:nowrap;">${drFmtDate(r['Pay To Date'])}</td>
+      <td style="padding:6px 5px;text-align:center;">${drStatusBadge(status)}</td>
+      <td style="padding:6px 5px;color:#6b7280;font-size:10px;max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r['Product']||''}">${product}</td>
+      <td style="padding:6px 5px;text-align:center;"><span style="background:${isLion?'#fef3c7':'#ede9fe'};color:${isLion?'#92400e':'#5b21b6'};padding:2px 6px;border-radius:8px;font-size:9px;font-weight:700;">${isLion?'LIONS':'MAV'}</span></td>
+      <td style="padding:6px 5px;text-align:center;color:#374151;font-size:10px;">${isNaN(pers)?'—':pers.toFixed(1)+'%'}</td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML=`
+    <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:12px;">
+      ${kpi('Monthly Prem',drFmtMoney(totalPrem))}
+      ${kpi('Annual Prem',drFmtMoney(totalPrem*12),'× 12')}
+      ${kpi('Records',total.toLocaleString())}
+      ${kpi('In-Force',inForce.toLocaleString())}
+      ${kpi('Stop Order',stopPct+'%')}
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center;">
+      <div style="font-size:11px;color:#6b7280;background:#f4f2ed;border-radius:8px;padding:4px 10px;">
+        🦁 Lions: <strong>${lionsCount.toLocaleString()}</strong> &nbsp;|&nbsp; 🟣 Mavericks: <strong>${mavCount.toLocaleString()}</strong>
+      </div>
+    </div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center;">
+      <select onchange="DR.filters.team=this.value;drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;">
+        <option value="all"${DR.filters.team==='all'?' selected':''}>All Teams</option>
+        <option value="lions"${DR.filters.team==='lions'?' selected':''}>🦁 Lions</option>
+        <option value="mavericks"${DR.filters.team==='mavericks'?' selected':''}>🟣 Mavericks</option>
+      </select>
+      <select onchange="DR.filters.status=this.value;drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;">
+        <option value="all"${DR.filters.status==='all'?' selected':''}>All Statuses</option>
+        <option value="In-Force"${DR.filters.status==='In-Force'?' selected':''}>In-Force</option>
+        <option value="Pending In-Force"${DR.filters.status==='Pending In-Force'?' selected':''}>Pending In-Force</option>
+        <option value="Lapsed"${DR.filters.status==='Lapsed'?' selected':''}>Lapsed</option>
+        <option value="Cancelled"${DR.filters.status==='Cancelled'?' selected':''}>Cancelled</option>
+        <option value="Not Taken Up"${DR.filters.status==='Not Taken Up'?' selected':''}>Not Taken Up</option>
+        <option value="Out-of-Force"${DR.filters.status==='Out-of-Force'?' selected':''}>Out-of-Force</option>
+      </select>
+      <input placeholder="Search name / policy / employer…" value="${DR.filters.q.replace(/"/g,'&quot;')}" oninput="DR.filters.q=this.value;drApplyFilters();renderDailyRegion()" style="flex:1;min-width:150px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;"/>
+      <button onclick="DR.allRows=[];DR.filtered=[];DR.page=1;DR.filters={team:'all',status:'all',q:''};initDailyRegion()" style="padding:6px 10px;background:#f4f2ed;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;color:#374151;white-space:nowrap;">↑ New File</button>
+    </div>
+    <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:10px;">
+      <table style="width:100%;border-collapse:collapse;min-width:860px;">
+        <thead>
+          <tr style="background:#0d1f3c;color:#fff;font-size:10px;">
+            <th style="padding:8px 5px;text-align:left;font-weight:700;">Rep</th>
+            <th style="padding:8px 5px;text-align:left;font-weight:700;">Policy No</th>
+            <th style="padding:8px 5px;text-align:left;font-weight:700;">Client Name</th>
+            <th style="padding:8px 5px;text-align:left;font-weight:700;">Employer</th>
+            <th style="padding:8px 5px;text-align:right;font-weight:700;">Monthly Prem</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Bill Type</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Signed</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Issue Date</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Pay To Date</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Status</th>
+            <th style="padding:8px 5px;text-align:left;font-weight:700;">Product</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Team</th>
+            <th style="padding:8px 5px;text-align:center;font-weight:700;">Pers%</th>
+          </tr>
+        </thead>
+        <tbody>${tableRows}</tbody>
+      </table>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;padding-bottom:16px;">
+      <div style="font-size:11px;color:#6b7280;">Showing ${(start+1).toLocaleString()}–${Math.min(start+DR.perPage,total).toLocaleString()} of <strong>${total.toLocaleString()}</strong> records</div>
+      <div style="display:flex;gap:5px;align-items:center;">
+        <button onclick="DR.page=1;renderDailyRegion()" ${DR.page===1?'disabled':''} style="padding:5px 9px;border:1px solid #e5e7eb;border-radius:6px;background:${DR.page===1?'#f3f4f6':'#fff'};font-size:12px;cursor:pointer;">«</button>
+        <button onclick="DR.page=Math.max(1,DR.page-1);renderDailyRegion()" ${DR.page===1?'disabled':''} style="padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;background:${DR.page===1?'#f3f4f6':'#fff'};font-size:12px;cursor:pointer;">← Prev</button>
+        <span style="padding:5px 10px;font-size:12px;color:#374151;white-space:nowrap;">Page ${DR.page} / ${pages}</span>
+        <button onclick="DR.page=Math.min(${pages},DR.page+1);renderDailyRegion()" ${DR.page===pages?'disabled':''} style="padding:5px 10px;border:1px solid #e5e7eb;border-radius:6px;background:${DR.page===pages?'#f3f4f6':'#fff'};font-size:12px;cursor:pointer;">Next →</button>
+        <button onclick="DR.page=${pages};renderDailyRegion()" ${DR.page===pages?'disabled':''} style="padding:5px 9px;border:1px solid #e5e7eb;border-radius:6px;background:${DR.page===pages?'#f3f4f6':'#fff'};font-size:12px;cursor:pointer;">»</button>
+      </div>
+    </div>`;
+}
+// ── END DAILY BY REGION ───────────────────────────────────────────────────────
