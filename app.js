@@ -8813,7 +8813,7 @@ function toggleMoreDropdown(){
 function moreShowPage(p){closeMoreDropdown();showPage(p);}
 
 // ── DAILY BY REGION ──────────────────────────────────────────────────────────
-const DR={allRows:[],filtered:[],page:1,perPage:100,filters:{team:'all',status:'all',q:''}};
+const DR={allRows:[],filtered:[],page:1,perPage:100,sortCol:null,sortDir:1,filters:{team:'all',status:'all',advisor:'all',q:''}};
 
 function initDailyRegion(){
   const el=document.getElementById('dailyRegionContent');
@@ -8867,7 +8867,7 @@ async function drFileSelected(input){
 }
 
 function drApplyFilters(){
-  const{team,status,q}=DR.filters;
+  const{team,status,advisor,q}=DR.filters;
   const ql=q.toLowerCase();
   DR.filtered=DR.allRows.filter(r=>{
     const t=String(r['Sales Team']||'').toLowerCase();
@@ -8875,6 +8875,7 @@ function drApplyFilters(){
     if(team==='mavericks'&&!t.includes('maverick'))return false;
     const s=String(r['Policy Status']||'').trim();
     if(status!=='all'&&s!==status)return false;
+    if(advisor!=='all'&&String(r['Rep Name']||'').trim()!==advisor)return false;
     if(ql){
       const name=String(r['Main Life']||r['Payer']||'').toLowerCase();
       const pol=String(r['Policy No']||'').toLowerCase();
@@ -8884,7 +8885,18 @@ function drApplyFilters(){
     }
     return true;
   });
+  if(DR.sortCol){
+    DR.filtered.sort((a,b)=>{
+      const av=String(a[DR.sortCol]||'').toLowerCase();
+      const bv=String(b[DR.sortCol]||'').toLowerCase();
+      return av<bv?-DR.sortDir:av>bv?DR.sortDir:0;
+    });
+  }
   DR.page=1;
+}
+function drSort(col){
+  if(DR.sortCol===col){DR.sortDir*=-1;}else{DR.sortCol=col;DR.sortDir=1;}
+  drApplyFilters();renderDailyRegion();
 }
 
 function drFmtDate(v){
@@ -8973,10 +8985,14 @@ function renderDailyRegion(){
       </div>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;align-items:center;">
-      <select onchange="DR.filters.team=this.value;drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;">
+      <select onchange="DR.filters.team=this.value;DR.filters.advisor='all';drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;">
         <option value="all"${DR.filters.team==='all'?' selected':''}>All Teams</option>
         <option value="lions"${DR.filters.team==='lions'?' selected':''}>🦁 Lions</option>
         <option value="mavericks"${DR.filters.team==='mavericks'?' selected':''}>🟣 Mavericks</option>
+      </select>
+      <select onchange="DR.filters.advisor=this.value;drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;max-width:160px;">
+        <option value="all"${DR.filters.advisor==='all'?' selected':''}>All Advisors</option>
+        ${[...new Set(DR.allRows.filter(r=>{const t=String(r['Sales Team']||'').toLowerCase();return DR.filters.team==='all'||(DR.filters.team==='lions'&&t.includes('lion'))||(DR.filters.team==='mavericks'&&t.includes('maverick'));}).map(r=>String(r['Rep Name']||'').trim()).filter(Boolean))].sort().map(n=>`<option value="${n.replace(/"/g,'&quot;')}"${DR.filters.advisor===n?' selected':''}>${n}</option>`).join('')}
       </select>
       <select onchange="DR.filters.status=this.value;drApplyFilters();renderDailyRegion()" style="padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;background:#fff;">
         <option value="all"${DR.filters.status==='all'?' selected':''}>All Statuses</option>
@@ -8987,26 +9003,19 @@ function renderDailyRegion(){
         <option value="Not Taken Up"${DR.filters.status==='Not Taken Up'?' selected':''}>Not Taken Up</option>
         <option value="Out-of-Force"${DR.filters.status==='Out-of-Force'?' selected':''}>Out-of-Force</option>
       </select>
-      <input placeholder="Search name / policy / employer…" value="${DR.filters.q.replace(/"/g,'&quot;')}" oninput="DR.filters.q=this.value;drApplyFilters();renderDailyRegion()" style="flex:1;min-width:150px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;"/>
-      <button onclick="DR.allRows=[];DR.filtered=[];DR.page=1;DR.filters={team:'all',status:'all',q:''};initDailyRegion()" style="padding:6px 10px;background:#f4f2ed;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;color:#374151;white-space:nowrap;">↑ New File</button>
+      <input placeholder="Search name / policy / employer…" value="${DR.filters.q.replace(/"/g,'&quot;')}" oninput="DR.filters.q=this.value;drApplyFilters();renderDailyRegion()" style="flex:1;min-width:140px;padding:6px 10px;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;"/>
+      <button onclick="DR.allRows=[];DR.filtered=[];DR.page=1;DR.sortCol=null;DR.sortDir=1;DR.filters={team:'all',status:'all',advisor:'all',q:''};initDailyRegion()" style="padding:6px 10px;background:#f4f2ed;border:1px solid #e5e7eb;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;color:#374151;white-space:nowrap;">↑ New File</button>
     </div>
     <div style="overflow-x:auto;border-radius:10px;border:1px solid #e5e7eb;margin-bottom:10px;">
       <table style="width:100%;border-collapse:collapse;min-width:860px;">
         <thead>
           <tr style="background:#0d1f3c;color:#fff;font-size:10px;">
-            <th style="padding:8px 5px;text-align:left;font-weight:700;">Rep</th>
-            <th style="padding:8px 5px;text-align:left;font-weight:700;">Policy No</th>
-            <th style="padding:8px 5px;text-align:left;font-weight:700;">Client Name</th>
-            <th style="padding:8px 5px;text-align:left;font-weight:700;">Employer</th>
-            <th style="padding:8px 5px;text-align:right;font-weight:700;">Monthly Prem</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Bill Type</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Signed</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Issue Date</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Pay To Date</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Status</th>
-            <th style="padding:8px 5px;text-align:left;font-weight:700;">Product</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Team</th>
-            <th style="padding:8px 5px;text-align:center;font-weight:700;">Pers%</th>
+            ${[['Rep Name','Rep'],['Policy No','Policy No'],['Main Life','Client Name'],['PayPoint Name','Employer'],['Monthly Prem','Monthly Prem'],['Bill Type','Bill Type'],['Pol Signed Date','Signed'],['Issue Date','Issue Date'],['Pay To Date','Pay To'],['Policy Status','Status'],['Product','Product'],['Sales Team','Team'],['Rep Pers','Pers%']].map(([col,label])=>{
+              const active=DR.sortCol===col;
+              const arrow=active?(DR.sortDir===1?' ↑':' ↓'):'';
+              const align=['Monthly Prem','Rep Pers'].includes(col)?'right':['Policy No','Pol Signed Date','Issue Date','Pay To Date','Policy Status','Sales Team'].includes(col)?'center':'left';
+              return`<th onclick="drSort('${col}')" style="padding:8px 5px;text-align:${align};font-weight:700;cursor:pointer;white-space:nowrap;user-select:none;${active?'background:rgba(255,255,255,.12);':''}">${label}${arrow}</th>`;
+            }).join('')}
           </tr>
         </thead>
         <tbody>${tableRows}</tbody>
