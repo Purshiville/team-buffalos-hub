@@ -277,10 +277,10 @@ function tryRestoreSession(){
     const code=saved.code.toUpperCase();
     const pass=saved.pass;
     if(code==='PURSHIVILLE'){
-      enterHub({name:'Purshiville Nortje',email:'manager@teambuffalos.co.za',code:'PURSHIVILLE',pass,isManager:true,isOps:true,dob:null});return true;
+      enterHub({name:'Purshiville Nortje',email:'manager@teambuffalos.co.za',code:'PURSHIVILLE',pass,isManager:true,isOps:true,dob:null,photo:saved.photo||getUsers()['PURSHIVILLE']?.photo||null});return true;
     }
     if(code==='ARLENE'){
-      enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null});return true;
+      enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null,photo:saved.photo||getUsers()['ARLENE']?.photo||null});return true;
     }
     const users=getUsers();
     if(users[code]&&users[code].pass===pass){
@@ -1140,14 +1140,20 @@ function renderInboxList(){
   const msgs=window._inboxMsgs||[];
   if(!msgs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 16px;">No notifications yet.</div>';return;}
   const typeIcon={notice:'📢',stats:'📊',message:'✉️',chat:'💬',reminder:'🗓️'};
+  const _allUsers=getUsers();
   el.innerHTML=msgs.map(m=>{
     const unread=!(m.readBy||[]).includes(currentUser.code);
     const ts=m.sentAt?.toDate?m.sentAt.toDate():m.sentAt?new Date(m.sentAt):new Date();
     const timeStr=ts.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' '+ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
     const chatFrom=m.chatFrom||'';
     const chatFromName=(m.chatFromName||'').replace(/'/g,'&#39;');
+    const senderPhoto=_allUsers[m.from]?.photo||null;
+    const senderInitial=(m.fromName||'?').charAt(0).toUpperCase();
+    const avatarHtml=senderPhoto
+      ?`<img src="${senderPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+      :`<div class="inbox-icon ${m.type||'message'}">${typeIcon[m.type||'message']||'📌'}</div>`;
     return`<div class="inbox-item${unread?' unread':''}${chatFrom?' chat-tap':''}" onclick="readInboxItem('${m.id}',this,'${chatFrom}','${chatFromName}')" style="${chatFrom?'cursor:pointer;':''}" title="${chatFrom?'Tap to open conversation':''}">
-      <div class="inbox-icon ${m.type||'message'}">${typeIcon[m.type||'message']||'📌'}</div>
+      ${avatarHtml}
       <div class="inbox-meta">
         <div class="inbox-title">${m.title||'Notification'}${chatFrom?' <span style="font-size:9px;color:#7c3aed;font-weight:700;margin-left:4px;">TAP TO REPLY</span>':''}</div>
         ${m.body?`<div class="inbox-body">${m.body}</div>`:''}
@@ -1226,13 +1232,18 @@ function renderChatContacts(){
   }
   contacts.sort((a,b)=>a.name.localeCompare(b.name));
   if(!contacts.length){el.innerHTML='<div style="padding:16px;color:#9ca3af;font-size:13px;text-align:center;">No contacts available.</div>';return;}
+  const _chatUsers=getUsers();
   el.innerHTML=contacts.map(c=>{
     const chatId=getChatId(currentUser.code,c.code);
     const chatData=chatMap[chatId];
     const unread=chatData?(chatData.unread||{})[currentUser.code]||0:0;
     const lastMsg=chatData?.lastMessage||'Start a conversation';
+    const contactPhoto=_chatUsers[c.code]?.photo||null;
+    const contactAvatar=contactPhoto
+      ?`<img src="${contactPhoto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+      :`<div class="chat-av" style="background:${chatColor(c.code)};">${c.name.charAt(0)}</div>`;
     return`<div class="chat-contact" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
-      <div class="chat-av" style="background:${chatColor(c.code)};">${c.name.charAt(0)}</div>
+      ${contactAvatar}
       <div style="flex:1;min-width:0;">
         <div class="chat-contact-name">${c.name}</div>
         <div class="chat-contact-last">${lastMsg}</div>
@@ -1245,10 +1256,14 @@ function openChatThread(partnerCode,partnerName){
   _currentChatPartner={code:partnerCode,name:partnerName};
   _currentChatId=getChatId(currentUser.code,partnerCode);
   const el=document.getElementById('chatBody');
+  const _partnerPhoto=getUsers()[partnerCode]?.photo||null;
+  const _partnerAvatar=_partnerPhoto
+    ?`<img src="${_partnerPhoto}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+    :`<div class="chat-av" style="background:${chatColor(partnerCode)};width:30px;height:30px;font-size:12px;">${partnerName.charAt(0)}</div>`;
   el.innerHTML=`<div class="chat-thread">
     <div class="chat-thread-hd">
       <button class="chat-back" onclick="backToChatContacts()">‹</button>
-      <div class="chat-av" style="background:${chatColor(partnerCode)};width:30px;height:30px;font-size:12px;">${partnerName.charAt(0)}</div>
+      ${_partnerAvatar}
       <div class="chat-thread-name">${partnerName}</div>
     </div>
     <div class="chat-messages" id="chatThreadMessages"></div>
@@ -1277,14 +1292,22 @@ function renderChatMessages(msgs){
   const el=document.getElementById('chatThreadMessages');
   if(!el)return;
   if(!msgs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:12px;padding:16px;">No messages yet. Say hello!</div>';return;}
+  const _msgUsers=getUsers();
   el.innerHTML=msgs.map(m=>{
     const mine=m.from===currentUser.code;
     const ts=m.sentAt?.toDate?m.sentAt.toDate():new Date();
     const timeStr=ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
-    return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}">
-      ${!mine?`<div style="font-size:10px;color:#6b7280;margin-bottom:2px;padding:0 2px;">${m.fromName}</div>`:''}
-      <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text}</div>
-      <div class="chat-bubble-time">${timeStr}</div>
+    const senderPhoto=!mine?(_msgUsers[m.from]?.photo||null):null;
+    const senderAvatar=senderPhoto
+      ?`<img src="${senderPhoto}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-right:6px;align-self:flex-end;">`
+      :'';
+    return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="display:flex;align-items:flex-end;${mine?'justify-content:flex-end;':''}">
+      ${!mine?senderAvatar:''}
+      <div style="max-width:75%;">
+        ${!mine?`<div style="font-size:10px;color:#6b7280;margin-bottom:2px;padding:0 2px;">${m.fromName}</div>`:''}
+        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text}</div>
+        <div class="chat-bubble-time">${timeStr}</div>
+      </div>
     </div>`;
   }).join('');
   el.scrollTop=el.scrollHeight;
@@ -6062,11 +6085,10 @@ function saveSettingsPhoto(){
   const b64=input?._b64;
   if(!b64)return showAlert('Please select a photo first — tap the circle above.','error');
   const users=getUsers();
-  if(users[currentUser.code]){
-    users[currentUser.code].photo=b64;
-    saveUsers(users);
-    if(window.FB_READY){window.FB.saveUser(currentUser.code,users[currentUser.code]).catch(()=>{});}
-  }
+  if(!users[currentUser.code])users[currentUser.code]={...currentUser};
+  users[currentUser.code].photo=b64;
+  saveUsers(users);
+  if(window.FB_READY){window.FB.saveUser(currentUser.code,users[currentUser.code]).catch(()=>{});}
   currentUser.photo=b64;
   try{localStorage.setItem('tl_session',JSON.stringify(currentUser));}catch(e){}
   updateTopbarAvatar();
