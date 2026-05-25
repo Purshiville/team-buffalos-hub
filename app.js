@@ -1108,6 +1108,8 @@ function openInboxPanel(){
   document.getElementById('inboxOverlay').style.display='block';
   switchInboxTab('received');
   renderInboxList();
+  // Refresh user photos from Firebase so avatars are up to date
+  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);renderInboxList();}}).catch(()=>{});}
   if(currentUser.isManager||currentUser.isOps){
     document.getElementById('inboxCompose').style.display='block';
     const sel=document.getElementById('inboxComposeTo');
@@ -1149,9 +1151,12 @@ function renderInboxList(){
     const chatFromName=(m.chatFromName||'').replace(/'/g,'&#39;');
     const senderPhoto=_allUsers[m.from]?.photo||null;
     const senderInitial=(m.fromName||'?').charAt(0).toUpperCase();
+    const isSystem=!m.from||m.from==='SYSTEM';
     const avatarHtml=senderPhoto
       ?`<img src="${senderPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-      :`<div class="inbox-icon ${m.type||'message'}">${typeIcon[m.type||'message']||'📌'}</div>`;
+      :isSystem
+        ?`<div class="inbox-icon ${m.type||'message'}">${typeIcon[m.type||'message']||'📌'}</div>`
+        :`<div style="width:36px;height:36px;border-radius:50%;background:${chatColor(m.from||'X')};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${senderInitial}</div>`;
     return`<div class="inbox-item${unread?' unread':''}${chatFrom?' chat-tap':''}" onclick="readInboxItem('${m.id}',this,'${chatFrom}','${chatFromName}')" style="${chatFrom?'cursor:pointer;':''}" title="${chatFrom?'Tap to open conversation':''}">
       ${avatarHtml}
       <div class="inbox-meta">
@@ -1210,6 +1215,8 @@ function openChatPanel(){
   document.getElementById('chatOverlay').style.display='block';
   _currentChatId=null;_currentChatPartner=null;
   renderChatContacts();
+  // Refresh user photos from Firebase so avatars are up to date
+  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);renderChatContacts();}}).catch(()=>{});}
 }
 function closeChatPanel(){
   document.getElementById('chatPanel').classList.remove('open');
@@ -1298,8 +1305,11 @@ function renderChatMessages(msgs){
     const ts=m.sentAt?.toDate?m.sentAt.toDate():new Date();
     const timeStr=ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
     const senderPhoto=!mine?(_msgUsers[m.from]?.photo||null):null;
-    const senderAvatar=senderPhoto
-      ?`<img src="${senderPhoto}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-right:6px;align-self:flex-end;">`
+    const senderInitialChat=(m.fromName||'?').charAt(0).toUpperCase();
+    const senderAvatar=!mine
+      ?senderPhoto
+        ?`<img src="${senderPhoto}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-right:6px;align-self:flex-end;">`
+        :`<div style="width:26px;height:26px;border-radius:50%;background:${chatColor(m.from||'X')};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:6px;align-self:flex-end;">${senderInitialChat}</div>`
       :'';
     return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="display:flex;align-items:flex-end;${mine?'justify-content:flex-end;':''}">
       ${!mine?senderAvatar:''}
