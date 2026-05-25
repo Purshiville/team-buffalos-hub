@@ -1392,7 +1392,7 @@ function showClientDetailStep(email,ccList){
     :`<div style="font-size:10px;color:#9ca3af;margin-top:3px;">Downloads to your device when Gmail opens so you can attach it.</div>`;
   ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:22px 20px 18px;width:320px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
     <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0d1f3c;text-align:center;">📋 Client Details</h3>
-    <p style="margin:0 0 14px;font-size:12px;color:#6b7280;text-align:center;">Pre-fills the email. ID number goes into the subject line.</p>
+    <p style="margin:0 0 14px;font-size:12px;color:#6b7280;text-align:center;">Upload the LOA — name &amp; ID are read automatically.</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
       <div>
         <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Client Full Name</label>
@@ -1419,13 +1419,55 @@ function showClientDetailStep(email,ccList){
   document.body.appendChild(ov);
   setTimeout(()=>{ loaIdCheck(); if(!_loaClient.idNumber)document.getElementById('loaIdInput')?.focus(); else document.getElementById('loaClientName')?.focus(); },50);
 }
-function loaFileSelected(input){
+function _loadPdfJs(){
+  return new Promise((res,rej)=>{
+    if(window.pdfjsLib){res();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';res();};
+    s.onerror=rej; document.head.appendChild(s);
+  });
+}
+async function _extractTextFromPDF(file){
+  await _loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  let text='';
+  for(let i=1;i<=Math.min(pdf.numPages,3);i++){
+    const pg=await pdf.getPage(i);
+    const ct=await pg.getTextContent();
+    text+=ct.items.map(x=>x.str).join(' ')+'\n';
+  }
+  return text;
+}
+function _parseLoaDetails(text){
+  const idMatch=text.match(/\b(\d{13})\b/);
+  const idNumber=idMatch?idMatch[1]:'';
+  let name='';
+  const patterns=[
+    /(?:full\s+name|client(?:'s)?\s+name|name\s+of\s+(?:client|policyholder)|policyholder)[:\s,]+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})/i,
+    /I[,\s]+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})[,\s]+(?:hereby|the undersigned|ID\s*[Nn]o)/i,
+    /(?:name\s*[:\/])\s*([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})/i,
+  ];
+  for(const p of patterns){const m=text.match(p);if(m){name=m[1].trim();break;}}
+  return{name,idNumber};
+}
+async function loaFileSelected(input){
   if(!input.files||!input.files[0])return;
   window._loaFile=input.files[0];
   const btn=document.getElementById('loaFileBtn');
-  if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${window._loaFile.name}</span>`;
   const note=document.getElementById('loaFileNote');
   if(note)note.innerHTML=`<div style="font-size:10px;color:#059669;margin-top:3px;">Will download automatically when Gmail opens — attach from Downloads.</div>`;
+  if(window._loaFile.name.toLowerCase().endsWith('.pdf')){
+    if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">⏳ Reading LOA…</span>`;
+    try{
+      const text=await _extractTextFromPDF(window._loaFile);
+      const{name,idNumber}=_parseLoaDetails(text);
+      if(name){const f=document.getElementById('loaClientName');if(f)f.value=name;}
+      if(idNumber){const f=document.getElementById('loaIdInput');if(f){f.value=idNumber;loaIdCheck();}}
+    }catch(e){console.warn('LOA parse failed:',e);}
+  }
+  if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${window._loaFile.name}</span>`;
 }
 function loaIdCheck(){
   const val=(document.getElementById('loaIdInput')?.value||'').trim();
