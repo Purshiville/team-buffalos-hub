@@ -1373,6 +1373,67 @@ async function chatSendBroadcast(){
   showAlert(`Broadcast sent to ${sent} advisors.`,'success');
 }
 // ── END INBOX & CHAT ──────────────────────────────────────────────────────
+// ── LOA CLIENT SESSION ────────────────────────────────────────────────────
+let _loaClient=(()=>{try{return JSON.parse(sessionStorage.getItem('tl_loa_client')||'null')||{name:'',idNumber:''};}catch(e){return{name:'',idNumber:''};} })();
+function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
+
+function showClientDetailStep(email,ccList){
+  window._loaEmail=email; window._loaCC=ccList||[];
+  let ov=document.getElementById('loaClientOverlay'); if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='loaClientOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9200;display:flex;align-items:center;justify-content:center;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:22px 20px 18px;width:320px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0d1f3c;text-align:center;">📋 Client Details</h3>
+    <p style="margin:0 0 14px;font-size:12px;color:#6b7280;text-align:center;">Pre-fills the email. ID number goes into the subject line.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Client Full Name</label>
+        <input id="loaClientName" placeholder="e.g. Zanele Dlamini" value="${(_loaClient.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;box-sizing:border-box;"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">ID Number <span style="color:#dc2626;">★</span></label>
+        <input id="loaIdInput" placeholder="13-digit ID number" value="${(_loaClient.idNumber||'').replace(/"/g,'&quot;')}" maxlength="13" inputmode="numeric" style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;box-sizing:border-box;font-family:monospace;letter-spacing:1px;" oninput="loaIdCheck()"/>
+        <div id="loaIdNote" style="font-size:10px;color:#9ca3af;margin-top:3px;">Required — always used in the subject line.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('loaClientOverlay').remove()" style="flex:1;padding:9px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button id="loaNextBtn" onclick="loaClientNext()" style="flex:2;padding:9px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:.45;pointer-events:none;">Next →</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+  setTimeout(()=>{ loaIdCheck(); if(!_loaClient.idNumber)document.getElementById('loaIdInput')?.focus(); else document.getElementById('loaClientName')?.focus(); },50);
+}
+function loaIdCheck(){
+  const val=(document.getElementById('loaIdInput')?.value||'').trim();
+  const btn=document.getElementById('loaNextBtn');
+  const note=document.getElementById('loaIdNote');
+  if(!btn)return;
+  const ok=val.length>=6;
+  btn.style.opacity=ok?'1':'.45'; btn.style.pointerEvents=ok?'auto':'none';
+  if(note)note.style.color=ok?'#9ca3af':'#dc2626';
+}
+function loaClientNext(){
+  const name=(document.getElementById('loaClientName')?.value||'').trim();
+  const idNumber=(document.getElementById('loaIdInput')?.value||'').trim();
+  if(idNumber.length<6){const n=document.getElementById('loaIdNote');if(n)n.style.color='#dc2626';return;}
+  saveLoaClient(name,idNumber);
+  document.getElementById('loaClientOverlay')?.remove();
+  showEmailTypePicker(window._loaEmail,window._loaCC);
+}
+function showLoaReminder(){
+  const ex=document.getElementById('loaReminderToast');if(ex)ex.remove();
+  const t=document.createElement('div');
+  t.id='loaReminderToast';
+  t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d1f3c;color:#fff;padding:12px 18px 12px 14px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);max-width:320px;width:90%;';
+  t.innerHTML=`<span style="font-size:20px;flex-shrink:0;">📎</span><span style="flex:1;line-height:1.4;">Attach the LOA from your device before sending</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.55);font-size:20px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;">✕</button>`;
+  document.body.appendChild(t);
+  setTimeout(()=>{if(t.parentElement)t.remove();},9000);
+}
+// ── END LOA CLIENT SESSION ────────────────────────────────────────────────
+
 function openGmailCompose(email, ccList, type){
   let subject, body;
   if(type==='refund'){
@@ -1482,6 +1543,8 @@ function showRefundEmailBuilder(){
   document.body.appendChild(overlay);
   document.getElementById('refundDate').value=new Date().toISOString().slice(0,10);
   if(currentUser&&currentUser.name)document.getElementById('refundAdvisorName').value=currentUser.name;
+  if(_loaClient.name)document.getElementById('refundClientName').value=_loaClient.name;
+  if(_loaClient.idNumber)document.getElementById('refundIdNumber').value=_loaClient.idNumber;
 }
 function closeRefundBuilder(){
   const o=document.getElementById('refundBuilderOverlay');
@@ -1530,16 +1593,19 @@ function generateRefundEmail(){
   }
   if(!emails.length){alert('No email addresses found for the selected companies.');return;}
   const clientName=(document.getElementById('refundClientName').value.trim())||'[Full Name]';
-  const idNumber=(document.getElementById('refundIdNumber').value.trim())||'[ID Number]';
+  const idNumber=(document.getElementById('refundIdNumber').value.trim());
+  if(!idNumber){alert('Please enter the client ID number — it is required in the subject line.');return;}
   const advisorName=(document.getElementById('refundAdvisorName').value.trim())||'[Your Name]';
   const dateVal=document.getElementById('refundDate').value;
   const dateStr=dateVal?new Date(dateVal).toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'}):'[Date]';
+  saveLoaClient(clientName,idNumber);
   const subject=idNumber+' — Premium Refund Request';
   const body=`Good day,\n\nOn behalf of ${clientName} (ID Number: ${idNumber}), I am hereby requesting a premium refund.\n\nPolicy No: [Policy Number]\nAmount: R[Amount]\n\nKindly process the refund and confirm once the amount has been transferred to the client's account.\n\nKind regards,\n${advisorName}\n${dateStr}`;
   const toAddr=emails.join(',');
   const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeRefundBuilder();
   window.open(url,'_blank');
+  showLoaReminder();
 }
 // ── END REFUND EMAIL BUILDER ───────────────────────────────────────────────
 
@@ -1611,6 +1677,8 @@ function showScheduleEmailBuilder(){
   document.body.appendChild(overlay);
   document.getElementById('schedDate').value=new Date().toISOString().slice(0,10);
   if(currentUser&&currentUser.name)document.getElementById('schedAdvisorName').value=currentUser.name;
+  if(_loaClient.name)document.getElementById('schedClientName').value=_loaClient.name;
+  if(_loaClient.idNumber)document.getElementById('schedIdNumber').value=_loaClient.idNumber;
 }
 function closeSchedBuilder(){
   const o=document.getElementById('schedBuilderOverlay');
@@ -1659,16 +1727,19 @@ function generateScheduleEmail(){
   }
   if(!emails.length){alert('No email addresses found for the selected companies.');return;}
   const clientName=(document.getElementById('schedClientName').value.trim())||'[Full Name]';
-  const idNumber=(document.getElementById('schedIdNumber').value.trim())||'[ID Number]';
+  const idNumber=(document.getElementById('schedIdNumber').value.trim());
+  if(!idNumber){alert('Please enter the client ID number — it is required in the subject line.');return;}
   const advisorName=(document.getElementById('schedAdvisorName').value.trim())||'[Your Name]';
   const dateVal=document.getElementById('schedDate').value;
   const dateStr=dateVal?new Date(dateVal).toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'}):'[Date]';
+  saveLoaClient(clientName,idNumber);
   const subject=idNumber+' — Policy Schedule Request';
   const body=`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${idNumber}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${dateStr}`;
   const toAddr=emails.join(',');
   const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeSchedBuilder();
   window.open(url,'_blank');
+  showLoaReminder();
 }
 // ── END SCHEDULE EMAIL BUILDER ────────────────────────────────────────────
 
@@ -1708,7 +1779,7 @@ function wrapFspEmails(){
         const addr=emailMatch[0];
         const cc=allEmails.filter(e=>e!==addr);
         const ccJson=JSON.stringify(cc).replace(/"/g,'&quot;');
-        return '<span class="fsp-email-link" onclick="showEmailTypePicker(\''+addr+'\','+ccJson+')">'+p+'</span>';
+        return '<span class="fsp-email-link" onclick="showClientDetailStep(\''+addr+'\','+ccJson+')">'+p+'</span>';
       }
       return p;
     }).join(' · ');
