@@ -551,6 +551,7 @@ function enterHub(user){
   const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
+  const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
@@ -1919,7 +1920,7 @@ function showPage(p){
   if(p==='opsland')renderOpsLand();
   if(p==='competitor')renderCompetitors('');
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
-  if(p==='dailyregion')initDailyRegion();
+  if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='standard')setupStandardHero();
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
