@@ -2752,6 +2752,61 @@ Please send your Proof of Payment to your advisor once done.</div>
       <div id="top3SaveFeedback" style="display:none;font-size:12px;color:#16a34a;text-align:center;margin-top:6px;">✓ Published!</div>
     </div>
   </div>
+
+  <!-- Training & Guides -->
+  <div class="page" id="page-training">
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:20px;padding:14px 20px;margin-bottom:16px;">
+      <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📚 Guides &amp; Training</div>
+      <div style="color:#fff;font-size:16px;font-weight:700;">Learn. Grow. Win.</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">All training resources in one place</div>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📖 Reference Guides</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
+      <a class="tool-card" href="https://purshiville.github.io/team-buffalos-guide/" target="_blank">
+        <div class="tc-icon">📖</div>
+        <div class="tc-name">The Guide</div>
+        <div class="tc-desc">Products, scripts &amp; processes</div>
+      </a>
+      <a class="tool-card" href="https://purshiville.github.io/team-buffalos-intel" target="_blank">
+        <div class="tc-icon">📋</div>
+        <div class="tc-name">Beyond Enemy Lines</div>
+        <div class="tc-desc">Competitor training</div>
+      </a>
+      <div class="tool-card" onclick="showPage('competitor')">
+        <div class="tc-icon">🕵️</div>
+        <div class="tc-name">Competitors Guide</div>
+        <div class="tc-desc">Replacement reference</div>
+      </div>
+      <a class="tool-card" href="https://purshiville.github.io/team-buffalos-abna" target="_blank">
+        <div class="tc-icon">🏢</div>
+        <div class="tc-name">Commercial Worksites</div>
+        <div class="tc-desc">Stop order worksites</div>
+      </a>
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🎬 Video Tutorials</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+      <a class="tool-card" href="https://drive.google.com/file/d/12zgpfQxo_Y93oSYb3D2nmZzAOUtEs6wO/view?ts=69ea3824" target="_blank">
+        <div class="tc-icon">🎬</div>
+        <div class="tc-name">Connect Me Tutorial</div>
+        <div class="tc-desc">Step-by-step video guide</div>
+      </a>
+    </div>
+  </div>
+
+  <!-- Daily By Region -->
+  <div class="page" id="page-dailyregion">
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);padding:14px 16px;margin-bottom:0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <button onclick="showPage('tools')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;">← Tools</button>
+        <div style="text-align:right;">
+          <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Report</div>
+          <div style="color:#fff;font-weight:700;font-size:15px;">Daily By Region</div>
+        </div>
+      </div>
+    </div>
+    <div style="padding:12px;" id="dailyRegionContent"></div>
+  </div>
+
 </div>
 <!-- Inbox panel -->
 <div class="side-panel-overlay" id="inboxOverlay" onclick="closeInboxPanel()"></div>
@@ -2927,68 +2982,6 @@ Please send your Proof of Payment to your advisor once done.</div>
 </div>
 </div>
 
-<!-- Training & Guides -->
-<div class="page" id="page-training">
-  <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:20px;padding:14px 20px;margin-bottom:16px;">
-    <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📚 Guides &amp; Training</div>
-    <div style="color:#fff;font-size:16px;font-weight:700;">Learn. Grow. Win.</div>
-    <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">All training resources in one place</div>
-  </div>
-
-  <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📖 Reference Guides</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-
-    <a class="tool-card" href="https://purshiville.github.io/team-buffalos-guide/" target="_blank">
-      <div class="tc-icon">📖</div>
-      <div class="tc-name">The Guide</div>
-      <div class="tc-desc">Products, scripts &amp; processes</div>
-    </a>
-
-    <a class="tool-card" href="https://purshiville.github.io/team-buffalos-intel" target="_blank">
-      <div class="tc-icon">📋</div>
-      <div class="tc-name">Beyond Enemy Lines</div>
-      <div class="tc-desc">Competitor training</div>
-    </a>
-
-    <div class="tool-card" onclick="showPage('competitor')">
-      <div class="tc-icon">🕵️</div>
-      <div class="tc-name">Competitors Guide</div>
-      <div class="tc-desc">Replacement reference</div>
-    </div>
-
-    <a class="tool-card" href="https://purshiville.github.io/team-buffalos-abna" target="_blank">
-      <div class="tc-icon">🏢</div>
-      <div class="tc-name">Commercial Worksites</div>
-      <div class="tc-desc">Stop order worksites</div>
-    </a>
-
-  </div>
-
-  <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">🎬 Video Tutorials</div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-
-    <a class="tool-card" href="https://drive.google.com/file/d/12zgpfQxo_Y93oSYb3D2nmZzAOUtEs6wO/view?ts=69ea3824" target="_blank">
-      <div class="tc-icon">🎬</div>
-      <div class="tc-name">Connect Me Tutorial</div>
-      <div class="tc-desc">Step-by-step video guide</div>
-    </a>
-
-  </div>
-</div>
-
-<!-- Daily By Region -->
-<div class="page" id="page-dailyregion">
-  <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);padding:14px 16px;margin-bottom:0;">
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <button onclick="showPage('tools')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;">← Tools</button>
-      <div style="text-align:right;">
-        <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Report</div>
-        <div style="color:#fff;font-weight:700;font-size:15px;">Daily By Region</div>
-      </div>
-    </div>
-  </div>
-  <div style="padding:12px;" id="dailyRegionContent"></div>
-</div>
 
 <div id="inactivityWarning" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:16px;padding:2rem;width:90%;max-width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.25);text-align:center;">
