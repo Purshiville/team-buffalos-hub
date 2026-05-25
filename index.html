@@ -419,6 +419,9 @@
       <div class="secondary-tool" onclick="showPage('directory')">
         <div class="st-icon">📞</div><div class="st-name">Directory</div><div class="st-desc">Contacts &amp; team</div>
       </div>
+      <div class="secondary-tool" onclick="showPage('directory');setTimeout(()=>{document.getElementById('portals-section')?.scrollIntoView({behavior:'smooth',block:'start'});},120)">
+        <div class="st-icon">🌐</div><div class="st-name">Online Portals</div><div class="st-desc">Insurer portals</div>
+      </div>
       <div class="secondary-tool" id="opsTile" style="display:none;border-top-color:#c9922a;position:relative;" onclick="showPage('opsland')">
         <span id="opsTileBadge" style="display:none;position:absolute;top:6px;right:8px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:2px 6px;line-height:1.4;animation:pulse 1.5s infinite;">!</span>
         <div class="st-icon">⚙️</div><div class="st-name" style="color:#c9922a;font-weight:700;">Operations</div><div class="st-desc" id="opsTileDesc">Manage your tasks</div>
@@ -2282,7 +2285,7 @@ Please send your Proof of Payment to your advisor once done.</div>
     </div>
 
     <!-- Online Portals -->
-    <div class="section-label" style="margin-top:20px;margin-bottom:8px;">🌐 Online Portals</div>
+    <div id="portals-section" class="section-label" style="margin-top:20px;margin-bottom:8px;">🌐 Online Portals</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
       <a class="tool-card" href="https://myassupol.datafree.co.za/#/log-in" target="_blank">
         <div class="tc-icon" style="background:#fff;padding:3px;"><img src="https://logo.clearbit.com/assupol.co.za" data-fb="https://www.google.com/s2/favicons?domain=assupol.co.za&sz=128" data-em="🛡️" style="width:34px;height:34px;object-fit:contain;" onerror="if(!this.dataset.used){this.dataset.used=1;this.src=this.dataset.fb;}else{this.parentElement.innerHTML=this.dataset.em;this.parentElement.style.cssText='width:44px;height:44px;border-radius:50%;background:#f5f5ff;display:flex;align-items:center;justify-content:center;font-size:26px;margin:0 auto 4px';}"></div>
