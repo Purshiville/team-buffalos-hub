@@ -1375,6 +1375,7 @@ async function chatSendBroadcast(){
 // ── END INBOX & CHAT ──────────────────────────────────────────────────────
 // ── LOA CLIENT SESSION ────────────────────────────────────────────────────
 let _loaClient=(()=>{try{return JSON.parse(sessionStorage.getItem('tl_loa_client')||'null')||{name:'',idNumber:''};}catch(e){return{name:'',idNumber:''};} })();
+window._loaFile=null;
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -1383,7 +1384,13 @@ function showClientDetailStep(email,ccList){
   ov=document.createElement('div');
   ov.id='loaClientOverlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9200;display:flex;align-items:center;justify-content:center;';
-  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:22px 20px 18px;width:320px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+  const fileLabel=window._loaFile
+    ?`<span style="color:#059669;font-weight:700;">✅ ${window._loaFile.name}</span>`
+    :`<span style="color:#6b7280;">📎 Tap to upload LOA</span>`;
+  const fileNote=window._loaFile
+    ?`<div style="font-size:10px;color:#059669;margin-top:3px;">Will download automatically when Gmail opens — attach from Downloads.</div>`
+    :`<div style="font-size:10px;color:#9ca3af;margin-top:3px;">Downloads to your device when Gmail opens so you can attach it.</div>`;
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:22px 20px 18px;width:320px;max-width:94vw;box-shadow:0 8px 32px rgba(0,0,0,.25);max-height:92vh;overflow-y:auto;">
     <h3 style="margin:0 0 4px;font-size:15px;font-weight:700;color:#0d1f3c;text-align:center;">📋 Client Details</h3>
     <p style="margin:0 0 14px;font-size:12px;color:#6b7280;text-align:center;">Pre-fills the email. ID number goes into the subject line.</p>
     <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
@@ -1396,6 +1403,12 @@ function showClientDetailStep(email,ccList){
         <input id="loaIdInput" placeholder="13-digit ID number" value="${(_loaClient.idNumber||'').replace(/"/g,'&quot;')}" maxlength="13" inputmode="numeric" style="width:100%;padding:8px 10px;font-size:14px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;box-sizing:border-box;font-family:monospace;letter-spacing:1px;" oninput="loaIdCheck()"/>
         <div id="loaIdNote" style="font-size:10px;color:#9ca3af;margin-top:3px;">Required — always used in the subject line.</div>
       </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">LOA Document <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
+        <input type="file" id="loaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif" style="display:none;" onchange="loaFileSelected(this)"/>
+        <button onclick="document.getElementById('loaFileInput').click()" id="loaFileBtn" style="width:100%;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;box-sizing:border-box;">${fileLabel}</button>
+        <div id="loaFileNote">${fileNote}</div>
+      </div>
     </div>
     <div style="display:flex;gap:8px;">
       <button onclick="document.getElementById('loaClientOverlay').remove()" style="flex:1;padding:9px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
@@ -1405,6 +1418,14 @@ function showClientDetailStep(email,ccList){
   ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
   document.body.appendChild(ov);
   setTimeout(()=>{ loaIdCheck(); if(!_loaClient.idNumber)document.getElementById('loaIdInput')?.focus(); else document.getElementById('loaClientName')?.focus(); },50);
+}
+function loaFileSelected(input){
+  if(!input.files||!input.files[0])return;
+  window._loaFile=input.files[0];
+  const btn=document.getElementById('loaFileBtn');
+  if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${window._loaFile.name}</span>`;
+  const note=document.getElementById('loaFileNote');
+  if(note)note.innerHTML=`<div style="font-size:10px;color:#059669;margin-top:3px;">Will download automatically when Gmail opens — attach from Downloads.</div>`;
 }
 function loaIdCheck(){
   const val=(document.getElementById('loaIdInput')?.value||'').trim();
@@ -1423,12 +1444,26 @@ function loaClientNext(){
   document.getElementById('loaClientOverlay')?.remove();
   showEmailTypePicker(window._loaEmail,window._loaCC);
 }
+function triggerLoaDownload(){
+  if(!window._loaFile)return;
+  try{
+    const url=URL.createObjectURL(window._loaFile);
+    const a=document.createElement('a');
+    a.href=url; a.download=window._loaFile.name;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),15000);
+  }catch(e){console.warn('LOA download failed:',e);}
+}
 function showLoaReminder(){
   const ex=document.getElementById('loaReminderToast');if(ex)ex.remove();
+  const hasFile=!!window._loaFile;
+  const msg=hasFile
+    ?`LOA is downloading — attach it from your Downloads in Gmail`
+    :`Attach the LOA from your device before sending`;
   const t=document.createElement('div');
   t.id='loaReminderToast';
   t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0d1f3c;color:#fff;padding:12px 18px 12px 14px;border-radius:12px;font-size:13px;font-weight:600;z-index:9999;display:flex;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(0,0,0,.35);max-width:320px;width:90%;';
-  t.innerHTML=`<span style="font-size:20px;flex-shrink:0;">📎</span><span style="flex:1;line-height:1.4;">Attach the LOA from your device before sending</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.55);font-size:20px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;">✕</button>`;
+  t.innerHTML=`<span style="font-size:20px;flex-shrink:0;">📎</span><span style="flex:1;line-height:1.4;">${msg}</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:rgba(255,255,255,.55);font-size:20px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;">✕</button>`;
   document.body.appendChild(t);
   setTimeout(()=>{if(t.parentElement)t.remove();},9000);
 }
@@ -1604,6 +1639,7 @@ function generateRefundEmail(){
   const toAddr=emails.join(',');
   const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeRefundBuilder();
+  triggerLoaDownload();
   window.open(url,'_blank');
   showLoaReminder();
 }
@@ -1738,6 +1774,7 @@ function generateScheduleEmail(){
   const toAddr=emails.join(',');
   const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeSchedBuilder();
+  triggerLoaDownload();
   window.open(url,'_blank');
   showLoaReminder();
 }
