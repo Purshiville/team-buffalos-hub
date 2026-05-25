@@ -92,6 +92,7 @@
       async clearChatUnread(chatId,code){ const upd={};upd[`unread.${code}`]=0;await updateDoc(doc(db,'chats',chatId),upd); },
       async saveTop3(periodKey,data){ await setDoc(doc(db,'top3',periodKey),{...data,updatedAt:serverTimestamp()}); },
       async getAllTop3(){ const s=await getDocs(collection(db,'top3')); const r={}; s.docs.forEach(d=>r[d.id]=d.data()); return r; },
+      onTop3(cb){ return onSnapshot(collection(db,'top3'), s=>{const r={};s.docs.forEach(d=>r[d.id]=d.data());cb(r);}); },
       async saveCalEvent(id,data){ await setDoc(doc(db,'diary',id),{...data,updatedAt:serverTimestamp()},{merge:true}); },
       async deleteCalEvent(id){ await deleteDoc(doc(db,'diary',id)); },
       async getAllCalEvents(){ const s=await getDocs(collection(db,'diary')); return s.docs.map(d=>({id:d.id,...d.data()})); },
@@ -126,6 +127,17 @@
         window._fbDocs = docs;
         localStorage.setItem('tl_docs', JSON.stringify(docs));
         if(typeof renderDocs === 'function') renderDocs();
+      });
+    };
+
+    let top3Unsub=null;
+    window.startTop3Listener=function(){
+      if(top3Unsub){top3Unsub();top3Unsub=null;}
+      top3Unsub=window.FB.onTop3(fbData=>{
+        const local=JSON.parse(localStorage.getItem('tl_top3')||'{}');
+        const merged={...local,...fbData};
+        localStorage.setItem('tl_top3',JSON.stringify(merged));
+        if(typeof renderTop3==='function')renderTop3();
       });
     };
 

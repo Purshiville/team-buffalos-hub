@@ -580,6 +580,7 @@ function enterHub(user){
       initStatsListener();
     }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();});
     window.startNoticeListener();
+    if(window.startTop3Listener)window.startTop3Listener();
     startInboxListener();
     startSentListener();
     startChatListListener();
@@ -589,6 +590,7 @@ function enterHub(user){
       Promise.all([syncUsersFromFirebase(),syncSchedulesFromFirebase(),syncDocsFromFirebase()])
         .then(()=>{renderNoticeBoard();}).catch(()=>{});
       window.startNoticeListener();
+      if(window.startTop3Listener)window.startTop3Listener();
       startInboxListener();
       startSentListener();
       startChatListListener();
@@ -610,12 +612,6 @@ function enterHub(user){
   renderYTDStats();
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
-  // Sync Top 3 from Firebase
-  if(window.FB_READY){
-    window.FB.getAllTop3().then(fbData=>{
-      const local=getTop3Data();const merged={...fbData,...local};saveTop3Data(merged);renderTop3();
-    }).catch(()=>{});
-  }
 }
 
 // ── INACTIVITY TIMER ──
@@ -3541,7 +3537,7 @@ function saveTop3Awards(){
   };
   const data=getTop3Data();data[periodKey]=record;
   saveTop3Data(data);
-  if(window.FB_READY)window.FB.saveTop3(periodKey,record).catch(()=>{});
+  if(window.FB_READY)window.FB.saveTop3(periodKey,record).catch(e=>console.error('Top3 Firestore save failed:',e));
   renderTop3();
   const fb=document.getElementById('top3SaveFeedback');if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);}
   // Send inbox announcement to all advisors
