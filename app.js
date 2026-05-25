@@ -1405,8 +1405,12 @@ function showClientDetailStep(email,ccList){
       </div>
       <div>
         <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">LOA Document <span style="color:#9ca3af;font-weight:400;">(optional)</span></label>
-        <input type="file" id="loaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif" style="display:none;" onchange="loaFileSelected(this)"/>
-        <button onclick="document.getElementById('loaFileInput').click()" id="loaFileBtn" style="width:100%;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;box-sizing:border-box;">${fileLabel}</button>
+        <input type="file" id="loaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*" style="display:none;" onchange="loaFileSelected(this)"/>
+        <input type="file" id="loaCamInput" accept="image/*" capture="environment" style="display:none;" onchange="loaFileSelected(this)"/>
+        <div style="display:flex;gap:6px;">
+          <button onclick="document.getElementById('loaFileInput').click()" id="loaFileBtn" style="flex:1;padding:9px 10px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;box-sizing:border-box;">${fileLabel}</button>
+          <button onclick="document.getElementById('loaCamInput').click()" title="Take photo or scan" style="padding:9px 11px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:18px;cursor:pointer;flex-shrink:0;">📷</button>
+        </div>
         <div id="loaFileNote">${fileNote}</div>
       </div>
     </div>
@@ -1452,20 +1456,41 @@ function _parseLoaDetails(text){
   for(const p of patterns){const m=text.match(p);if(m){name=m[1].trim();break;}}
   return{name,idNumber};
 }
+async function _ocrImage(file){
+  if(!window.Tesseract){
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+  const worker=await Tesseract.createWorker('eng',1,{
+    workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/worker.min.js',
+    corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@4/tesseract-core-simd.wasm.js',
+    langPath:'https://tessdata.projectnaptha.com/4.0.0',
+  });
+  try{
+    const{data:{text}}=await worker.recognize(file);
+    return text;
+  }finally{await worker.terminate();}
+}
 async function loaFileSelected(input){
   if(!input.files||!input.files[0])return;
   window._loaFile=input.files[0];
   const btn=document.getElementById('loaFileBtn');
   const note=document.getElementById('loaFileNote');
   if(note)note.innerHTML=`<div style="font-size:10px;color:#059669;margin-top:3px;">Will download automatically when Gmail opens — attach from Downloads.</div>`;
-  if(window._loaFile.name.toLowerCase().endsWith('.pdf')){
-    if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">⏳ Reading LOA…</span>`;
+  const fname=window._loaFile.name.toLowerCase();
+  const isPdf=fname.endsWith('.pdf');
+  const isImg=/\.(jpe?g|png|heic|heif|webp|bmp)$/.test(fname);
+  if(isPdf||isImg){
+    if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">${isPdf?'⏳ Reading LOA…':'📷 Scanning — may take ~10 sec…'}</span>`;
     try{
-      const text=await _extractTextFromPDF(window._loaFile);
+      const text=isPdf?await _extractTextFromPDF(window._loaFile):await _ocrImage(window._loaFile);
       const{name,idNumber}=_parseLoaDetails(text);
       if(name){const f=document.getElementById('loaClientName');if(f)f.value=name;}
       if(idNumber){const f=document.getElementById('loaIdInput');if(f){f.value=idNumber;loaIdCheck();}}
-    }catch(e){console.warn('LOA parse failed:',e);}
+    }catch(e){console.warn('LOA extract failed:',e);}
   }
   if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${window._loaFile.name}</span>`;
 }
