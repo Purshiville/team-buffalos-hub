@@ -708,6 +708,11 @@ function formatPeriodLabel(period){
 function openStatsModal(){
   const overlay=document.getElementById('statsModalOverlay');
   if(overlay){overlay.style.display='flex';}
+  const now=new Date();
+  const mo=document.getElementById('statsPeriodMonth');
+  const yr=document.getElementById('statsPeriodYear');
+  if(mo)mo.value=('0'+(now.getMonth()+1)).slice(-2);
+  if(yr)yr.value=String(now.getFullYear());
   populateStatsAdvisorSelect();
   refreshStatsPeriod();
   populateTop3Selects();
@@ -3472,7 +3477,7 @@ function renderTop3(){
   const currentKey=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0');
   const data=getTop3Data();
   const prevRec=data[periodKey];const curRec=data[currentKey];
-  const record=(prevRec&&prevRec.first?prevRec:null)||(curRec&&curRec.first?curRec:null);
+  const record=(curRec&&curRec.first?curRec:null)||(prevRec&&prevRec.first?prevRec:null);
   if(!record){el.innerHTML='';return;}
   const usedKey=data[periodKey]?periodKey:currentKey;
   const [yr,mo]=usedKey.split('-');
