@@ -482,7 +482,7 @@ function updatePrecanHubAlert(){
         </div>`;
       } else {
         el.style.cursor='pointer';
-        el.onclick=()=>showPage('precansheet');
+        el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
         el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;">
           <span style="font-size:22px;">⚠️</span>
           <div>
