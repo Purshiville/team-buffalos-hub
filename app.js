@@ -4124,9 +4124,27 @@ async function handleIMPUpload(input, mode){
 
 // ── ROA GENERATOR ──
 let _roaType = 'new';
+let _repReasonType = 'affordability';
 let _roaPlans = [];
 let _roaRepPolicies = [];
 let _roaNewPolicies = [];
+
+function setRepReason(type){
+  _repReasonType=type;
+  [['Afford','affordability'],['Benefits','benefits'],['Mix','mix']].forEach(([id,val])=>{
+    const btn=document.getElementById(`roaRepBtn${id}`);
+    if(!btn)return;
+    const active=val===type;
+    btn.style.background=active?'#0d1f3c':'#fff';
+    btn.style.color=active?'#fff':'#0d1f3c';
+    btn.style.borderColor=active?'#0d1f3c':'#e5e7eb';
+  });
+  const bc=document.getElementById('roaBenefitChecks');
+  const ad=document.getElementById('roaAffordDetail');
+  if(bc)bc.style.display=(type==='benefits'||type==='mix')?'block':'none';
+  if(ad)ad.style.display=(type==='affordability'||type==='mix')?'block':'none';
+  roaGenerate();
+}
 
 const ROA_PLANS = ['Value Funeral Plan','Enhanced Priority Funeral Plan','All-in-One Plan (standalone)','Immediate Life Cover (ILC)','Essential Med'];
 const ROA_LIFE_ROLES = ['Main member','Spouse','Child 1','Child 2','Child 3','Child 4','Extended family member'];
@@ -4159,6 +4177,8 @@ function setROAType(type){
     if(repForm)repForm.style.display='block';
     if(!_roaRepPolicies.length)roaAddRepPolicy();
     if(!_roaNewPolicies.length)roaAddNewPolicy();
+    setRepReason(_repReasonType||'affordability');
+    return; // setRepReason calls roaGenerate
   }
   roaGenerate();
 }
@@ -4302,70 +4322,121 @@ function roaGenerate(){
 
   } else {
     const client = (document.getElementById('roa_rep_client')||{}).value?.trim() || 'the client';
-    const reason = (document.getElementById('roa_rep_reason')||{}).value || 'align';
-    const cashback = (document.getElementById('roa_cashback')||{}).value || 'none';
     const increase = (document.getElementById('roa_rep_increase')||{}).value || 'no';
     const qlink = (document.getElementById('roa_qlink')||{}).value || 'ok';
     const repNotes = (document.getElementById('roa_rep_notes')||{}).value?.trim() || '';
+    const reasonType = _repReasonType || 'affordability';
+    const currPrem = (document.getElementById('roa_afford_currprem')||{}).value?.trim()||'';
 
-    const reasonText = ROA_REASONS[reason] || '';
-    const cashbackText = cashback === '50'
-      ? ' The client chose the 50% lump sum cashback payment option after 15 years.'
-      : cashback === '100'
-      ? ' The client chose the 100% cashback payment option after 15 years.'
-      : '';
+    // Collect selected benefits
+    const _chk=id=>document.getElementById(id)?.checked||false;
+    const selectedBenefits=[];
+    if(_chk('roa_ben_paidup')) selectedBenefits.push('the paid-up benefit at age 65, which ensures no further premiums are payable upon reaching retirement age while the cover remains fully in force');
+    if(_chk('roa_ben_nomoreprem')) selectedBenefits.push('the no more premiums death benefit, which ensures that cover continues for all surviving lives assured at no further cost upon the death of the main member');
+    if(_chk('roa_ben_cashback')){
+      const pct=document.getElementById('roa_ben_cashback_pct')?.value||'50';
+      selectedBenefits.push(`the ${pct}% lump sum cash back option, which provides a ${pct}% cash back payment after 15 years of continuous uninterrupted cover`);
+    }
+    if(_chk('roa_ben_doubleacc')) selectedBenefits.push('the double accident benefit, which provides double the insured cover amount in the event of accidental death');
+    if(_chk('roa_ben_repatriation')) selectedBenefits.push('full repatriation cover, ensuring that mortal remains can be transported to the place of burial at no additional cost to the family');
+    if(_chk('roa_ben_bettervalue')) selectedBenefits.push('a better overall value proposition and more comprehensive benefits package that better aligns with the client\'s current and future financial protection needs');
 
-    const openingSentence = `${client} has requested the replacement of their existing policy with a new Sanlam Sky policy. ${reasonText}${cashbackText}`.trim();
+    const benefitList = selectedBenefits.length
+      ? selectedBenefits.map((b,i)=>i===0?b.charAt(0).toUpperCase()+b.slice(1):b).join(', and ')
+      : 'enhanced product benefits and a more suitable benefits structure';
 
-    let cancelText = '';
-    if(_roaRepPolicies.length > 0){
-      cancelText = 'The following policies are being cancelled as part of this replacement: '+
-        _roaRepPolicies.filter(p=>p.company).map(p=>{
-          let t = p.company;
-          if(p.premium) t += ` (premium: ${p.premium})`;
-          if(p.lives) t += ` — ${p.lives}`;
+    // Helper: format a new policy block
+    const _polBlock = p=>{
+      const livesList=(p.lives||[]).filter(l=>l.name||l.cover).map(l=>{
+        let line=`    • ${l.role}`;
+        if(l.name)line+=`: ${l.name}`;
+        if(l.cover)line+=` — ${l.cover} funeral cover`;
+        return line;
+      }).join('\n');
+      const lines=[`  ${p.plan}${p.premium?' — Monthly premium: '+p.premium:''}`];
+      if(livesList)lines.push(`  Lives assured and funeral cover:\n${livesList}`);
+      return lines.join('\n');
+    };
+
+    // Cancelled policies summary
+    let cancelText='';
+    const cancelledList=_roaRepPolicies.filter(p=>p.company);
+    if(cancelledList.length){
+      cancelText='The following existing policies are being cancelled as part of this replacement:\n'+
+        cancelledList.map(p=>{
+          let t=`  • ${p.company}`;
+          if(p.premium)t+=` — current premium: ${p.premium}`;
+          if(p.lives)t+=` (${p.lives})`;
           return t;
-        }).join('; ')+'.';
-    }
-
-    let newPolBlocks = '';
-    if(_roaNewPolicies.length > 0){
-      newPolBlocks = _roaNewPolicies.filter(p=>p.plan).map(p=>{
-        const livesList = (p.lives||[]).filter(l=>l.name||l.cover).map(l=>{
-          let line = `    • ${l.role}`;
-          if(l.name) line += `: ${l.name}`;
-          if(l.cover) line += ` — ${l.cover} funeral cover`;
-          return line;
         }).join('\n');
-        const lines = [`  ${p.plan}${p.premium ? ' — premium: '+p.premium : ''}`];
-        if(livesList) lines.push(`  Lives assured and funeral cover:\n${livesList}`);
-        return lines.join('\n');
-      }).join('\n\n');
-      if(newPolBlocks) newPolBlocks = 'The following new Sanlam Sky policies are being taken up:\n' + newPolBlocks;
     }
 
-    const waitText = increase === 'yes'
+    // New policies summary
+    const newPolList=_roaNewPolicies.filter(p=>p.plan);
+    let newPolBlocks='';
+    if(newPolList.length){
+      newPolBlocks='The following new Sanlam Sky policies are being taken up:\n'+newPolList.map(_polBlock).join('\n\n');
+    }
+
+    // Generate reason narrative based on type
+    const _affordNarrative=(planName)=>{
+      const premLine=currPrem?` The client is currently paying ${currPrem} per month on the existing policy.`:''
+      const planLine=planName?` on the ${planName}`:'';
+      return `${client} requested a review of their existing funeral cover arrangements. Following a comprehensive assessment of the client's financial situation and monthly financial commitments, it was established that the existing policy premium${premLine} placed undue financial strain on the client's budget and no longer aligned with their current financial means. The client expressed the need for a more affordable funeral cover solution that would still ensure adequate protection for themselves and their family. The advisor recommended a replacement${planLine} at a monthly premium that aligns with the client's current financial position and obligations. The replacement is in the client's best financial interest and ensures continued funeral cover without compromising the client's financial stability.`;
+    };
+
+    const _benefitsNarrative=(planName)=>{
+      const planLine=planName?` — ${planName}`:'';
+      return `${client} requested a review of their existing funeral cover arrangements. Following a thorough needs analysis, the advisor established that the client's current policy does not provide the level of benefits required to meet their current and future financial protection needs. ${client} is aware that similar funeral cover products are available in the market but has confirmed, after a full product comparison, that the recommended Sanlam Sky policy${planLine} better addresses their personal and financial protection requirements. The client specifically identified the following benefits as essential to their current and future needs: ${benefitList}. The client expressed that the absence of these benefits in the existing policy is the primary motivation for the replacement. The advisor confirmed that the recommended Sanlam Sky policy provides these benefits and that the replacement is in the client's best financial interest.`;
+    };
+
+    let reasonNarrative='';
+    if(reasonType==='affordability'){
+      const planNames=newPolList.map(p=>p.plan).join(' and ');
+      reasonNarrative=_affordNarrative(planNames);
+    } else if(reasonType==='benefits'){
+      const planNames=newPolList.map(p=>p.plan).join(' and ');
+      reasonNarrative=_benefitsNarrative(planNames);
+    } else {
+      // Mix: Value/Enhanced Priority = affordability; AIO/ILC/Essential = benefits
+      const affordPlans=newPolList.filter(p=>/value funeral|enhanced priority/i.test(p.plan));
+      const benPlans=newPolList.filter(p=>!/value funeral|enhanced priority/i.test(p.plan));
+      const parts=[];
+      parts.push('The following replacement has been structured to address both the client\'s affordability requirements and the need for enhanced product benefits across different tiers of cover.\n');
+      if(affordPlans.length){
+        const names=affordPlans.map(p=>p.plan).join(' and ');
+        parts.push(`AFFORDABILITY — ${names.toUpperCase()}\n${_affordNarrative(names)}`);
+      }
+      if(benPlans.length){
+        const names=benPlans.map(p=>p.plan).join(' and ');
+        parts.push(`BENEFITS — ${names.toUpperCase()}\n${_benefitsNarrative(names)}`);
+      }
+      if(!affordPlans.length&&!benPlans.length) reasonNarrative=_affordNarrative('')+'\n\n'+_benefitsNarrative('');
+      reasonNarrative=parts.join('\n\n');
+    }
+
+    const waitText = increase==='yes'
       ? 'All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month waiting period applies on any additional cover taken up above the existing cover amount.'
-      : 'All waiting periods were discussed with the client. The waiting period has been waived in full due to the replacement of external policies, as the client has had continuous cover for 31 or more days.';
+      : 'All waiting periods were discussed with the client. The waiting period has been waived in full as the client has had continuous funeral cover for 31 or more days prior to commencement of the new policy.';
 
-    const repPlanNames = _roaNewPolicies.filter(p=>p.plan).map(p=>p.plan).join(' and ');
-    const repBenefitsText = `The advisor explained all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including funeral cover amounts per life assured, the paid-up benefit, repatriation cover, and cashback options. The client confirmed understanding of the new policy benefits and how they compare to the cancelled policy.`;
+    const repPlanNames=newPolList.map(p=>p.plan).join(' and ');
+    const repBenefitsText=`The advisor explained and disclosed all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including the funeral cover amounts per life assured, the paid-up benefit, repatriation cover, waiting period structure, and all applicable cashback options. The client confirmed full understanding of the new policy benefits and acknowledged how the new benefits compare to and improve upon the cancelled policy.`;
 
-    const repPremiumSummary = _roaNewPolicies.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
-    const repAgreementText = `${client} confirmed agreement to${repPremiumSummary ? ' the monthly premium ('+repPremiumSummary+') and' : ''} the funeral cover amounts for all lives assured as listed above. The client agreed that the replacement is in their interest and that the advice given is understood and accepted.`;
+    const repPremiumSummary=newPolList.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
+    const repAgreementText=`${client} confirmed agreement to${repPremiumSummary?' the monthly premium ('+repPremiumSummary+') and':''} the funeral cover amounts for all lives assured as set out above. The client confirmed that the replacement is in their best interest, that the advice given is fully understood and accepted, and that all questions have been answered to their satisfaction.`;
 
-    let qlinkText = '';
-    if(qlink === 'ok') qlinkText = 'The Qlink affordability calculation confirms all policies fit within the 15% stop order bracket on the client\'s payslip.';
-    else if(qlink === 'movement') qlinkText = 'Policy movements and/or cancellations have created the necessary space on the payslip to accommodate the new policies within the 15% bracket.';
-    else if(qlink === 'partial_dc') qlinkText = 'The Qlink calculation did not allow all policies onto the stop order. One or more policies have been placed on debit order. A DebiCheck mandate has been sent to the client. A 3-month bank statement is required for this application.';
+    let qlinkText='';
+    if(qlink==='ok') qlinkText='The Qlink affordability calculation confirms all policies fit within the 15% stop order bracket on the client\'s payslip.';
+    else if(qlink==='movement') qlinkText='Policy movements and/or cancellations have created the necessary space on the payslip to accommodate the new policies within the 15% bracket.';
+    else if(qlink==='partial_dc') qlinkText='The Qlink calculation did not allow all policies onto the stop order. One or more policies have been placed on debit order. A DebiCheck mandate has been sent to the client. A 3-month bank statement is required for this application.';
 
-    const repParts = [openingSentence];
-    if(cancelText) repParts.push(cancelText);
-    if(newPolBlocks) repParts.push(newPolBlocks);
-    repParts.push(waitText, repBenefitsText, repAgreementText);
-    if(qlinkText) repParts.push(qlinkText);
-    if(repNotes) repParts.push(`Additional notes: ${repNotes}`);
-    note = repParts.join('\n\n').trim();
+    const repParts=[`A Record of Advice was completed for ${client} regarding the replacement of their existing funeral policy.\n`,reasonNarrative];
+    if(cancelText)repParts.push(cancelText);
+    if(newPolBlocks)repParts.push(newPolBlocks);
+    repParts.push(waitText,repBenefitsText,repAgreementText);
+    if(qlinkText)repParts.push(qlinkText);
+    if(repNotes)repParts.push(`Additional notes: ${repNotes}`);
+    note=repParts.join('\n\n').trim();
   }
 
   out.textContent = note;
@@ -4386,6 +4457,7 @@ function roaCopy(){
 
 function renderROA(){
   _roaPlans=[];_roaRepPolicies=[];_roaNewPolicies=[];
+  _repReasonType='affordability';
   setROAType('new');
 }
 
@@ -5979,8 +6051,42 @@ async function sendChat(){
   }catch(e){bubble.textContent='Something went wrong. Please try again.';bubble.classList.remove('typing');}
 }
 
+function previewSettingsPhoto(input){
+  const file=input.files?.[0];if(!file)return;
+  resizeImageToBase64(file,80,0.75).then(b64=>{
+    if(!b64)return;
+    const el=document.getElementById('sp_photoPreview');
+    if(el)el.innerHTML=`<img src="${b64}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">`;
+    input._b64=b64;
+  });
+}
+
+function saveSettingsPhoto(){
+  const input=document.getElementById('sp_photoInput');
+  const b64=input?._b64;
+  if(!b64)return showAlert('Please select a photo first — tap the circle above.','error');
+  const users=getUsers();
+  if(users[currentUser.code]){
+    users[currentUser.code].photo=b64;
+    saveUsers(users);
+    if(window.FB_READY){window.FB.saveUser(currentUser.code,users[currentUser.code]).catch(()=>{});}
+  }
+  currentUser.photo=b64;
+  try{localStorage.setItem('tl_session',JSON.stringify(currentUser));}catch(e){}
+  updateTopbarAvatar();
+  renderTop3();renderYTDTop3();
+  const btn=document.getElementById('sp_savePhotoBtn');
+  if(btn){btn.textContent='✓ Photo updated!';setTimeout(()=>{btn.textContent='Save photo';},2500);}
+}
+
 function openSettingsPanel(){
   if(!currentUser)return;
+  // Show current photo
+  const photo=currentUser.photo||(getUsers()[currentUser.code]?.photo)||null;
+  const photoEl=document.getElementById('sp_photoPreview');
+  if(photoEl)photoEl.innerHTML=photo?`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;display:block;">`:'📷';
+  const photoInput=document.getElementById('sp_photoInput');
+  if(photoInput){photoInput.value='';photoInput._b64=null;}
   // Populate profile fields
   document.getElementById('sp_name').value=currentUser.name||'';
   document.getElementById('sp_email').value=currentUser.email||'';
