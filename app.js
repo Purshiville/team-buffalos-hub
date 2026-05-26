@@ -10079,9 +10079,12 @@ function _form_repl_disclosure(u,today){
 
     <p style="font-size:13px;font-weight:600;margin-bottom:12px;">By signing this document, I acknowledge and confirm that:</p>
 
-    ${clauses.map(c=>`
+    ${clauses.map((c,i)=>`
       <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
-        <div style="flex-shrink:0;width:22px;height:22px;border:1.5px solid #555;border-radius:3px;margin-top:1px;"></div>
+        <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:center;gap:2px;">
+          <canvas id="sig_rd_clause_${i}" data-sig="1" width="70" height="36" style="border:1.5px solid #555;border-radius:3px;cursor:crosshair;display:block;touch-action:none;background:#fff;"></canvas>
+          <button class="no-print" onclick="clearCanvas('sig_rd_clause_${i}')" style="font-size:9px;color:#aaa;background:none;border:none;cursor:pointer;padding:0;line-height:1;">✕ clear</button>
+        </div>
         <p style="font-size:12.5px;line-height:1.7;margin:0;flex:1;">${c.n} ${c.text}</p>
       </div>`).join('')}
 
