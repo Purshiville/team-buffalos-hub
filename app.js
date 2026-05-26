@@ -6129,7 +6129,7 @@ function renderHubBirthdays(){
   }
   if(currentUser&&currentUser.isManager){
     const users=getUsers(),all=Object.values(users);
-    const wb=all.filter(u=>u.dob).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
+    const wb=all.filter(u=>u.dob&&!REVOKED_CODES.has(u.code)).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
     if(wb.length){
       let html='';
       wb.filter(u=>u.bday.isToday).forEach(u=>{html+=`<div class="bday-banner today" style="margin-bottom:8px;"><div class="bday-emoji">🎂</div><div><div class="bday-title">${u.name} — Birthday today!</div><div class="bday-sub">Turning ${u.bday.turningAge} today (${u.bday.dateStr}). Don't forget to wish them!</div></div></div>`;});
@@ -6167,12 +6167,12 @@ function _renderManagerDashInner(){
   const users=getUsers(),all=Object.values(users);
   const total=all.length,active=all.filter(u=>u.lastActive&&(Date.now()-new Date(u.lastActive))<86400000).length,compliant=all.filter(u=>(u.fpPct||0)===100).length;
   document.getElementById('statRow').innerHTML=`<div class="stat-card"><div class="s-label">Total registered</div><div class="s-val">${total}</div></div><div class="stat-card"><div class="s-label">Active today</div><div class="s-val">${active}</div></div><div class="stat-card"><div class="s-label">Fully compliant</div><div class="s-val">${compliant}</div></div>`;
-  const wb=all.filter(u=>u.dob).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
+  const wb=all.filter(u=>u.dob&&!REVOKED_CODES.has(u.code)).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
   const sec=document.getElementById('managerBdaySection');
   if(wb.length){sec.innerHTML=`<div class="section-label">Birthdays — next 30 days</div><div class="bday-cards">${wb.map(u=>`<div class="bday-card ${u.bday.isToday?'today-card':''}"><div class="bday-card-top"><div class="bday-av">${u.name.charAt(0)}</div><div><div class="bday-card-name">${u.name}</div><div class="bday-card-date">${u.bday.dateStr} · turning ${u.bday.turningAge}</div></div></div><span class="bday-tag ${u.bday.isToday?'today':u.bday.daysUntil<=7?'soon':'upcoming'}">${u.bday.isToday?'🎂 Today':u.bday.daysUntil===1?'Tomorrow':'In '+u.bday.daysUntil+' days'}</span></div>`).join('')}</div>`;}
   else sec.innerHTML='';
   const tbody=document.getElementById('userTableBody');
-  if(!all.length){tbody.innerHTML=`<tr><td colspan="10" style="color:#9ca3af;text-align:center;padding:1.5rem;">No advisors registered yet</td></tr>`;return;}
+  if(!all.length){tbody.innerHTML=`<tr><td colspan="8" style="color:#9ca3af;text-align:center;padding:1.5rem;">No advisors registered yet</td></tr>`;return;}
   tbody.innerHTML=all.map(u=>{
     const isActive=u.lastActive&&(Date.now()-new Date(u.lastActive))<3600000;
     const fp=u.fpPct!==undefined?u.fpPct:getFpPercent(u.code);
@@ -6190,16 +6190,14 @@ function _renderManagerDashInner(){
       :`<div style="width:34px;height:34px;border-radius:50%;background:#0d1f3c;color:#f5d98b;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(u.name||'?').charAt(0).toUpperCase()}</div>`;
     const displayName=_advisorNameMap[u.code]||u.name;
     return`<tr>
-      <td><div style="display:flex;align-items:center;gap:9px;">${avatarHtml}<div><div style="font-weight:600;">${displayName}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:10px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;margin-left:5px;font-weight:600;">Ops</span>':''}</div><div style="font-size:10px;color:#9ca3af;margin-top:2px;">${fmtDate(u.lastActive)}</div></div></div></td>
-      <td style="font-family:monospace;font-size:12px;">${u.code}</td>
-      <td style="color:#6b7280;font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${u.email}</td>
-      <td style="font-size:12px;color:#6b7280;">${dofaDisplay}</td>
-      <td style="font-size:12px;color:${b&&b.isToday?'#92400e':'#6b7280'};">${bdayDsp}</td>
+      <td><div style="display:flex;align-items:center;gap:9px;">${avatarHtml}<div><div style="font-weight:600;">${displayName}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:10px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;margin-left:5px;font-weight:600;">Ops</span>':''}</div><div style="font-size:10px;color:#9ca3af;margin-top:1px;font-family:monospace;">${u.code}</div><div style="font-size:10px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;">${u.email}</div></div></div></td>
+      <td style="font-size:12px;color:#6b7280;white-space:nowrap;">${dofaDisplay}</td>
+      <td style="font-size:12px;color:${b&&b.isToday?'#92400e':'#6b7280'};white-space:nowrap;">${bdayDsp}</td>
       <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;${replCls}">${replLbl}</span></td>
-      <td>${u.isSuspended?'<span style="font-size:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:1px 7px;font-weight:700;">⏸ Suspended</span>':`<span class="status-dot ${isActive?'active':'inactive'}"></span>${isActive?'Active':'Offline'}`}</td>
+      <td>${u.isSuspended?'<span style="font-size:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:1px 7px;font-weight:700;">⏸ Suspended</span>':`<span class="status-dot ${isActive?'active':'offline'}"></span><span style="font-size:12px;">${isActive?'Active':'Offline'}</span>`}</td>
       <td><span class="fp-pill ${fpCls}">${fpLbl}</span></td>
       <td><div class="pass-cell"><span class="pass-val" id="pass_val_${u.code}">••••••</span><button class="pass-eye" id="pass_btn_${u.code}" onclick="adminTogglePassVis('${u.code}')" title="Show/hide password">👁️</button></div></td>
-      <td style="white-space:nowrap;"><button class="user-act-btn edit" onclick="adminEditUser('${u.code}')">✏️ Edit</button><button class="user-act-btn" onclick="adminToggleSuspend('${u.code}')" style="margin-left:4px;background:${u.isSuspended?'#d1fae5;color:#065f46':'#fef3c7;color:#92400e'};">${u.isSuspended?'▶ Restore':'⏸ Suspend'}</button><button class="user-act-btn del" onclick="adminDeleteUser('${u.code}')" style="margin-left:4px;">🗑️</button></td>
+      <td style="white-space:nowrap;text-align:right;"><button class="user-act-btn edit" onclick="adminEditUser('${u.code}')" title="Edit">✏️</button> <button class="user-act-btn" onclick="adminToggleSuspend('${u.code}')" title="${u.isSuspended?'Restore':'Suspend'}" style="background:${u.isSuspended?'#d1fae5;color:#065f46':'#fef3c7;color:#92400e'};">${u.isSuspended?'▶':'⏸'}</button> <button class="user-act-btn del" onclick="adminDeleteUser('${u.code}')" title="Delete">🗑️</button></td>
     </tr>`;
   }).join('');
 }
