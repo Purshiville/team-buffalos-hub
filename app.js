@@ -416,7 +416,9 @@ function doLogin(){
   if(users[code]){
     if(users[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
     if(users[code].isSuspended)return showAlert('Your access has been suspended. Please contact your manager.','error');
-    users[code].lastActive=now();saveUsers(users);enterHub(users[code]);
+    users[code].lastActive=now();saveUsers(users);
+    if(window.FB_READY&&window.FB.saveUser)window.FB.saveUser(code,users[code]).catch(()=>{});
+    enterHub(users[code]);
     return;
   }
   // Not in local cache — fetch from Firebase
@@ -427,7 +429,9 @@ function doLogin(){
       if(!fbUsers||!fbUsers[code])return showAlert('Employee code not found. Please register first.','error');
       const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);
       if(local[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
-      local[code].lastActive=now();saveUsers(local);enterHub(local[code]);
+      local[code].lastActive=now();saveUsers(local);
+      if(window.FB.saveUser)window.FB.saveUser(code,local[code]).catch(()=>{});
+      enterHub(local[code]);
     }).catch(()=>showAlert('Employee code not found. Please register first.','error'));
   } else {
     showAlert('Employee code not found. Please register first.','error');
