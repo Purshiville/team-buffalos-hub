@@ -100,7 +100,7 @@ body::before {
 .chat-bubble-wrap{display:flex;flex-direction:row;align-items:flex-end;margin-bottom:6px;}
 .chat-bubble-wrap.mine{justify-content:flex-end;}
 .chat-bubble-wrap.theirs{justify-content:flex-start;}
-.chat-bubble{max-width:80%;padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;}
+.chat-bubble{padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;display:inline-block;min-width:32px;}
 .chat-bubble.mine{background:#0d1f3c;color:#fff;border-bottom-right-radius:4px;}
 .chat-bubble.theirs{background:#f3f4f6;color:#1a1a2e;border-bottom-left-radius:4px;}
 .chat-bubble-time{font-size:10px;color:#9ca3af;margin-top:2px;padding:0 2px;}
