@@ -6224,14 +6224,39 @@ function adminAddUser(){
   document.getElementById('adminToggleMgr').classList.remove('on');
   document.getElementById('adminToggleOps').classList.remove('on');
   document.getElementById('adminToggleSuspended').classList.remove('on');
+  _adminSetPhotoPreview(null,'');
   document.getElementById('adminDelBtn').style.display='none';
   document.getElementById('adminUserOverlay').classList.add('open');
+}
+function adminPhotoPreview(inp){
+  const f=inp.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=e=>{
+    window._adminPhotoData=e.target.result;
+    const prev=document.getElementById('adminPhotoPreview');
+    prev.innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`;
+  };
+  r.readAsDataURL(f);
+}
+function adminClearPhoto(){
+  window._adminPhotoData=null;
+  const prev=document.getElementById('adminPhotoPreview');
+  const name=document.getElementById('admin_name').value||'?';
+  prev.innerHTML=`<span>${name.charAt(0).toUpperCase()}</span>`;
+  document.getElementById('admin_photo_file').value='';
+}
+function _adminSetPhotoPreview(photo,name){
+  window._adminPhotoData=photo||null;
+  const prev=document.getElementById('adminPhotoPreview');
+  if(photo){prev.innerHTML=`<img src="${photo}" style="width:100%;height:100%;object-fit:cover;">`;}
+  else{prev.innerHTML=`<span>${(name||'?').charAt(0).toUpperCase()}</span>`;}
+  document.getElementById('admin_photo_file').value='';
 }
 function adminEditUser(code){
   const users=getUsers();const u=users[code];if(!u)return;
   document.getElementById('admin_code').value=code;
   document.getElementById('admin_new_code_field').style.display='none';
-  document.getElementById('adminModalTitle').textContent='Edit — '+u.name;
+  document.getElementById('adminModalTitle').textContent='Edit — '+(u.name||code);
   document.getElementById('admin_name').value=u.name||'';
   document.getElementById('admin_email').value=u.email||'';
   document.getElementById('admin_dob').value=u.dob||'';
@@ -6241,6 +6266,7 @@ function adminEditUser(code){
   document.getElementById('adminToggleMgr').classList.toggle('on',!!u.isManager);
   document.getElementById('adminToggleOps').classList.toggle('on',!!u.isOps);
   document.getElementById('adminToggleSuspended').classList.toggle('on',!!u.isSuspended);
+  _adminSetPhotoPreview(u.photo||null,u.name);
   document.getElementById('adminDelBtn').style.display='block';
   document.getElementById('adminUserOverlay').classList.add('open');
 }
@@ -6263,7 +6289,7 @@ function adminSaveUser(){
   const np=document.getElementById('admin_pass').value;
   if(isNew&&!np)return showAlert('A password is required for new advisors.','error');
   if(isNew){
-    users[code]={code,name,email:document.getElementById('admin_email').value.trim(),dob:document.getElementById('admin_dob').value,dofa:document.getElementById('admin_dofa').value,pass:np,isManager:document.getElementById('adminToggleMgr').classList.contains('on'),isOps:document.getElementById('adminToggleOps').classList.contains('on'),isSuspended:document.getElementById('adminToggleSuspended').classList.contains('on'),registeredAt:now(),lastActive:null};
+    users[code]={code,name,email:document.getElementById('admin_email').value.trim(),dob:document.getElementById('admin_dob').value,dofa:document.getElementById('admin_dofa').value,pass:np,photo:window._adminPhotoData||null,isManager:document.getElementById('adminToggleMgr').classList.contains('on'),isOps:document.getElementById('adminToggleOps').classList.contains('on'),isSuspended:document.getElementById('adminToggleSuspended').classList.contains('on'),registeredAt:now(),lastActive:null};
   } else {
     users[code].name=name;
     users[code].email=document.getElementById('admin_email').value.trim();
@@ -6273,6 +6299,7 @@ function adminSaveUser(){
     users[code].isOps=document.getElementById('adminToggleOps').classList.contains('on');
     users[code].isSuspended=document.getElementById('adminToggleSuspended').classList.contains('on');
     if(np)users[code].pass=np;
+    users[code].photo=window._adminPhotoData!==undefined?window._adminPhotoData:users[code].photo||null;
   }
   saveUsers(users);
   if(window.FB_READY)window.FB.saveUser(code,users[code]).catch(()=>{});
