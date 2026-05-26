@@ -941,7 +941,7 @@ function getYTDStats(){
   return Object.values(ytd).filter(a=>(a.cases>0||a.premium>0)&&!REVOKED_CODES.has(a.code));
 }
 function renderYTDStats(){
-  const el=document.getElementById('hubYTD');
+  const el=document.getElementById('stdYTD');
   if(!el||!currentUser)return;
   // Sync all months from Firebase then re-render
   if(window.FB_READY&&window.FB.getYearStats){
@@ -1000,9 +1000,8 @@ function _renderYTDStatsInner(el){
   renderYTDTop3();
 }
 function renderYTDTop3(){
-  const hubEl=document.getElementById('hubYTDTop3');
-  const opsEl=document.getElementById('opsYTDTop3');
-  const els=[hubEl,opsEl].filter(Boolean);
+  const hubEl=document.getElementById('stdYTDTop3');
+  const els=[hubEl].filter(Boolean);
   if(!els.length)return;
   // Sync user photos from Firebase then render
   if(window.FB_READY&&window.FB.getAllUsers){
@@ -2002,7 +2001,7 @@ function showPage(p){
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
-  if(p==='standard')setupStandardHero();
+  if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
