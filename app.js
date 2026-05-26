@@ -309,6 +309,9 @@ window.addEventListener('load',()=>{
     },800);
   },{once:true});
 });
+// ── REVOKED CODES — never display in rankings or anywhere on platform ──
+const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
+
 // ── APPROVED ADVISOR WHITELIST ──
 const APPROVED_CODES = new Set([
   'SKA312009', // Adrian Roelfse
@@ -831,7 +834,7 @@ function renderProdStats(data,period){
   const teamEl=document.getElementById('hubTeamStats');
   if(!personalEl||!teamEl||!currentUser)return;
   const periodLabel=formatPeriodLabel(period);
-  const advisors=Object.values(data?.advisors||{});
+  const advisors=Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code));
   if(!advisors.length){personalEl.style.display='none';teamEl.style.display='none';return;}
 
   // ── Personal mini card ──
@@ -917,7 +920,7 @@ function getYTDStats(){
       });
     }catch(e){}
   }
-  return Object.values(ytd).filter(a=>a.cases>0||a.premium>0);
+  return Object.values(ytd).filter(a=>(a.cases>0||a.premium>0)&&!REVOKED_CODES.has(a.code));
 }
 function renderYTDStats(){
   const el=document.getElementById('hubYTD');
@@ -970,7 +973,7 @@ function renderYTDTop3(){
     els.forEach(el=>el.innerHTML=isOps?`<div style="background:#f9f9f9;border:1px dashed #d1d5db;border-radius:12px;padding:12px 14px;text-align:center;color:#9ca3af;font-size:11px;margin-bottom:4px;">No YTD stats yet — add monthly stats via <b>Operations → Production Stats</b></div>`:'');
     return;
   }
-  const sorted=[...stats].sort((a,b)=>b.premium-a.premium);
+  const sorted=[...stats].filter(s=>!REVOKED_CODES.has(s.code)).sort((a,b)=>b.premium-a.premium);
   const _ring={gold:'border:3px solid #f59e0b;box-shadow:0 0 0 2px #fef9c3,0 0 10px rgba(245,158,11,0.45);',silver:'border:3px solid #9ca3af;box-shadow:0 0 0 2px #f1f5f9,0 0 10px rgba(156,163,175,0.4);',bronze:'border:3px solid #cd7f32;box-shadow:0 0 0 2px #fff7ed,0 0 10px rgba(180,83,9,0.35);'};
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
   const _badgeCol={gold:'#f59e0b',silver:'#9ca3af',bronze:'#cd7f32'};
@@ -3691,7 +3694,7 @@ function renderTop3(){
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
   const _badgeCol={gold:'#f59e0b',silver:'#9ca3af',bronze:'#cd7f32'};
   const _regUsers=getUsers();
-  const _card=(r,cls,medal,posLabel)=>r?`
+  const _card=(r,cls,medal,posLabel)=>(r&&REVOKED_CODES.has(r.code))?`<div class="podium-col"></div>`:r?`
     <div class="podium-col">
       <div class="top3-card ${cls}">
         <div style="position:relative;width:52px;margin:0 auto 6px;">
