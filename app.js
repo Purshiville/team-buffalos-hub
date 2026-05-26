@@ -10058,13 +10058,13 @@ function _form_repl_disclosure(u,today){
     {n:'8.',bold:false,text:`<strong>Verification of Personal Details Across Policies</strong><br>
       I confirm that all my personal details, including but not limited to names, surnames, and dates of birth, have been reviewed and corrected where necessary on both previous and new policies to ensure accuracy and to prevent any potential claim-related issues.`},
     {n:'9.',bold:false,text:`<strong>Policy Classification and System Representation</strong><br>
-      I understand that, due to system and administrative processes, my new policy may be reflected as "new business" when viewed on certain systems or when discussed with representatives who may have limited access to my full policy history.<br><br>
-      I acknowledge that, despite this system classification, this policy forms part of a replacement of my previous policy/policies, and must be considered as such.<br><br>
-      I confirm that the replacement process, including the implications, benefits, and potential disadvantages, has been fully explained to me by my financial advisor, and that I understand the nature of this transaction.<br><br>
-      I further acknowledge that any information received from third parties or representatives who are not fully aware of my full replacement context should be considered in conjunction with the advice and documentation provided to me at the time of this replacement.<br><br>
-      To avoid any confusion, administrative errors, or potential claim-related hurdles, I understand that it is advisable to contact the financial advisor and/or manager who assisted me with my replacement for clarification or guidance.`},
-    {n:'10.',bold:true,text:'I confirm that I understand the advice provided to me and that I have had the opportunity to ask questions and receive satisfactory answers.'},
-    {n:'11.',bold:true,text:'I hereby give full written consent to proceed with the replacement policy.'},
+      I understand that, due to system and administrative processes, my new policy may be reflected as "new business" when viewed on certain systems or when discussed with representatives who may have limited access to my full policy history.`},
+    {n:'10.',bold:false,text:'I acknowledge that, despite this system classification, this policy forms part of a replacement of my previous policy/policies, and must be considered as such.'},
+    {n:'11.',bold:false,text:'I confirm that the replacement process, including the implications, benefits, and potential disadvantages, has been fully explained to me by my financial advisor, and that I understand the nature of this transaction.'},
+    {n:'12.',bold:false,text:'I further acknowledge that any information received from third parties or representatives who are not fully aware of my full replacement context should be considered in conjunction with the advice and documentation provided to me at the time of this replacement.'},
+    {n:'13.',bold:false,text:'To avoid any confusion, administrative errors, or potential claim-related hurdles, I understand that it is advisable to contact the financial advisor and/or manager who assisted me with my replacement for clarification or guidance.'},
+    {n:'14.',bold:true,text:'I confirm that I understand the advice provided to me and that I have had the opportunity to ask questions and receive satisfactory answers.'},
+    {n:'15.',bold:true,text:'I hereby give full written consent to proceed with the replacement policy.'},
   ];
   return _fs()+`
   <div class="fd">
