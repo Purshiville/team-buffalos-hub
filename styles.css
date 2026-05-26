@@ -67,7 +67,7 @@ body::before {
 /* Inbox */
 .inbox-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f4f2ed;cursor:pointer;transition:background .12s;}
 .inbox-item:hover{background:#fafaf8;}
-.inbox-item.unread{background:#fdf6ed;}
+.inbox-item.unread{background:#fdf6ed;border-left:3px solid #c9922a;}
 .inbox-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .inbox-icon.notice{background:#e0f2fe;}
 .inbox-icon.stats{background:#d1fae5;}

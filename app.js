@@ -1159,7 +1159,14 @@ function closeInboxPanel(){
 function renderInboxList(){
   const el=document.getElementById('inboxList');
   if(!el||!currentUser)return;
-  const msgs=window._inboxMsgs||[];
+  const msgs=[...(window._inboxMsgs||[])].sort((a,b)=>{
+    const aRead=(a.readBy||[]).includes(currentUser.code);
+    const bRead=(b.readBy||[]).includes(currentUser.code);
+    if(aRead!==bRead)return aRead?1:-1; // unread first
+    const aT=a.sentAt?.toDate?a.sentAt.toDate():a.sentAt?new Date(a.sentAt):0;
+    const bT=b.sentAt?.toDate?b.sentAt.toDate():b.sentAt?new Date(b.sentAt):0;
+    return bT-aT; // newest first within each group
+  });
   if(!msgs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:24px 16px;">No notifications yet.</div>';return;}
   const typeIcon={notice:'📢',stats:'📊',message:'✉️',chat:'💬',reminder:'🗓️'};
   const _allUsers=getUsers();
