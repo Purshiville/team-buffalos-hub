@@ -347,6 +347,7 @@ const ADVISOR_LIST = [
   {code:'SKA315466', name:'Thomas Taylor'},
   {code:'SKA315568', name:'Stefan Barnard'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
+const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
 
 function getUsers(){try{return JSON.parse(localStorage.getItem('tl_v6')||'{}');}catch(e){return{};}}
 function saveUsers(u){try{localStorage.setItem('tl_v6',JSON.stringify(u));}catch(e){}}
@@ -871,7 +872,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${pc};">R${(a.actualPremium||0).toLocaleString()}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${pp}%</td>`+
       `</tr>`;
@@ -885,7 +886,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${cc};">${a.actualCases||0}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${cp}%</td>`+
       `</tr>`;
