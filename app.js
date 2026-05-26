@@ -1230,7 +1230,13 @@ function readInboxItem(id,el,chatFrom,chatFromName){
     el.classList.remove('unread');
     el.querySelector('.inbox-unread-dot')?.remove();
     if(window.FB_READY)window.FB.markInboxRead(id,currentUser.code).catch(()=>{});
+    // Immediately mark in local cache so badge drops without Firebase round-trip
+    const localMsg=(window._inboxMsgs||[]).find(m=>m.id===id);
+    if(localMsg&&!(localMsg.readBy||[]).includes(currentUser.code)){
+      localMsg.readBy=[...(localMsg.readBy||[]),currentUser.code];
+    }
     updateInboxBadge();
+    updateChatBadge();
   }
   if(chatFrom&&chatFromName){
     closeInboxPanel();
@@ -1294,7 +1300,17 @@ function renderChatContacts(){
     contacts.push({code:'PURSHIVILLE',name:'Purshiville Nortje (Manager)'});
     contacts.push({code:'ARLENE',name:'Arlene (Ops)'});
   }
-  contacts.sort((a,b)=>a.name.localeCompare(b.name));
+  // Sort: unread first, then most recent message, then alphabetical
+  contacts.sort((a,b)=>{
+    const cdA=chatMap[getChatId(currentUser.code,a.code)];
+    const cdB=chatMap[getChatId(currentUser.code,b.code)];
+    const unrA=(cdA?.unread||{})[currentUser.code]||0;
+    const unrB=(cdB?.unread||{})[currentUser.code]||0;
+    if(unrA!==unrB)return unrB-unrA;
+    const tA=cdA?.lastAt?.toDate?cdA.lastAt.toDate():cdA?.lastAt?new Date(cdA.lastAt):new Date(0);
+    const tB=cdB?.lastAt?.toDate?cdB.lastAt.toDate():cdB?.lastAt?new Date(cdB.lastAt):new Date(0);
+    return tB-tA;
+  });
   if(!contacts.length){el.innerHTML='<div style="padding:16px;color:#9ca3af;font-size:13px;text-align:center;">No contacts available.</div>';return;}
   const _chatUsers=getUsers();
   el.innerHTML=contacts.map(c=>{
@@ -1319,6 +1335,9 @@ function renderChatContacts(){
 function openChatThread(partnerCode,partnerName){
   _currentChatPartner={code:partnerCode,name:partnerName};
   _currentChatId=getChatId(currentUser.code,partnerCode);
+  // Immediately clear local unread so badge drops without waiting for Firebase
+  const _lc=(window._myChats||[]).find(c=>c.id===_currentChatId);
+  if(_lc){if(!_lc.unread)_lc.unread={};_lc.unread[currentUser.code]=0;updateChatBadge();}
   const el=document.getElementById('chatBody');
   const _partnerPhoto=getUsers()[partnerCode]?.photo||null;
   const _partnerAvatar=_partnerPhoto
