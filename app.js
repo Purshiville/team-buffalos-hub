@@ -1338,7 +1338,7 @@ function renderChatMessages(msgs){
         ?`<img src="${senderPhoto}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-right:6px;align-self:flex-end;">`
         :`<div style="width:26px;height:26px;border-radius:50%;background:${chatColor(m.from||'X')};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:6px;align-self:flex-end;">${senderInitialChat}</div>`
       :'';
-    return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="display:flex;align-items:flex-end;${mine?'justify-content:flex-end;':''}">
+    return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="margin-bottom:8px;">
       ${!mine?senderAvatar:''}
       <div style="max-width:75%;">
         ${!mine?`<div style="font-size:10px;color:#6b7280;margin-bottom:2px;padding:0 2px;">${m.fromName}</div>`:''}
