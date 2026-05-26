@@ -962,3 +962,13 @@ body::before {
 .nav-more-item:hover { background: rgba(255,255,255,0.08); color: #c9922a; }
 .nav-more-item.active { color: #c9922a; font-weight: 700; }
 .nav-more-item-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+/* ── FSP Forms print support ─────────────────── */
+@media print {
+  body > *:not(#formViewerOverlay) { display: none !important; }
+  #formViewerOverlay { display: block !important; position: static !important; overflow: visible !important; height: auto !important; }
+  #fvBar { display: none !important; }
+  #fvContent { overflow: visible !important; padding: 0 !important; }
+  .no-print { display: none !important; }
+  .fd { box-shadow: none !important; border-radius: 0 !important; }
+}

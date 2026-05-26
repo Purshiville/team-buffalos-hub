@@ -233,6 +233,7 @@
     <button class="nav-tab" onclick="showPage('directory')"><span class="nav-icon">📞</span> Directory</button>
     <button class="nav-tab" onclick="showPage('tools')"><span class="nav-icon">🧰</span> Tools</button>
     <button class="nav-tab" onclick="showPage('training')"><span class="nav-icon">📚</span> Training</button>
+    <button class="nav-tab" onclick="showPage('forms')"><span class="nav-icon">📋</span> Forms</button>
     <button class="nav-tab" id="opsTab" onclick="showPage('opsland')" style="display:none;position:relative;">
       <span class="nav-icon">⚙️</span> Operations
       <span id="opsNavBadge" style="display:none;position:absolute;top:6px;right:4px;background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;line-height:1.4;">!</span>
@@ -2808,6 +2809,29 @@ Please send your Proof of Payment to your advisor once done.</div>
     <div style="padding:12px;" id="dailyRegionContent"></div>
   </div>
 
+  <!-- FSP Forms -->
+  <div class="page" id="page-forms">
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);padding:14px 16px;">
+      <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Hub</div>
+      <div style="color:#fff;font-weight:700;font-size:17px;">FSP Forms</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:2px;">Fill on-screen · Sign · Print / Save PDF</div>
+    </div>
+    <div style="padding:10px 12px 6px;">
+      <input id="formsSearch" type="search" placeholder="Search forms..." oninput="filterForms(this.value)"
+        style="width:100%;box-sizing:border-box;padding:9px 12px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;outline:none;background:#f9fafb;">
+    </div>
+    <div style="padding:6px 12px 80px;" id="formsCatalogueEl"></div>
+  </div>
+
+</div>
+<!-- Form Viewer Overlay (sits outside hub-main so it can cover everything) -->
+<div id="formViewerOverlay" style="display:none;position:fixed;inset:0;z-index:9000;background:#f8f8f8;flex-direction:column;overflow:hidden;">
+  <div id="fvBar" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#0d1f3c;color:#fff;flex-shrink:0;">
+    <button onclick="closeFormViewer()" style="background:rgba(255,255,255,0.15);color:#fff;border:none;border-radius:8px;padding:7px 13px;font-size:12px;cursor:pointer;">← Back</button>
+    <div id="fvBarTitle" style="font-size:13px;font-weight:700;color:#f5d98b;flex:1;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;"></div>
+    <button onclick="printForm()" style="background:#f5d98b;color:#0d1f3c;border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;">🖨️ Print / PDF</button>
+  </div>
+  <div id="fvContent" style="flex:1;overflow-y:auto;padding:14px 12px 40px;"></div>
 </div>
 <!-- Inbox panel -->
 <div class="side-panel-overlay" id="inboxOverlay" onclick="closeInboxPanel()"></div>

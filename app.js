@@ -1921,6 +1921,7 @@ function showPage(p){
   if(p==='competitor')renderCompetitors('');
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
+  if(p==='forms')renderFormsPage();
   if(p==='standard')setupStandardHero();
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
@@ -9034,3 +9035,546 @@ function renderDailyRegion(){
     </div>`;
 }
 // ── END DAILY BY REGION ───────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// FSP FORMS SYSTEM
+// ─────────────────────────────────────────────
+
+const FORMS_CAT = [
+  { fsp:'Universal / Generic', color:'#374151', forms:[
+    { id:'cancel_letter',   name:'Cancellation Letter',        desc:'Multi-insurer multi-policy cancellation' },
+    { id:'refund_letter',   name:'Refund Request Letter',      desc:'Request premium refund after cancellation' },
+    { id:'precan_reversal', name:'Pre-Cancellation Reversal',  desc:'Withdraw a previous cancellation request' },
+  ]},
+  { fsp:'Workers Life', color:'#166534', forms:[
+    { id:'wl_cancel',  name:'Cancellation Request',      desc:'30-day written notice to cancel policy' },
+    { id:'wl_payment', name:'Payment Mandate (Debit Order)', desc:'Authorise monthly premium collection' },
+  ]},
+  { fsp:'Assupol', color:'#1e40af', forms:[
+    { id:'assupol_debit', name:'Debit Order Authorization', desc:'Authorise premium debit order per policy' },
+  ]},
+  { fsp:'Sanlam Sky', color:'#003087', forms:[
+    { id:'sansky_cancel',  name:'Cancellation Letter',         desc:'Multi-policy cancellation request' },
+    { id:'sansky_banking', name:'Banking Details Change',      desc:'Update debit order bank account' },
+  ]},
+  { fsp:'Sanlam Life', color:'#003087', forms:[
+    { id:'sanlife_cancel', name:'Cancellation Letter', desc:'Sanlam Life policy cancellation request' },
+  ]},
+  { fsp:'SAPS', color:'#6d28d9', forms:[
+    { id:'saps_cancel', name:'SAPS Cancellation Form', desc:'SAPS member policy cancellation notice' },
+  ]},
+];
+
+function renderFormsPage(){
+  const q=(document.getElementById('formsSearch')?.value||'').toLowerCase().trim();
+  const el=document.getElementById('formsCatalogueEl');
+  if(!el)return;
+  let html='';
+  for(const cat of FORMS_CAT){
+    const vis=cat.forms.filter(f=>!q||f.name.toLowerCase().includes(q)||f.desc.toLowerCase().includes(q)||cat.fsp.toLowerCase().includes(q));
+    if(!vis.length)continue;
+    html+=`<div style="margin-bottom:18px;">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:${cat.color};margin-bottom:7px;padding-left:2px;">${cat.fsp}</div>
+      ${vis.map(f=>`
+        <div onclick="openForm('${f.id}')" style="display:flex;align-items:center;gap:10px;padding:11px 13px;background:#fff;border:1px solid #e5e7eb;border-left:3px solid ${cat.color};border-radius:8px;margin-bottom:6px;cursor:pointer;" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background='#fff'">
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:600;color:#111827;">${f.name}</div>
+            <div style="font-size:11px;color:#6b7280;margin-top:2px;">${f.desc}</div>
+          </div>
+          <div style="color:#d1d5db;font-size:20px;line-height:1;">›</div>
+        </div>`).join('')}
+    </div>`;
+  }
+  el.innerHTML=html||'<div style="text-align:center;padding:40px 0;color:#9ca3af;font-size:13px;">No forms found</div>';
+}
+
+function filterForms(q){ renderFormsPage(); }
+
+// ── Shared form helpers ──────────────────────
+
+function _fs(){
+  // Shared inline styles injected once per form
+  return `<style>
+    .fd{font-family:Arial,sans-serif;font-size:13px;color:#111;max-width:700px;margin:0 auto;background:#fff;padding:20px 22px;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.1);}
+    .fu{border:none;border-bottom:1.5px solid #555;background:transparent;font-size:12.5px;padding:2px 3px;outline:none;font-family:Arial,sans-serif;color:#111;}
+    .fbox{border:1px solid #aaa;border-radius:2px;background:#fff;font-size:12.5px;padding:4px 6px;outline:none;font-family:Arial,sans-serif;color:#111;}
+    .ffr{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+    .ffr label{white-space:nowrap;font-size:12px;font-weight:600;min-width:78px;}
+    .fsec{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;background:#f0f0f0;border:1px solid #ccc;padding:5px 8px;margin:14px 0 8px;}
+    .sig-wrap{margin-top:6px;}
+    .sig-wrap canvas{border:1px solid #aaa;border-radius:3px;cursor:crosshair;display:block;touch-action:none;background:#fff;}
+    .sig-wrap button{font-size:10px;color:#888;background:none;border:none;cursor:pointer;padding:2px 0;}
+    @media print{.no-print{display:none!important;}}
+  </style>`;
+}
+
+function _sigBlock(id,w=240,h=75){
+  return `<div class="sig-wrap">
+    <canvas id="${id}" data-sig="1" width="${w}" height="${h}"></canvas>
+    <button class="no-print" onclick="clearCanvas('${id}')">✕ Clear</button>
+  </div>`;
+}
+
+function _today(){ return new Date().toISOString().slice(0,10); }
+
+// ── Open / close / print ────────────────────
+
+function openForm(id){
+  const overlay=document.getElementById('formViewerOverlay');
+  if(!overlay)return;
+  const u=currentUser||{};
+  const today=_today();
+  const MAP={
+    cancel_letter:   {title:'Cancellation Letter',              html:_form_cancel_letter(u,today)},
+    refund_letter:   {title:'Refund Request Letter',            html:_form_refund_letter(u,today)},
+    precan_reversal: {title:'Pre-Cancellation Reversal',        html:_form_precan_reversal(u,today)},
+    wl_cancel:       {title:'Workers Life — Cancellation Request', html:_form_wl_cancel(u,today)},
+    wl_payment:      {title:'Workers Life — Payment Mandate',   html:_form_wl_payment(u,today)},
+    assupol_debit:   {title:'Assupol — Debit Order Authorization', html:_form_assupol_debit(u,today)},
+    sansky_cancel:   {title:'Sanlam Sky — Cancellation Letter', html:_form_sansky_cancel(u,today)},
+    sansky_banking:  {title:'Sanlam Sky — Banking Details Change', html:_form_sansky_banking(u,today)},
+    sanlife_cancel:  {title:'Sanlam Life — Cancellation Letter',html:_form_sanlife_cancel(u,today)},
+    saps_cancel:     {title:'SAPS — Cancellation Form',         html:_form_saps_cancel(u,today)},
+  };
+  const form=MAP[id];if(!form)return;
+  document.getElementById('fvBarTitle').textContent=form.title;
+  document.getElementById('fvContent').innerHTML=form.html;
+  overlay.style.display='flex';
+  document.querySelectorAll('canvas[data-sig]').forEach(c=>initSigCanvas(c.id));
+}
+
+function closeFormViewer(){
+  const o=document.getElementById('formViewerOverlay');
+  if(o){o.style.display='none';}
+  document.getElementById('fvContent').innerHTML='';
+}
+
+function printForm(){ window.print(); }
+
+function initSigCanvas(id){
+  const c=document.getElementById(id);
+  if(!c||c._si)return;
+  c._si=true;
+  const ctx=c.getContext('2d');
+  ctx.strokeStyle='#111';ctx.lineWidth=2;ctx.lineCap='round';ctx.lineJoin='round';
+  let d=false,lx=0,ly=0;
+  const gp=e=>{const r=c.getBoundingClientRect();return e.touches?[e.touches[0].clientX-r.left,e.touches[0].clientY-r.top]:[e.clientX-r.left,e.clientY-r.top];};
+  c.addEventListener('mousedown',e=>{d=true;[lx,ly]=gp(e);});
+  c.addEventListener('mousemove',e=>{if(!d)return;const [x,y]=gp(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];});
+  c.addEventListener('mouseup',()=>d=false);
+  c.addEventListener('mouseleave',()=>d=false);
+  c.addEventListener('touchstart',e=>{e.preventDefault();d=true;[lx,ly]=gp(e);},{passive:false});
+  c.addEventListener('touchmove',e=>{if(!d)return;e.preventDefault();const [x,y]=gp(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];},{passive:false});
+  c.addEventListener('touchend',()=>d=false);
+}
+
+function clearCanvas(id){
+  const c=document.getElementById(id);
+  if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
+}
+
+// ── Form 1: Universal Cancellation Letter ───
+
+function _form_cancel_letter(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:18px;">
+      <div style="flex:1;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">CLIENT ADDRESS</div>
+        ${[1,2,3,4].map(i=>`<input type="text" placeholder="Address line ${i}" class="fu" style="display:block;width:100%;margin-bottom:6px;">`).join('')}
+      </div>
+      <div style="flex:1;text-align:right;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">TO (FSP / INSURER ADDRESS)</div>
+        ${[1,2,3,4].map(i=>`<input type="text" placeholder="Address line ${i}" class="fu" style="display:block;width:100%;margin-bottom:6px;text-align:right;">`).join('')}
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #111;padding-bottom:5px;margin:16px 0 10px;letter-spacing:.3px;">CANCELLATION POLICY NR :</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 20px;margin-bottom:16px;">
+      ${[1,2,3,4,5,6,7,8].map(i=>`<input type="text" placeholder="Policy number ${i}" class="fu" style="width:100%;">`).join('')}
+    </div>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:14px;">
+      Please be so kind as to cancel ALL above mentioned policies with effect from
+      <input type="text" placeholder="________" class="fu" style="width:120px;">
+      as I have received a better offer.
+    </p>
+    <p style="font-size:13px;margin-bottom:22px;">Kind regards,</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <div class="ffr"><label>Name:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label>ID no:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature:</label>
+          ${_sigBlock('sig_cl_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 2: Universal Refund Letter ─────────
+
+function _form_refund_letter(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:16px;font-weight:700;margin-bottom:4px;">Refund Request.</div>
+    <p style="font-size:13px;margin-bottom:12px;">To whom it may concern: Dear Sir/Madam,</p>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:14px;">
+      I, <input type="text" placeholder="Full name" class="fu" style="width:200px;"> with identity number
+      <input type="text" placeholder="13-digit ID" class="fu" style="width:140px;">, hereby request my full refund <strong>IMMEDIATELY</strong>
+      that was deducted from my pay slip after my policy was canceled already.
+    </p>
+    <p style="font-size:13px;font-weight:700;margin-bottom:8px;">Policy numbers to be refunded:</p>
+    <div style="margin-bottom:16px;">
+      ${[1,2,3,4,5].map(i=>`<div class="ffr"><label style="min-width:30px;">${i}.</label><input type="text" placeholder="Policy number" class="fu" style="flex:1;"></div>`).join('')}
+    </div>
+    <p style="font-size:13px;margin-bottom:16px;">Please see supporting documentation attached to this letter.</p>
+    <div class="fsec">Client / Banking Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:12px;">
+      <div class="ffr"><label>Name & Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Mobile:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account no:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:16px;">
+      <div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature:</label>
+          ${_sigBlock('sig_ref_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 3: Pre-Cancellation Reversal ───────
+
+function _form_precan_reversal(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:18px;border-bottom:2px solid #111;padding-bottom:6px;">CLIENT POLICY CANCELLATION REVERSAL REQUEST</div>
+    <div class="ffr"><label>Client Full Name:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="ffr"><label>Client ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="ffr" style="align-items:flex-start;"><label style="padding-top:4px;">Policy Number(s):</label><textarea class="fbox" rows="3" style="flex:1;resize:vertical;font-size:12px;"></textarea></div>
+    <p style="font-size:13px;line-height:1.8;margin:16px 0;">
+      I, the undersigned, confirm that I do <strong>not</strong> wish to cancel the policies listed above and hereby give full permission for these policies to remain active.
+    </p>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:20px;">
+      I acknowledge that I had previously requested to cancel the policies, but I now wish to withdraw that request and keep the policies active.
+    </p>
+    <p style="font-size:13px;margin-bottom:20px;">
+      Signed at <input type="text" placeholder="location" class="fu" style="width:160px;"> on this
+      <input type="text" placeholder="day" class="fu" style="width:50px;"> day of
+      <input type="text" placeholder="month" class="fu" style="width:100px;"> 20<input type="text" placeholder="YY" class="fu" style="width:40px;">.
+    </p>
+    <div class="ffr" style="align-items:flex-start;">
+      <label style="padding-top:6px;">Client Signature:</label>
+      ${_sigBlock('sig_pcr_client')}
+    </div>
+  </div>`;
+}
+
+// ── Form 4: Workers Life Cancellation ───────
+
+function _form_wl_cancel(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;border-bottom:2px solid #111;padding-bottom:6px;">CANCELLATION REQUEST</div>
+    <div style="font-size:11px;color:#666;margin-bottom:14px;font-style:italic;">Please attach a copy of ID</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;">
+      <div class="ffr"><label>Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Persal No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell Phone:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+    </div>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:12px;">Herewith please receive my 30 days cancellation notice in writing to cancel the following policy(s):</p>
+    <div style="margin-bottom:16px;">
+      <div class="ffr"><label>1.</label><input type="text" placeholder="Policy number" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>2.</label><input type="text" placeholder="Policy number" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Reason for Cancellation</div>
+    <textarea class="fbox" rows="5" style="width:100%;box-sizing:border-box;resize:vertical;font-size:12.5px;"></textarea>
+    <div style="margin-top:18px;">
+      <p style="font-size:13px;margin-bottom:6px;">Signed at <input type="text" placeholder="location" class="fu" style="width:150px;"> on this <input type="text" placeholder="day" class="fu" style="width:50px;"> day of <input type="text" placeholder="month/year" class="fu" style="width:110px;"></p>
+      <div class="ffr" style="align-items:flex-start;margin-top:12px;">
+        <label style="padding-top:6px;">Client Signature:</label>
+        ${_sigBlock('sig_wlc_client')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 5: Workers Life Payment Mandate ────
+
+function _form_wl_payment(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Payment Mandate</div>
+        <div style="font-size:11px;color:#666;margin-top:2px;">WLA 202</div>
+      </div>
+    </div>
+    <div class="fsec">Payer Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>First Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Other Names:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Persal No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell Phone:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Contact Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0 14px;">
+      <div class="ffr"><label style="min-width:50px;">Tel (W):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:50px;">Tel (H):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:50px;">Cell:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <p style="font-size:12px;line-height:1.7;margin-bottom:14px;color:#333;">
+      I hereby authorise Workers Life Assurance Company Limited to issue and deliver payment instructions to its banker for collection against my account on condition that the sum will never exceed my obligations as agreed to in the Policy and continuing until this authority is terminated by me by giving Workerslife notice in writing of not less than 20 ordinary working days.
+    </p>
+    <div class="fsec">Bank Account Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Account Holder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Bank Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Savings</option><option>Cheque</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Debit Day:</label><input type="text" placeholder="e.g. 1st" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Monthly Premium:</label><span style="font-size:13px;font-weight:600;">R </span><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;">
+      <div>
+        <div class="ffr"><label>Signed at:</label><input type="text" class="fu" style="width:160px;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:160px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Client Signature:</label>
+          ${_sigBlock('sig_wlp_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 6: Assupol Debit Order ─────────────
+
+function _form_assupol_debit(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Debit Order Authorization</div>
+    <div style="font-size:11px;color:#666;margin-bottom:14px;">Complete one form per policy. Submit to policyservice@assupol.co.za or fax 0861 000 395.</div>
+    <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="fsec">Policyholder Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Initials:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Tel (Work):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Tel (Home):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="ffr"><label>Postal Code:</label><input type="text" class="fu" style="width:80px;"></div>
+    <div class="fsec">Debit Order / Payment Details</div>
+    <p style="font-size:12px;margin-bottom:10px;line-height:1.7;color:#333;">
+      I will pay by debit order. I authorize Assupol to draw premiums from my bank account. If the premium changes in terms of the policy, the changed premium may likewise be drawn.
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Current</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Debit Day:</label><input type="text" placeholder="day of month" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Amount (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Start Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <div class="ffr"><label>Account Holder Name:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:160px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature of Premium-Payer:</label>
+          ${_sigBlock('sig_ass_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 7: Sanlam Sky Cancellation ─────────
+
+function _form_sansky_cancel(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:18px;">
+      <div style="flex:1;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">CLIENT ADDRESS</div>
+        ${[1,2,3,4].map(i=>`<input type="text" placeholder="Address line ${i}" class="fu" style="display:block;width:100%;margin-bottom:6px;">`).join('')}
+      </div>
+      <div style="flex:1;text-align:right;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">TO: SANLAM SKY</div>
+        <div style="font-size:12px;color:#444;line-height:1.6;">Sanlam Business Park<br>9 to 13 West Street<br>Houghton, 2192<br>info@sanlamsky.co.za</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #111;padding-bottom:5px;margin:16px 0 10px;letter-spacing:.3px;">CANCELLATION POLICY NR :</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 20px;margin-bottom:16px;">
+      ${[1,2,3,4,5,6,7,8].map(i=>`<input type="text" placeholder="Policy number ${i}" class="fu" style="width:100%;">`).join('')}
+    </div>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:14px;">
+      Please be so kind as to cancel ALL above mentioned policies with effect from
+      <input type="text" placeholder="________" class="fu" style="width:120px;">
+      as I have received a better offer.
+    </p>
+    <p style="font-size:13px;margin-bottom:22px;">Kind regards,</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+      <div>
+        <div class="ffr"><label>Name:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label>ID no:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature:</label>
+          ${_sigBlock('sig_ssc_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 8: Sanlam Sky Banking Details ──────
+
+function _form_sansky_banking(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Bank Details Change Form</div>
+    <div style="font-size:11px;color:#555;margin-bottom:14px;">Sanlam Sky · Email: info@sanlamsky.co.za · Fax: 0861 235 329</div>
+    <div style="font-size:11px;color:#666;background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">
+      Attach: ① Certified copy of ID ② Stamped bank statement or cancelled cheque (not older than 3 months)
+    </div>
+    <div class="fsec">A. Policyholder Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px;">
+      <div class="ffr"><label style="min-width:40px;">Title:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:50px;">Initials:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:60px;">Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:8px;">
+      <div class="ffr"><label>Full Names:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Contact No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID / Passport:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="margin-bottom:6px;">
+      <div style="font-size:11px;font-weight:700;margin-bottom:5px;">List all policies to be changed:</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;">
+        ${[1,2,3,4].map(i=>`<input type="text" placeholder="Policy ${i}" class="fu" style="width:100%;">`).join('')}
+      </div>
+    </div>
+    <div class="fsec">B. Premium Deduction Authority</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:8px;">
+      <div class="ffr"><label>Account Holder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Bank Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Current (Cheque)</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Monthly Premium:</label><span>R </span><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Deduction Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+    </div>
+    <div style="display:flex;gap:24px;margin-top:16px;flex-wrap:wrap;">
+      <div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:160px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Policyholder Signature:</label>
+          ${_sigBlock('sig_ssb_client')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 9: Sanlam Life Cancellation ────────
+
+function _form_sanlife_cancel(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="display:flex;justify-content:space-between;gap:20px;margin-bottom:18px;">
+      <div style="flex:1;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">CLIENT ADDRESS</div>
+        ${[1,2,3,4].map(i=>`<input type="text" placeholder="Address line ${i}" class="fu" style="display:block;width:100%;margin-bottom:6px;">`).join('')}
+      </div>
+      <div style="flex:1;text-align:right;">
+        <div style="font-size:10px;color:#888;margin-bottom:4px;font-weight:700;">TO: SANLAM LIFE</div>
+        <div style="font-size:12px;color:#444;line-height:1.6;">Sanlam Life Insurance Ltd<br>2 Strand Road, Bellville 7530<br>PO Box 1, Sanlamhof 7532</div>
+      </div>
+    </div>
+    <div style="font-size:13px;font-weight:700;text-transform:uppercase;border-bottom:2px solid #111;padding-bottom:5px;margin:16px 0 10px;letter-spacing:.3px;">CANCELLATION POLICY NR :</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 20px;margin-bottom:16px;">
+      ${[1,2,3,4,5,6].map(i=>`<input type="text" placeholder="Policy number ${i}" class="fu" style="width:100%;">`).join('')}
+    </div>
+    <p style="font-size:13px;line-height:1.8;margin-bottom:14px;">
+      Please be so kind as to cancel ALL above mentioned policies with effect from
+      <input type="text" placeholder="________" class="fu" style="width:120px;">
+      as I have received a better offer.
+    </p>
+    <p style="font-size:13px;margin-bottom:22px;">Kind regards,</p>
+    <div>
+      <div class="ffr"><label>Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID no:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+      <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+        <label style="padding-top:6px;">Signature:</label>
+        ${_sigBlock('sig_slc_client')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 10: SAPS Cancellation ───────────────
+
+function _form_saps_cancel(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:16px;border-bottom:2px solid #111;padding-bottom:6px;">SAPS POLICY CANCELLATION FORM</div>
+    <div style="font-size:11px;color:#666;margin-bottom:14px;font-style:italic;">For SAPS members cancelling deductions via salary</div>
+    <div class="fsec">Member Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:12px;">
+      <div class="ffr"><label>Full Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>SAPS Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Rank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Station:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Province:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Policy / Insurer Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px 20px;margin-bottom:14px;">
+      ${[1,2,3,4].map(i=>`
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;font-weight:600;min-width:60px;">Policy ${i}:</span>
+          <input type="text" placeholder="Policy number" class="fu" style="flex:1;">
+        </div>`).join('')}
+    </div>
+    <p style="font-size:13px;line-height:1.7;margin-bottom:16px;">
+      I hereby request the cancellation of the above mentioned policies and authorise the stopping of all related salary deductions with immediate effect.
+    </p>
+    <div style="margin-top:10px;">
+      <p style="font-size:13px;margin-bottom:6px;">Signed at <input type="text" placeholder="location" class="fu" style="width:150px;"> on <input type="date" class="fu" value="${today}" style="width:150px;"></p>
+      <div class="ffr" style="align-items:flex-start;margin-top:12px;">
+        <label style="padding-top:6px;">Member Signature:</label>
+        ${_sigBlock('sig_saps_client')}
+      </div>
+    </div>
+  </div>`;
+}
