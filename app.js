@@ -552,7 +552,7 @@ function enterHub(user){
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
-  const formsTab=document.querySelector('.nav-tab[onclick*="\'forms\'"]');if(formsTab)formsTab.style.display=user.isManager?'inline-flex':'none';
+  const formsTab=document.querySelector('.nav-tab[onclick*="\'forms\'"]');if(formsTab)formsTab.style.display='inline-flex';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
@@ -1922,7 +1922,7 @@ function showPage(p){
   if(p==='competitor')renderCompetitors('');
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
-  if(p==='forms'){if(currentUser&&currentUser.isManager)renderFormsPage();else showPage('hub');return;}
+  if(p==='forms'){renderFormsPage();return;}
   if(p==='standard')setupStandardHero();
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
@@ -9042,38 +9042,42 @@ function renderDailyRegion(){
 // ─────────────────────────────────────────────
 
 const FORMS_CAT = [
-  { fsp:'Universal / Generic', color:'#374151', forms:[
+  { fsp:'Universal Forms', color:'#374151', forms:[
     { id:'cancel_letter',   name:'Cancellation Letter',        desc:'Multi-insurer multi-policy cancellation' },
     { id:'refund_letter',   name:'Refund Request Letter',      desc:'Request premium refund after cancellation' },
     { id:'precan_reversal', name:'Pre-Cancellation Reversal',  desc:'Withdraw a previous cancellation request' },
   ]},
-  { fsp:'Workers Life', color:'#166534', forms:[
+  { fsp:'Regulatory', color:'#7c3aed', forms:[
+    { id:'rpar', name:'Replacement Product Advice Record (RPAR)', desc:'Client replacement disclosure — adviser + client sign' },
+  ]},
+  // FSP-specific forms — hidden for now
+  { fsp:'_Workers Life', color:'#166534', forms:[
     { id:'wl_cancel',  name:'Cancellation Request',      desc:'30-day written notice to cancel policy' },
     { id:'wl_payment', name:'Payment Mandate (Debit Order)', desc:'Authorise monthly premium collection' },
   ]},
-  { fsp:'Assupol', color:'#1e40af', forms:[
+  { fsp:'_Assupol', color:'#1e40af', forms:[
     { id:'assupol_debit', name:'Debit Order Authorization', desc:'Authorise premium debit order per policy' },
   ]},
-  { fsp:'Sanlam Sky', color:'#003087', forms:[
+  { fsp:'_Sanlam Sky', color:'#003087', forms:[
     { id:'sansky_cancel',  name:'Cancellation Letter',         desc:'Multi-policy cancellation request' },
     { id:'sansky_banking', name:'Banking Details Change',      desc:'Update debit order bank account' },
   ]},
-  { fsp:'Sanlam Life', color:'#003087', forms:[
+  { fsp:'_Sanlam Life', color:'#003087', forms:[
     { id:'sanlife_cancel', name:'Cancellation Letter', desc:'Sanlam Life policy cancellation request' },
   ]},
-  { fsp:'SAPS', color:'#6d28d9', forms:[
+  { fsp:'_SAPS', color:'#6d28d9', forms:[
     { id:'saps_cancel', name:'SAPS Cancellation Form', desc:'SAPS member policy cancellation notice' },
   ]},
-  { fsp:'Metropolitan', color:'#c2185b', forms:[
+  { fsp:'_Metropolitan', color:'#c2185b', forms:[
     { id:'metro_debit',   name:'Bank Debit Order',           desc:'Arrange policy payment by debit order' },
     { id:'metro_paidup',  name:'Application to Make Policy Paid-Up', desc:'Convert policy to paid-up status' },
     { id:'metro_surrender', name:'Full Surrender Application', desc:'Surrender policy and receive surrender value' },
   ]},
-  { fsp:'Hollard Specialist Life', color:'#b45309', forms:[
+  { fsp:'_Hollard Specialist Life', color:'#b45309', forms:[
     { id:'hsl_debit',    name:'Debit Order Authorisation (IL020)', desc:'Authorise monthly premium debit order' },
     { id:'hsl_surrender', name:'Application to Surrender (CS003)', desc:'Full or partial policy surrender' },
   ]},
-  { fsp:'AVBOB', color:'#065f46', forms:[
+  { fsp:'_AVBOB', color:'#065f46', forms:[
     { id:'avbob_debit',    name:'Debit Order Authorisation', desc:'Authorise premium and debt debit order' },
     { id:'avbob_surrender', name:'Surrender Application',    desc:'Apply for surrender of policy / savings plan' },
   ]},
@@ -9085,6 +9089,7 @@ function renderFormsPage(){
   if(!el)return;
   let html='';
   for(const cat of FORMS_CAT){
+    if(cat.fsp.startsWith('_'))continue;
     const vis=cat.forms.filter(f=>!q||f.name.toLowerCase().includes(q)||f.desc.toLowerCase().includes(q)||cat.fsp.toLowerCase().includes(q));
     if(!vis.length)continue;
     html+=`<div style="margin-bottom:18px;">
@@ -9156,6 +9161,7 @@ function openForm(id){
     hsl_surrender:   {title:'Hollard Specialist — Surrender Application',     html:_form_hsl_surrender(u,today)},
     avbob_debit:     {title:'AVBOB — Debit Order Authorisation',html:_form_avbob_debit(u,today)},
     avbob_surrender: {title:'AVBOB — Surrender Application',   html:_form_avbob_surrender(u,today)},
+    rpar:            {title:'Replacement Product Advice Record (RPAR)', html:_form_rpar(u,today)},
   };
   const form=MAP[id];if(!form)return;
   document.getElementById('fvBarTitle').textContent=form.title;
@@ -10025,6 +10031,111 @@ function _form_avbob_surrender(u,today){
     <div class="ffr" style="align-items:flex-start;">
       <label style="padding-top:6px;">Signature of Policyholder:</label>
       ${_sigBlock('sig_avbob_surr')}
+    </div>
+  </div>`;
+}
+
+// ── RPAR: Replacement Product Advice Record ──
+
+function _form_rpar(u,today){
+  const advName=u.name||'';
+  const advCode=u.code||'';
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Replacement Product Advice Record (RPAR)</div>
+    <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">To be completed in consultation with your client. This does <strong>not</strong> serve as a cancellation of the replaced policy — the client must also advise the insurer in writing.</div>
+
+    <div class="fsec">1. General Information</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Full Names of Policyholder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID / Passport No of Policyholder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Full Names of Financial Adviser:</label><input type="text" class="fu" style="flex:1;" value="${advName}"></div>
+      <div class="ffr"><label>Broker / Reference Code:</label><input type="text" class="fu" style="flex:1;" value="${advCode}"></div>
+      <div class="ffr"><label>Name of FSP Recommending Replacement:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>FSP Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Date of Inception of Policy Being Replaced:</label><input type="date" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of FSP(s) of Replaced Policy:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;">
+      <div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:6px;">New Policy</div>
+        <div class="ffr"><label style="min-width:90px;">Policy / App No:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label style="min-width:90px;">Insurer:</label><input type="text" class="fu" style="flex:1;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:700;margin-bottom:6px;">Policy Being Replaced</div>
+        <div class="ffr"><label style="min-width:90px;">Policy / App No:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label style="min-width:90px;">Insurer:</label><input type="text" class="fu" style="flex:1;"></div>
+      </div>
+    </div>
+
+    <div class="fsec">2. Policy Comparison</div>
+    <div style="overflow-x:auto;margin-bottom:14px;">
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:560px;">
+        <thead>
+          <tr style="background:#0d1f3c;color:#fff;">
+            <th style="padding:7px 8px;text-align:left;width:38%;font-weight:600;">Feature</th>
+            <th style="padding:7px 8px;text-align:center;font-weight:600;">New Policy</th>
+            <th style="padding:7px 8px;text-align:center;font-weight:600;">Replaced Policy 1</th>
+            <th style="padding:7px 8px;text-align:center;font-weight:600;">Replaced Policy 2</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${[
+            'Product Type (Funeral / Investment / RA)',
+            'Policy / Quotation Number',
+            'Premium (and other fees)',
+            'Names of Lives Assured and Date of Birth',
+            'Cover Amount (incl. per life assured)',
+            'Waiting Periods (incl. waiting period completed)',
+            'Special Terms and Conditions',
+            'Exclusions of Liability (incl. suicide)',
+            'Restrictions (circumstances where benefits not paid)',
+            'Penalties (incl. early termination)',
+            'Loadings (additional fees due to age / health)',
+            'Tax Implications',
+            'Investment Risk',
+            'Accessibility of Funds',
+            'Vested rights / guaranteed benefits that will be lost',
+            'Any other policy benefits / special features',
+          ].map((row,i)=>`
+            <tr style="background:${i%2===0?'#f9fafb':'#fff'};">
+              <td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;color:#374151;font-weight:${i<4?'600':'400'};">${row}</td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
+              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="fsec">3. Reasons for Replacement</div>
+    <p style="font-size:12px;margin-bottom:6px;color:#555;">Provide the reasons why the replacement product was considered more suitable to the client's needs:</p>
+    <textarea class="fbox" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;margin-bottom:14px;"></textarea>
+
+    <div class="fsec">4. Declaration &amp; Signatures</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:10px;">
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#0d1f3c;">FINANCIAL ADVISER</div>
+        <p style="font-size:10.5px;color:#555;line-height:1.6;margin-bottom:10px;">I confirm that I have taken all reasonable steps to confirm that the information in this RPAR is true and correct, and that I have fully discharged my duties as set out in section 8(1)(d) and 9(1)(d) of the General Code of Conduct.</p>
+        <div class="ffr"><label style="min-width:60px;">Name:</label><input type="text" class="fu" style="flex:1;" value="${advName}"></div>
+        <div class="ffr"><label style="min-width:60px;">Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+        <div class="ffr"><label style="min-width:60px;">Tel / Email:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;color:#777;margin-bottom:4px;">Adviser Signature</div>
+          ${_sigBlock('sig_rpar_adv',220,70)}
+        </div>
+      </div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#0d1f3c;">POLICYHOLDER / CLIENT</div>
+        <p style="font-size:10.5px;color:#555;line-height:1.6;margin-bottom:10px;">I confirm that the financial adviser has fully explained the material differences between the new policy and the replaced policy(cies), and the implications of replacing my previous policy(cies). I understand the consequences.</p>
+        <div class="ffr"><label style="min-width:60px;">Name:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div class="ffr"><label style="min-width:60px;">Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+        <div style="margin-top:8px;">
+          <div style="font-size:10px;color:#777;margin-bottom:4px;">Client Signature</div>
+          ${_sigBlock('sig_rpar_client',220,70)}
+        </div>
+      </div>
     </div>
   </div>`;
 }
