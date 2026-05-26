@@ -1071,9 +1071,13 @@ function startInboxListener(){
   if(_inboxUnsub)_inboxUnsub();
   _inboxUnsub=window.FB.onInbox(currentUser.code,msgs=>{
     window._inboxMsgs=msgs;
-    renderInboxList();
-    updateInboxBadge();
+    updateInboxBadge();   // also calls _updateUnreadTabCount
     updateChatBadge();
+    // Refresh whichever inbox tab is currently visible
+    const unreadTabActive=document.getElementById('inboxTabUnread')?.classList.contains('active');
+    const receivedTabActive=document.getElementById('inboxTabReceived')?.classList.contains('active');
+    if(unreadTabActive)renderUnreadList();
+    else if(receivedTabActive)renderInboxList();
   });
 }
 function startSentListener(){
