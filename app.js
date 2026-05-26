@@ -1004,6 +1004,17 @@ function renderYTDTop3(){
   const opsEl=document.getElementById('opsYTDTop3');
   const els=[hubEl,opsEl].filter(Boolean);
   if(!els.length)return;
+  // Sync user photos from Firebase then render
+  if(window.FB_READY&&window.FB.getAllUsers){
+    window.FB.getAllUsers().then(fbUsers=>{
+      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);}
+      _renderYTDTop3Inner(els);
+    }).catch(()=>_renderYTDTop3Inner(els));
+  } else {
+    _renderYTDTop3Inner(els);
+  }
+}
+function _renderYTDTop3Inner(els){
   const stats=getYTDStats();
   const yr=new Date().getFullYear();
   if(!stats.length){
