@@ -9048,7 +9048,7 @@ const FORMS_CAT = [
     { id:'precan_reversal', name:'Pre-Cancellation Reversal',  desc:'Withdraw a previous cancellation request' },
   ]},
   { fsp:'Regulatory', color:'#7c3aed', forms:[
-    { id:'rpar', name:'Replacement Product Advice Record (RPAR)', desc:'Client replacement disclosure — adviser + client sign' },
+    { id:'repl_disclosure', name:'Replacement Disclosure & Client Acknowledgment', desc:'Client confirms voluntary replacement — adviser + client sign' },
   ]},
   // FSP-specific forms — hidden for now
   { fsp:'_Workers Life', color:'#166534', forms:[
@@ -9161,7 +9161,7 @@ function openForm(id){
     hsl_surrender:   {title:'Hollard Specialist — Surrender Application',     html:_form_hsl_surrender(u,today)},
     avbob_debit:     {title:'AVBOB — Debit Order Authorisation',html:_form_avbob_debit(u,today)},
     avbob_surrender: {title:'AVBOB — Surrender Application',   html:_form_avbob_surrender(u,today)},
-    rpar:            {title:'Replacement Product Advice Record (RPAR)', html:_form_rpar(u,today)},
+    repl_disclosure: {title:'Replacement Disclosure & Client Acknowledgment', html:_form_repl_disclosure(u,today)},
   };
   const form=MAP[id];if(!form)return;
   document.getElementById('fvBarTitle').textContent=form.title;
@@ -10035,106 +10035,67 @@ function _form_avbob_surrender(u,today){
   </div>`;
 }
 
-// ── RPAR: Replacement Product Advice Record ──
+// ── Replacement Disclosure & Client Acknowledgment ──
 
-function _form_rpar(u,today){
+function _form_repl_disclosure(u,today){
   const advName=u.name||'';
-  const advCode=u.code||'';
+  const clauses=[
+    {n:'1.',bold:true, text:'I have voluntarily opted in to proceed with this replacement and confirm that this decision was made of my own free will.'},
+    {n:'2.',bold:true, text:'I confirm that I have been fully informed of the implications of replacing my existing policy/policies.'},
+    {n:'3.',bold:false,text:`<strong>I understand that:</strong><br>
+      &nbsp;– Existing policies will be cancelled where applicable.<br>
+      &nbsp;– The current insurer(s) may contact me via SMS, phone call, or other means to confirm cancellation and may attempt to retain my policy.<br>
+      &nbsp;– The new policy may reflect as "new business" on systems, but I acknowledge that it forms part of a replacement as explained to me.`},
+    {n:'4.',bold:false,text:`<strong>Waiting Periods – Disclosure and Understanding</strong><br>
+      I confirm that waiting periods have been fully explained to me and that I understand the following:<br>
+      &nbsp;– Waiting periods that have already been served on existing policies for the same lives and equivalent cover amounts will be waived under the replacement policy where applicable.<br>
+      &nbsp;– Any new lives insured and/or additional or increased cover amounts that have not previously served a waiting period will be subject to new waiting periods, exclusions, or underwriting terms.<br>
+      &nbsp;– I understand how these conditions apply specifically to my replacement.`},
+    {n:'5.',bold:true, text:'I acknowledge that I may lose certain benefits, values, or features associated with my existing policy/policies, depending on the structure of the replacement.'},
+    {n:'6.',bold:true, text:'I confirm that I have not been misled, pressured, or unduly influenced into making this decision.'},
+    {n:'7.',bold:false,text:`<strong>Acknowledgment of External Policy Movement / Cancellation</strong><br>
+      I acknowledge that this replacement involves the movement and/or cancellation of existing policies with external insurers where applicable, and I provide full consent for such cancellations to be processed.`},
+    {n:'8.',bold:false,text:`<strong>Verification of Personal Details Across Policies</strong><br>
+      I confirm that all my personal details, including but not limited to names, surnames, and dates of birth, have been reviewed and corrected where necessary on both previous and new policies to ensure accuracy and to prevent any potential claim-related issues.`},
+    {n:'9.',bold:false,text:`<strong>Policy Classification and System Representation</strong><br>
+      I understand that, due to system and administrative processes, my new policy may be reflected as "new business" when viewed on certain systems or when discussed with representatives who may have limited access to my full policy history.<br><br>
+      I acknowledge that, despite this system classification, this policy forms part of a replacement of my previous policy/policies, and must be considered as such.<br><br>
+      I confirm that the replacement process, including the implications, benefits, and potential disadvantages, has been fully explained to me by my financial advisor, and that I understand the nature of this transaction.<br><br>
+      I further acknowledge that any information received from third parties or representatives who are not fully aware of my full replacement context should be considered in conjunction with the advice and documentation provided to me at the time of this replacement.<br><br>
+      To avoid any confusion, administrative errors, or potential claim-related hurdles, I understand that it is advisable to contact the financial advisor and/or manager who assisted me with my replacement for clarification or guidance.`},
+    {n:'10.',bold:true,text:'I confirm that I understand the advice provided to me and that I have had the opportunity to ask questions and receive satisfactory answers.'},
+    {n:'11.',bold:true,text:'I hereby give full written consent to proceed with the replacement policy.'},
+  ];
   return _fs()+`
   <div class="fd">
-    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Replacement Product Advice Record (RPAR)</div>
-    <div style="font-size:11px;color:#555;margin-bottom:10px;line-height:1.6;">To be completed in consultation with your client. This does <strong>not</strong> serve as a cancellation of the replaced policy — the client must also advise the insurer in writing.</div>
+    <div style="text-align:center;text-decoration:underline;font-size:15px;font-weight:700;margin-bottom:20px;">Replacement Disclosure &amp; Client Acknowledgment</div>
 
-    <div class="fsec">1. General Information</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
-      <div class="ffr"><label>Full Names of Policyholder:</label><input type="text" class="fu" style="flex:1;"></div>
-      <div class="ffr"><label>ID / Passport No of Policyholder:</label><input type="text" class="fu" style="flex:1;"></div>
-      <div class="ffr"><label>Full Names of Financial Adviser:</label><input type="text" class="fu" style="flex:1;" value="${advName}"></div>
-      <div class="ffr"><label>Broker / Reference Code:</label><input type="text" class="fu" style="flex:1;" value="${advCode}"></div>
-      <div class="ffr"><label>Name of FSP Recommending Replacement:</label><input type="text" class="fu" style="flex:1;"></div>
-      <div class="ffr"><label>FSP Number:</label><input type="text" class="fu" style="flex:1;"></div>
-      <div class="ffr"><label>Date of Inception of Policy Being Replaced:</label><input type="date" class="fu" style="flex:1;"></div>
-      <div class="ffr"><label>Name of FSP(s) of Replaced Policy:</label><input type="text" class="fu" style="flex:1;"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;">
+    <p style="font-size:13px;line-height:1.9;margin-bottom:6px;">
+      I, <input type="text" placeholder="Full Name" class="fu" style="width:220px;"> (Full Name),
+    </p>
+    <p style="font-size:13px;line-height:1.9;margin-bottom:16px;">
+      ID Number <input type="text" placeholder="ID Number" class="fu" style="width:200px;">, hereby confirm that I have voluntarily elected and requested to replace my existing policy/policies with a new policy issued by Sanlam Sky.
+    </p>
+
+    <p style="font-size:13px;font-weight:600;margin-bottom:12px;">By signing this document, I acknowledge and confirm that:</p>
+
+    ${clauses.map(c=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;">
+        <div style="flex-shrink:0;width:22px;height:22px;border:1.5px solid #555;border-radius:3px;margin-top:1px;"></div>
+        <p style="font-size:12.5px;line-height:1.7;margin:0;flex:1;">${c.n} ${c.text}</p>
+      </div>`).join('')}
+
+    <div style="margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:24px;">
       <div>
-        <div style="font-size:11px;font-weight:700;margin-bottom:6px;">New Policy</div>
-        <div class="ffr"><label style="min-width:90px;">Policy / App No:</label><input type="text" class="fu" style="flex:1;"></div>
-        <div class="ffr"><label style="min-width:90px;">Insurer:</label><input type="text" class="fu" style="flex:1;"></div>
+        <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Client Signature:</div>
+        ${_sigBlock('sig_rd_client',220,75)}
+        <div class="ffr" style="margin-top:8px;"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
       </div>
       <div>
-        <div style="font-size:11px;font-weight:700;margin-bottom:6px;">Policy Being Replaced</div>
-        <div class="ffr"><label style="min-width:90px;">Policy / App No:</label><input type="text" class="fu" style="flex:1;"></div>
-        <div class="ffr"><label style="min-width:90px;">Insurer:</label><input type="text" class="fu" style="flex:1;"></div>
-      </div>
-    </div>
-
-    <div class="fsec">2. Policy Comparison</div>
-    <div style="overflow-x:auto;margin-bottom:14px;">
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;min-width:560px;">
-        <thead>
-          <tr style="background:#0d1f3c;color:#fff;">
-            <th style="padding:7px 8px;text-align:left;width:38%;font-weight:600;">Feature</th>
-            <th style="padding:7px 8px;text-align:center;font-weight:600;">New Policy</th>
-            <th style="padding:7px 8px;text-align:center;font-weight:600;">Replaced Policy 1</th>
-            <th style="padding:7px 8px;text-align:center;font-weight:600;">Replaced Policy 2</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${[
-            'Product Type (Funeral / Investment / RA)',
-            'Policy / Quotation Number',
-            'Premium (and other fees)',
-            'Names of Lives Assured and Date of Birth',
-            'Cover Amount (incl. per life assured)',
-            'Waiting Periods (incl. waiting period completed)',
-            'Special Terms and Conditions',
-            'Exclusions of Liability (incl. suicide)',
-            'Restrictions (circumstances where benefits not paid)',
-            'Penalties (incl. early termination)',
-            'Loadings (additional fees due to age / health)',
-            'Tax Implications',
-            'Investment Risk',
-            'Accessibility of Funds',
-            'Vested rights / guaranteed benefits that will be lost',
-            'Any other policy benefits / special features',
-          ].map((row,i)=>`
-            <tr style="background:${i%2===0?'#f9fafb':'#fff'};">
-              <td style="padding:5px 8px;border:1px solid #e5e7eb;font-size:11px;color:#374151;font-weight:${i<4?'600':'400'};">${row}</td>
-              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
-              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
-              <td style="padding:4px 6px;border:1px solid #e5e7eb;"><input type="text" class="fu" style="width:100%;font-size:11px;"></td>
-            </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>
-
-    <div class="fsec">3. Reasons for Replacement</div>
-    <p style="font-size:12px;margin-bottom:6px;color:#555;">Provide the reasons why the replacement product was considered more suitable to the client's needs:</p>
-    <textarea class="fbox" rows="4" style="width:100%;box-sizing:border-box;resize:vertical;font-size:12px;margin-bottom:14px;"></textarea>
-
-    <div class="fsec">4. Declaration &amp; Signatures</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:10px;">
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
-        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#0d1f3c;">FINANCIAL ADVISER</div>
-        <p style="font-size:10.5px;color:#555;line-height:1.6;margin-bottom:10px;">I confirm that I have taken all reasonable steps to confirm that the information in this RPAR is true and correct, and that I have fully discharged my duties as set out in section 8(1)(d) and 9(1)(d) of the General Code of Conduct.</p>
-        <div class="ffr"><label style="min-width:60px;">Name:</label><input type="text" class="fu" style="flex:1;" value="${advName}"></div>
-        <div class="ffr"><label style="min-width:60px;">Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
-        <div class="ffr"><label style="min-width:60px;">Tel / Email:</label><input type="text" class="fu" style="flex:1;"></div>
-        <div style="margin-top:8px;">
-          <div style="font-size:10px;color:#777;margin-bottom:4px;">Adviser Signature</div>
-          ${_sigBlock('sig_rpar_adv',220,70)}
-        </div>
-      </div>
-      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px;">
-        <div style="font-size:11px;font-weight:700;margin-bottom:8px;color:#0d1f3c;">POLICYHOLDER / CLIENT</div>
-        <p style="font-size:10.5px;color:#555;line-height:1.6;margin-bottom:10px;">I confirm that the financial adviser has fully explained the material differences between the new policy and the replaced policy(cies), and the implications of replacing my previous policy(cies). I understand the consequences.</p>
-        <div class="ffr"><label style="min-width:60px;">Name:</label><input type="text" class="fu" style="flex:1;"></div>
-        <div class="ffr"><label style="min-width:60px;">Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
-        <div style="margin-top:8px;">
-          <div style="font-size:10px;color:#777;margin-bottom:4px;">Client Signature</div>
-          ${_sigBlock('sig_rpar_client',220,70)}
-        </div>
+        <div class="ffr"><label style="white-space:nowrap;">Financial Advisor Name:</label><input type="text" class="fu" style="flex:1;" value="${advName}"></div>
+        <div style="font-size:12px;font-weight:600;margin:8px 0;">Advisor Signature:</div>
+        ${_sigBlock('sig_rd_adv',220,75)}
+        <div class="ffr" style="margin-top:8px;"><label>Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
       </div>
     </div>
   </div>`;
