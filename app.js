@@ -552,6 +552,7 @@ function enterHub(user){
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
+  const formsTab=document.querySelector('.nav-tab[onclick*="\'forms\'"]');if(formsTab)formsTab.style.display=user.isManager?'inline-flex':'none';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
@@ -1921,7 +1922,7 @@ function showPage(p){
   if(p==='competitor')renderCompetitors('');
   if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
-  if(p==='forms')renderFormsPage();
+  if(p==='forms'){if(currentUser&&currentUser.isManager)renderFormsPage();else showPage('hub');return;}
   if(p==='standard')setupStandardHero();
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
