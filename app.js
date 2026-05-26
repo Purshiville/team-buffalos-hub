@@ -9063,6 +9063,19 @@ const FORMS_CAT = [
   { fsp:'SAPS', color:'#6d28d9', forms:[
     { id:'saps_cancel', name:'SAPS Cancellation Form', desc:'SAPS member policy cancellation notice' },
   ]},
+  { fsp:'Metropolitan', color:'#c2185b', forms:[
+    { id:'metro_debit',   name:'Bank Debit Order',           desc:'Arrange policy payment by debit order' },
+    { id:'metro_paidup',  name:'Application to Make Policy Paid-Up', desc:'Convert policy to paid-up status' },
+    { id:'metro_surrender', name:'Full Surrender Application', desc:'Surrender policy and receive surrender value' },
+  ]},
+  { fsp:'Hollard Specialist Life', color:'#b45309', forms:[
+    { id:'hsl_debit',    name:'Debit Order Authorisation (IL020)', desc:'Authorise monthly premium debit order' },
+    { id:'hsl_surrender', name:'Application to Surrender (CS003)', desc:'Full or partial policy surrender' },
+  ]},
+  { fsp:'AVBOB', color:'#065f46', forms:[
+    { id:'avbob_debit',    name:'Debit Order Authorisation', desc:'Authorise premium and debt debit order' },
+    { id:'avbob_surrender', name:'Surrender Application',    desc:'Apply for surrender of policy / savings plan' },
+  ]},
 ];
 
 function renderFormsPage(){
@@ -9135,6 +9148,13 @@ function openForm(id){
     sansky_banking:  {title:'Sanlam Sky — Banking Details Change', html:_form_sansky_banking(u,today)},
     sanlife_cancel:  {title:'Sanlam Life — Cancellation Letter',html:_form_sanlife_cancel(u,today)},
     saps_cancel:     {title:'SAPS — Cancellation Form',         html:_form_saps_cancel(u,today)},
+    metro_debit:     {title:'Metropolitan — Bank Debit Order',  html:_form_metro_debit(u,today)},
+    metro_paidup:    {title:'Metropolitan — Policy Paid-Up',    html:_form_metro_paidup(u,today)},
+    metro_surrender: {title:'Metropolitan — Full Surrender',    html:_form_metro_surrender(u,today)},
+    hsl_debit:       {title:'Hollard Specialist — Debit Order Authorisation', html:_form_hsl_debit(u,today)},
+    hsl_surrender:   {title:'Hollard Specialist — Surrender Application',     html:_form_hsl_surrender(u,today)},
+    avbob_debit:     {title:'AVBOB — Debit Order Authorisation',html:_form_avbob_debit(u,today)},
+    avbob_surrender: {title:'AVBOB — Surrender Application',   html:_form_avbob_surrender(u,today)},
   };
   const form=MAP[id];if(!form)return;
   document.getElementById('fvBarTitle').textContent=form.title;
@@ -9575,6 +9595,435 @@ function _form_saps_cancel(u,today){
         <label style="padding-top:6px;">Member Signature:</label>
         ${_sigBlock('sig_saps_client')}
       </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 11: Metropolitan Debit Order ───────
+
+function _form_metro_debit(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">Bank Debit Order</div>
+        <div style="font-size:11px;color:#555;margin-top:2px;">Request to arrange policy payment by debit order</div>
+        <div style="font-size:11px;color:#555;">PO Box 2212 Bellville 7535 · Fax: 021 940 5730</div>
+      </div>
+      <div style="font-size:11px;color:#888;text-align:right;">Metropolitan<br>a division of MMI Group Ltd<br>Authorised FSP</div>
+    </div>
+    <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+    <p style="font-size:12px;line-height:1.7;margin:10px 0 14px;color:#333;">
+      I grant permission to Metropolitan to arrange for deductions against my bank account for monthly premiums due, arrear premiums or premium increases due, and any loan repayment amounts due.
+    </p>
+    <div class="fsec">Details of Account Holder / Premium Payer</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Initials:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Employer Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Tel (Work):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Tel (Home):</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0;">
+      <div class="ffr"><label style="min-width:60px;">Deduction Day (1–31):</label><input type="number" min="1" max="31" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:60px;">Effective From:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:50px;">Frequency:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Monthly</option><option>Quarterly (3m)</option><option>6-monthly</option><option>Annual</option></select>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin:8px 0 6px;">
+      <div class="ffr"><label>Premium (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Loan Repayment (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Banking Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Bank Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Current</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+    </div>
+    <div class="fsec">Source of Funds</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:12px;">
+      ${['Salary / Remuneration','Self-employed','Inheritance','Investment / Savings','Winnings','Business transaction','Other'].map(s=>`
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" style="margin:0;"> ${s}</label>`).join('')}
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <div class="ffr"><label>Signed at:</label><input type="text" class="fu" style="width:160px;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:160px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature of Account Holder:</label>
+          ${_sigBlock('sig_metro_debit')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 12: Metropolitan Policy Paid-Up ────
+
+function _form_metro_paidup(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;margin-bottom:4px;">Application to Make Policy Paid-Up</div>
+    <div style="font-size:11px;color:#555;margin-bottom:14px;">Metropolitan, a division of MMI Group Ltd · Authorised FSP</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Owner:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Residential Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:8px 0;">
+      <div class="ffr"><label style="min-width:40px;">Cell:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:30px;">Work:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label style="min-width:30px;">Home:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    <div class="fsec">Banking Details for Refunds</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Cheque</option><option>Transmission</option><option>Savings</option></select>
+      </div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0 12px;font-size:12px;">
+      <div class="ffr"><label style="min-width:120px;">US Citizen:</label><label><input type="radio" name="us_cit" value="yes"> Yes</label>&nbsp;<label><input type="radio" name="us_cit" value="no" checked> No</label></div>
+      <div class="ffr"><label style="min-width:120px;">Registered Taxpayer:</label><label><input type="radio" name="taxpayer" value="yes"> Yes</label>&nbsp;<label><input type="radio" name="taxpayer" value="no" checked> No</label></div>
+    </div>
+    <p style="font-size:11px;color:#555;line-height:1.6;margin-bottom:14px;border-left:3px solid #e5e7eb;padding-left:10px;">
+      I/We declare that I/We am/are the legal owner(s) of the above-mentioned policy, and I/We agree that from the date of completion of this form the total liability of Metropolitan under the said policy will be limited to the fully paid-up value thereof.
+    </p>
+    <div class="ffr"><label>Country of Tax Residence:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="ffr"><label>Tax Reference No:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <div class="ffr"><label>Signed at:</label><input type="text" class="fu" style="width:150px;"></div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:150px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature of Policy Owner:</label>
+          ${_sigBlock('sig_metro_pu')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 13: Metropolitan Full Surrender ────
+
+function _form_metro_surrender(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:15px;font-weight:700;margin-bottom:2px;">Application for Full Surrender</div>
+    <div style="font-size:11px;color:#555;margin-bottom:14px;">Metropolitan, a division of MMI Group Ltd · Authorised FSP · Form 01237</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of Owner:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr"><label>Identity No:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div style="font-size:12px;margin:10px 0 8px;font-weight:600;">Is this application to replace existing insurance with another insurer?</div>
+    <div style="display:flex;gap:12px;font-size:12px;margin-bottom:10px;">
+      <label><input type="radio" name="replacement" value="yes"> Yes</label>
+      <label><input type="radio" name="replacement" value="no" checked> No</label>
+    </div>
+    <div class="ffr"><label>Marital Status:</label>
+      <select class="fbox" style="flex:1;font-size:12px;"><option>Single</option><option>In Community of Property</option><option>Out of Community of Property</option><option>Widowed</option><option>Divorced</option><option>Muslim Rites</option><option>Common Law</option></select>
+    </div>
+    <div class="fsec">Payment Method</div>
+    <div style="display:flex;gap:12px;font-size:12px;margin-bottom:10px;">
+      <label><input type="radio" name="pay_method" value="eft" checked> Electronic Transfer (EFT)</label>
+      <label><input type="radio" name="pay_method" value="cheque"> Cheque</label>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Holder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Cheque</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+    </div>
+    <div class="fsec">Source of Funds</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px;font-size:12px;">
+      ${['Salary / Remuneration','Self-employed','Inheritance','Investment / Savings','Winnings','Business transaction'].map(s=>`
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" style="margin:0;"> ${s}</label>`).join('')}
+    </div>
+    <div class="ffr"><label>Country of Tax Residence:</label>
+      <select class="fbox" style="flex:1;font-size:12px;"><option>South Africa</option><option>United States of America</option><option>Other</option></select>
+    </div>
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:6px;padding:10px 12px;font-size:11px;color:#555;margin:14px 0;line-height:1.6;">
+      Under penalty of perjury I declare that my tax residencies disclosed are true, correct and complete. I am the legal owner of this policy. My estate is not sequestrated and is presently solvent. I have not ceded or pledged this policy to anyone.
+    </div>
+    <div style="display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <p style="font-size:12px;margin-bottom:6px;">Signed at <input type="text" class="fu" style="width:130px;"> on this <input type="text" class="fu" style="width:40px;"> day of <input type="text" class="fu" style="width:90px;"> 20<input type="text" class="fu" style="width:35px;"></p>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature of Policy Owner:</label>
+          ${_sigBlock('sig_metro_surr')}
+        </div>
+        <div class="ffr"><label>ID No:</label><input type="text" class="fu" style="flex:1;"></div>
+      </div>
+      <div>
+        <div style="font-size:11px;color:#888;margin-bottom:4px;">Present Address</div>
+        ${[1,2,3].map(i=>`<input type="text" placeholder="Address line ${i}" class="fu" style="display:block;width:100%;margin-bottom:5px;">`).join('')}
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;margin-top:4px;">
+          ${['Cell','Work Tel','Email'].map(l=>`<div class="ffr"><label style="min-width:30px;font-size:10px;">${l}:</label><input type="text" class="fu" style="flex:1;font-size:11px;"></div>`).join('')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 14: Hollard Debit Order (IL020) ────
+
+function _form_hsl_debit(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px;">IL020 — Debit Order Authorisation</div>
+    <div style="font-size:11px;color:#555;margin-bottom:2px;">Hollard Specialist Life · FSP No. 18146</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px;">Return completed form to HLamendments@hollard.co.za</div>
+    <div class="fsec">1. Policyholder Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Proposer:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Full Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Identity No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Work Tel:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Home Tel:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="fsec">2. Premium Payer Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>REF / PRI No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Policy No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Full Names:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Identity No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Occupation:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Employer:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Source of Funds:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Source of Wealth:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Country of Residence:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Relationship to Policyholder:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Same Proposer</option><option>Employer</option><option>Other</option></select>
+      </div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Residential Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="ffr" style="align-items:flex-start;"><label>Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="fsec">Banking Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>First Deduction Date:</label><input type="date" class="fu" value="${today}" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Cheque</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Bank / Institution:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <p style="font-size:11px;color:#555;line-height:1.6;margin:12px 0;border-left:3px solid #e5e7eb;padding-left:10px;">
+      I hereby authorise Hollard Specialist Life Limited or its agent to collect the monthly premium, both current and arrears, by debit order from my bank account detailed above. This debit order may be cancelled in writing with 7 days' notice.
+    </p>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <p style="font-size:12px;margin-bottom:6px;">Signed at <input type="text" class="fu" style="width:130px;"> on this <input type="text" class="fu" style="width:40px;"> day of <input type="text" class="fu" style="width:90px;"> 20<input type="text" class="fu" style="width:35px;"></p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:10px;">
+          <div>
+            <div style="font-size:11px;color:#777;margin-bottom:4px;">Signature of Policyholder</div>
+            ${_sigBlock('sig_hsl_ph')}
+          </div>
+          <div>
+            <div style="font-size:11px;color:#777;margin-bottom:4px;">Signature of Premium Payer</div>
+            ${_sigBlock('sig_hsl_pp')}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <div class="ffr"><label>Intermediary Full Names:</label><input type="text" class="fu" style="flex:1;" value="${u.name||''}"></div>
+      <div class="ffr"><label>Intermediary Code:</label><input type="text" class="fu" style="flex:1;" value="${u.code||''}"></div>
+      <div style="margin-top:8px;">
+        <div style="font-size:11px;color:#777;margin-bottom:4px;">Signature of Intermediary / Advisor</div>
+        ${_sigBlock('sig_hsl_adv')}
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 15: Hollard Surrender (CS003) ──────
+
+function _form_hsl_surrender(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px;">CS003 — Application to Surrender a Policy</div>
+    <div style="font-size:11px;color:#555;margin-bottom:2px;">Hollard Specialist Life · FSP No. 18146</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px;">Return completed form to HLamendments@hollard.co.za</div>
+    <div style="background:#fef3c7;border:1px solid #fde68a;border-radius:6px;padding:8px 10px;font-size:11px;color:#92400e;margin-bottom:14px;line-height:1.6;">
+      ⚠️ It is not in your interest to surrender your policy within the first 5 years. Early surrenders are subject to surrender penalties. Speak to your financial adviser before proceeding.
+    </div>
+    <div style="font-size:11px;color:#666;margin-bottom:14px;line-height:1.6;border-left:3px solid #d1d5db;padding-left:10px;">
+      Documents to attach: ① Certified copy of SA Identity Document ② Stamped bank statement (not older than 3 months) ③ Proof of residence (not older than 3 months)
+    </div>
+    <div class="fsec">Section A — Policyholder Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Full Names & Surname:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Identity No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Home Tel:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Work Tel:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Occupation:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Employer:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Source of Funds:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Source of Wealth:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Country of Residence:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Residential Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="ffr" style="align-items:flex-start;"><label>Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="fsec">Bank Account Details (for payment)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Cheque</option><option>Savings</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Full Name of Account Holder:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Section B — Surrender Option</div>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;margin-bottom:14px;">
+      <label><input type="radio" name="surr_type" value="partial"> Part Surrender — R <input type="number" step="0.01" class="fu" style="width:100px;"></label>
+      <label><input type="radio" name="surr_type" value="full_cancel"> Surrender Savings and Cancel Risk Benefits</label>
+      <label><input type="radio" name="surr_type" value="savings_only"> Surrender Savings Only</label>
+    </div>
+    <div class="fsec">Declaration</div>
+    <p style="font-size:11px;color:#555;line-height:1.7;margin-bottom:14px;">
+      I, the undersigned, hereby declare that: I am the legal owner of the policy. I have not ceded or pledged the said policy to anyone. My estate has not been declared insolvent. I fully understand that it is not in my best interest to surrender this policy within the first 5 years, as penalties will be incurred.
+    </p>
+    <p style="font-size:12px;margin-bottom:10px;">Signed at <input type="text" class="fu" style="width:130px;"> on this <input type="text" class="fu" style="width:40px;"> day of <input type="text" class="fu" style="width:90px;"> 20<input type="text" class="fu" style="width:35px;"></p>
+    <div class="ffr" style="align-items:flex-start;">
+      <label style="padding-top:6px;">Signature of Policyholder:</label>
+      ${_sigBlock('sig_hsl_surr')}
+    </div>
+  </div>`;
+}
+
+// ── Form 16: AVBOB Debit Order ───────────────
+
+function _form_avbob_debit(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px;">AVBOB — Debit Order Authorisation</div>
+    <div style="font-size:11px;color:#555;margin-bottom:2px;">AVBOB Mutual Assurance Society · 368 Madiba Street, Pretoria 0002</div>
+    <div style="font-size:11px;color:#888;margin-bottom:14px;">Tel: 0861 28 26 21 · Email: info@avbob.co.za</div>
+    <div class="fsec">Section A — Contact Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>ID Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Policyholder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of Employer:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Tel No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Cell No:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="ffr" style="align-items:flex-start;"><label>Residential Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <div class="fsec">Section B — Banking Details</div>
+    <div style="font-size:11px;color:#b45309;margin-bottom:8px;">NB: Copy of bank statement must be attached.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Account Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>City / Town:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Savings</option><option>Cheque</option><option>Transmission</option></select>
+      </div>
+      <div class="ffr"><label>Account Holder:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Holder ID:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Holder Cell:</label><input type="text" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Amounts to be Debited Monthly</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:14px;">
+      <div class="ffr"><label>Premium Amount (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Loan Repayment (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Premium Debt (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Non-Forfeiture Repayment (R):</label><input type="number" step="0.01" class="fu" style="flex:1;"></div>
+    </div>
+    <p style="font-size:11px;color:#555;line-height:1.7;margin-bottom:14px;border-left:3px solid #e5e7eb;padding-left:10px;">
+      I hereby authorise AVBOB Mutual Assurance Society to debit my account with the above-mentioned bank for the amounts payable as specified herein. I acknowledge that the payment due date will vary from month to month to coincide with my salary remuneration dates.
+    </p>
+    <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:14px;">
+      <div>
+        <div class="ffr"><label>Date:</label><input type="date" class="fu" value="${today}" style="width:160px;"></div>
+        <div class="ffr" style="align-items:flex-start;margin-top:10px;">
+          <label style="padding-top:6px;">Signature of Account Holder:</label>
+          ${_sigBlock('sig_avbob_debit')}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── Form 17: AVBOB Surrender Application ────
+
+function _form_avbob_surrender(u,today){
+  return _fs()+`
+  <div class="fd">
+    <div style="font-size:14px;font-weight:700;margin-bottom:2px;">AVBOB — Application for Surrender of Policy / Savings Plan</div>
+    <div style="font-size:11px;color:#555;margin-bottom:14px;">AVBOB Mutual Assurance Society · info@avbob.co.za · Tel: 0861 28 26 21</div>
+    <div class="fsec">Policy Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Policy Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Policy</option><option>Savings Plan</option></select>
+      </div>
+      <div class="ffr"><label>Initials & Surname of Assured:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Date of Birth:</label><input type="date" class="fu" style="flex:1;"></div>
+    </div>
+    <div class="fsec">Surrender Declaration</div>
+    <p style="font-size:11px;color:#555;line-height:1.7;margin-bottom:12px;">I/We declare that I/We am/are the legal owner(s) of the policy and am/are legally competent to dispose of the policy; I/We have not ceded or pledged the policy to anyone; My/Our estate(s) is/are solvent and has/have not been surrendered, sequestrated or assigned.</p>
+    <div style="font-size:12px;font-weight:600;margin-bottom:8px;">Will this policy be replaced by another policy?</div>
+    <div style="display:flex;gap:12px;font-size:12px;margin-bottom:14px;">
+      <label><input type="radio" name="avbob_repl" value="yes"> Yes — Name of Assurer: <input type="text" class="fu" style="width:150px;"></label>
+      <label><input type="radio" name="avbob_repl" value="no" checked> No</label>
+    </div>
+    <div class="fsec">Payment Details</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 20px;margin-bottom:10px;">
+      <div class="ffr"><label>Account Number:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Name of Bank:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Code:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Branch Name:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>City / Town:</label><input type="text" class="fu" style="flex:1;"></div>
+      <div class="ffr"><label>Account Type:</label>
+        <select class="fbox" style="flex:1;font-size:12px;"><option>Savings</option><option>Cheque</option><option>Transmission</option></select>
+      </div>
+    </div>
+    <div class="fsec">I Confirm That (Please tick all that apply)</div>
+    <div style="display:flex;flex-direction:column;gap:6px;font-size:12px;margin-bottom:14px;">
+      <label><input type="checkbox"> I am voluntarily surrendering my policy</label>
+      <label><input type="checkbox"> I understand that I and/or any other insureds will not have funeral cover after surrender</label>
+      <label><input type="checkbox"> I understand that all bonuses and values will be lost</label>
+      <label><input type="checkbox"> I understand that I will not be refunded in full on my premiums thus far</label>
+    </div>
+    <div class="ffr" style="align-items:flex-start;"><label>Reason for Surrender:</label><textarea class="fbox" rows="3" style="flex:1;resize:vertical;font-size:12px;"></textarea></div>
+    <div class="ffr"><label>Tel No:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="ffr"><label>Cell No:</label><input type="text" class="fu" style="flex:1;"></div>
+    <div class="ffr"><label>Email:</label><input type="email" class="fu" style="flex:1;"></div>
+    <div class="ffr" style="align-items:flex-start;"><label style="white-space:nowrap;">Postal Address:</label><textarea class="fbox" rows="2" style="flex:1;font-size:12px;resize:vertical;"></textarea></div>
+    <p style="font-size:12px;margin:14px 0 6px;">Signed at <input type="text" class="fu" style="width:140px;"> on this <input type="text" class="fu" style="width:40px;"> day of <input type="text" class="fu" style="width:90px;"> 20<input type="text" class="fu" style="width:35px;"></p>
+    <div class="ffr" style="align-items:flex-start;">
+      <label style="padding-top:6px;">Signature of Policyholder:</label>
+      ${_sigBlock('sig_avbob_surr')}
     </div>
   </div>`;
 }
