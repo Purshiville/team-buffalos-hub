@@ -1116,11 +1116,71 @@ function renderSentList(){
   }).join('');
 }
 function switchInboxTab(tab){
-  const received=tab==='received';
-  document.getElementById('inboxList').style.display=received?'':'none';
-  document.getElementById('sentList').style.display=received?'none':'';
-  document.getElementById('inboxTabReceived').classList.toggle('active',received);
-  document.getElementById('inboxTabSent').classList.toggle('active',!received);
+  const isUnread=tab==='unread',isReceived=tab==='received',isSent=tab==='sent';
+  document.getElementById('unreadList').style.display=isUnread?'':'none';
+  document.getElementById('inboxList').style.display=isReceived?'':'none';
+  document.getElementById('sentList').style.display=isSent?'':'none';
+  document.getElementById('inboxTabUnread').classList.toggle('active',isUnread);
+  document.getElementById('inboxTabReceived').classList.toggle('active',isReceived);
+  document.getElementById('inboxTabSent').classList.toggle('active',isSent);
+  if(isUnread)renderUnreadList();
+  if(isReceived)renderInboxList();
+}
+function _updateUnreadTabCount(){
+  if(!currentUser)return;
+  const count=(window._inboxMsgs||[]).filter(m=>!(m.readBy||[]).includes(currentUser.code)).length;
+  const badge=document.getElementById('inboxUnreadCount');
+  if(!badge)return;
+  if(count>0){badge.textContent=count;badge.style.cssText='background:#dc2626;color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px;display:inline-block;';}
+  else{badge.textContent='';badge.style.cssText='';}
+}
+function renderUnreadList(){
+  const el=document.getElementById('unreadList');
+  if(!el||!currentUser)return;
+  const msgs=[...(window._inboxMsgs||[])]
+    .filter(m=>!(m.readBy||[]).includes(currentUser.code))
+    .sort((a,b)=>{
+      const aT=a.sentAt?.toDate?a.sentAt.toDate():a.sentAt?new Date(a.sentAt):0;
+      const bT=b.sentAt?.toDate?b.sentAt.toDate():b.sentAt?new Date(b.sentAt):0;
+      return bT-aT;
+    });
+  if(!msgs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">✅ All caught up — no unread notifications.</div>';return;}
+  const typeIcon={notice:'📢',stats:'📊',message:'✉️',chat:'💬',reminder:'🗓️'};
+  const _allUsers=getUsers();
+  el.innerHTML=msgs.map(m=>{
+    const ts=m.sentAt?.toDate?m.sentAt.toDate():m.sentAt?new Date(m.sentAt):new Date();
+    const timeStr=ts.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})+' '+ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});
+    const chatFrom=m.chatFrom||'';
+    const chatFromName=(m.chatFromName||'').replace(/'/g,'&#39;');
+    const senderPhoto=_allUsers[m.from]?.photo||null;
+    const senderInitial=(m.fromName||'?').charAt(0).toUpperCase();
+    const isSystem=!m.from||m.from==='SYSTEM';
+    const avatarHtml=senderPhoto
+      ?`<img src="${senderPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+      :isSystem
+        ?`<div class="inbox-icon ${m.type||'notice'}">${typeIcon[m.type||'notice']||'📌'}</div>`
+        :`<div style="width:36px;height:36px;border-radius:50%;background:${chatColor(m.from||'X')};color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${senderInitial}</div>`;
+    return`<div class="inbox-item unread${chatFrom?' chat-tap':''}" onclick="readUnreadItem('${m.id}',this,'${chatFrom}','${chatFromName}')" style="cursor:pointer;">
+      ${avatarHtml}
+      <div class="inbox-meta">
+        <div class="inbox-title">${m.title||'Notification'}${chatFrom?' <span style="font-size:9px;color:#7c3aed;font-weight:700;margin-left:4px;">TAP TO REPLY</span>':''}</div>
+        ${m.body?`<div class="inbox-body">${m.body}</div>`:''}
+        <div class="inbox-time">${m.fromName||'System'} · ${timeStr}</div>
+      </div>
+      <div class="inbox-unread-dot"></div>
+    </div>`;
+  }).join('');
+}
+function readUnreadItem(id,el,chatFrom,chatFromName){
+  if(window.FB_READY)window.FB.markInboxRead(id,currentUser.code).catch(()=>{});
+  const localMsg=(window._inboxMsgs||[]).find(m=>m.id===id);
+  if(localMsg&&!(localMsg.readBy||[]).includes(currentUser.code)){
+    localMsg.readBy=[...(localMsg.readBy||[]),currentUser.code];
+  }
+  el.style.transition='opacity .2s';el.style.opacity='0';
+  setTimeout(()=>{el.remove();_updateUnreadTabCount();},200);
+  updateInboxBadge();updateChatBadge();
+  if(chatFrom&&chatFromName){closeInboxPanel();openChatPanel();openChatThread(chatFrom,chatFromName);}
 }
 function startChatListListener(){
   if(!window.FB_READY||!currentUser)return;
@@ -1139,6 +1199,7 @@ function updateInboxBadge(){
   if(!badge)return;
   if(unread>0){badge.style.display='flex';badge.textContent=unread>99?'99+':unread;}
   else badge.style.display='none';
+  _updateUnreadTabCount();
 }
 function updateChatBadge(){
   // Envelope: unread chat conversations + unread direct inbox messages
@@ -1156,8 +1217,9 @@ function updateChatBadge(){
 function openInboxPanel(){
   document.getElementById('inboxPanel').classList.add('open');
   document.getElementById('inboxOverlay').style.display='block';
-  switchInboxTab('received');
-  renderInboxList();
+  // Open to Unread tab if there are unread items, otherwise All
+  const _hasUnread=(window._inboxMsgs||[]).some(m=>!(m.readBy||[]).includes(currentUser.code));
+  switchInboxTab(_hasUnread?'unread':'received');
   // Refresh user photos from Firebase so avatars are up to date
   if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);renderInboxList();}}).catch(()=>{});}
   if(currentUser.isManager||currentUser.isOps){
