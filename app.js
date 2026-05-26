@@ -1301,7 +1301,11 @@ function openChatThread(partnerCode,partnerName){
       <div class="chat-thread-name">${partnerName}</div>
     </div>
     <div class="chat-messages" id="chatThreadMessages"></div>
-    <div class="chat-input-row">
+    <div class="chat-input-row" style="position:relative;">
+      <div style="position:relative;flex-shrink:0;">
+        <button onclick="toggleChatEmoji(event)" style="background:none;border:none;font-size:20px;cursor:pointer;padding:4px 6px;line-height:1;">😊</button>
+        <div id="chatEmojiPicker" style="display:none;position:absolute;bottom:44px;left:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:999;width:220px;flex-wrap:wrap;gap:4px;"></div>
+      </div>
       <input class="chat-input" id="chatThreadInput" placeholder="Type a message…" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChatMsg();}"/>
       <button class="chat-send-btn" onclick="sendChatMsg()">➤</button>
     </div>
@@ -1371,6 +1375,25 @@ async function sendChatMsg(){
       chatFromName:currentUser.name
     });
   }catch(e){console.warn(e);}
+}
+const _CHAT_EMOJIS='😊 😂 😍 🥰 😎 🤩 😅 😢 😭 😠 🤔 🙏 👍 👎 👋 🤝 💪 🙌 👏 ✅ ❌ ⚠️ 🔥 💯 🎉 🎊 🏆 🌟 💡 📞 📱 💼 📋 📊 💰 ⏰ 🗓️ 📌 🚀 👀 💬 ✍️ 📝 🤦 🤷 😴 🥳 🤗 💃 🕺'.split(' ');
+function toggleChatEmoji(e){
+  e.stopPropagation();
+  const p=document.getElementById('chatEmojiPicker');if(!p)return;
+  if(p.style.display==='flex'){p.style.display='none';return;}
+  if(!p.dataset.built){
+    p.dataset.built='1';
+    p.innerHTML=_CHAT_EMOJIS.map(em=>`<button onclick="insertChatEmoji('${em}')" style="background:none;border:none;font-size:20px;cursor:pointer;padding:3px;border-radius:6px;line-height:1;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'">${em}</button>`).join('');
+  }
+  p.style.display='flex';
+  setTimeout(()=>document.addEventListener('click',function h(ev){if(!p.contains(ev.target)){p.style.display='none';document.removeEventListener('click',h);}},{once:false}),0);
+}
+function insertChatEmoji(em){
+  const inp=document.getElementById('chatThreadInput');if(!inp)return;
+  const s=inp.selectionStart??inp.value.length,en=inp.selectionEnd??inp.value.length;
+  inp.value=inp.value.slice(0,s)+em+inp.value.slice(en);
+  const np=s+em.length;inp.focus();inp.setSelectionRange(np,np);
+  const p=document.getElementById('chatEmojiPicker');if(p)p.style.display='none';
 }
 // Chat broadcast (manager only)
 function chatOpenBroadcast(){
@@ -8534,7 +8557,7 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
     diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}">${s.label}</div>`);
     evs.slice(0,1).forEach(ev=>{h+=`<div class="diary-chip ${ev.type||'other'}" onclick="event.stopPropagation();diaryViewEvent('${ev.id}')" title="${ev.title}">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
-    if(evs.length>1)h+=`<div class="diary-chip more">+${evs.length-1}</div>`;
+    if(evs.length>1)h+=`<div class="diary-chip more" onclick="event.stopPropagation();diaryShowDayPanel('${dk}')">+${evs.length-1}</div>`;
     if(phol&&!isCutoff)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;margin-top:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
     if(phol&&isCutoff)h+=`<div style="font-size:7px;color:#fca5a5;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
     h+='</div>';
@@ -8728,6 +8751,84 @@ function renderTermCal(){
       diarySaveEvents(merged);renderDiary();
     }).catch(()=>{});
   }
+}
+const _APPT_STATUSES=[
+  {v:'confirmed', label:'Confirmed', color:'#16a34a', bg:'#dcfce7'},
+  {v:'done',      label:'Done',      color:'#1d4ed8', bg:'#dbeafe'},
+  {v:'postponed', label:'Postponed', color:'#d97706', bg:'#fef3c7'},
+  {v:'revisit',   label:'Revisit',   color:'#7c3aed', bg:'#ede9fe'},
+  {v:'tentative', label:'Tentative', color:'#9ca3af', bg:'#f3f4f6'},
+];
+function diaryShowDayPanel(dk){
+  // Remove old panel if any
+  document.getElementById('diaryDayPanel')?.remove();
+  const isOps=currentUser?.isManager||currentUser?.isOps;
+  // All visible events for this day (already filtered by advisor in diaryEventsForKey)
+  const evs=diaryEventsForKey(dk);
+  if(!evs.length)return;
+  const [y,m,d]=dk.split('-');
+  const dateLabel=`${parseInt(d)} ${['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(m)-1]} ${y}`;
+  const panel=document.createElement('div');
+  panel.id='diaryDayPanel';
+  panel.style.cssText='position:fixed;inset:0;z-index:9100;display:flex;align-items:flex-end;background:rgba(0,0,0,.45);';
+  const inner=document.createElement('div');
+  inner.style.cssText='background:#fff;width:100%;max-height:80vh;border-radius:20px 20px 0 0;overflow-y:auto;padding:0 0 32px;';
+  const statusOpts=_APPT_STATUSES.map(s=>`<option value="${s.v}">${s.label}</option>`).join('');
+  inner.innerHTML=`
+    <div style="position:sticky;top:0;background:#fff;padding:14px 16px 10px;border-bottom:1px solid #f4f2ed;display:flex;align-items:center;justify-content:space-between;z-index:1;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;">Appointments</div>
+        <div style="font-size:16px;font-weight:700;color:#0d1f3c;">${dateLabel}</div>
+      </div>
+      <button onclick="document.getElementById('diaryDayPanel').remove()" style="background:none;border:none;font-size:22px;color:#9ca3af;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px;">
+      ${evs.map(ev=>{
+        const st=_APPT_STATUSES.find(s=>s.v===(ev.status||'confirmed'))||_APPT_STATUSES[0];
+        const timeStr=(ev.startTime?ev.startTime.slice(0,5):'')+(ev.endTime?' – '+ev.endTime.slice(0,5):'');
+        return`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+            <div>
+              <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
+              ${timeStr?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">⏰ ${timeStr}</div>`:''}
+              ${ev.location?`<div style="font-size:11px;color:#6b7280;">📍 ${ev.location}</div>`:''}
+              ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;">👤 ${ev.advisorName}</div>`:''}
+            </div>
+            <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${st.bg};color:${st.color};white-space:nowrap;">${st.label}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            ${_APPT_STATUSES.map(s=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;border:1.5px solid ${(ev.status||'confirmed')===s.v?s.color:'#e5e7eb'};background:${(ev.status||'confirmed')===s.v?s.bg:'#fff'};color:${(ev.status||'confirmed')===s.v?s.color:'#6b7280'};transition:all .15s;">
+              <input type="radio" name="apst_${ev.id}" value="${s.v}" ${(ev.status||'confirmed')===s.v?'checked':''} onchange="diaryUpdateEventStatus('${ev.id}',this.value)" style="display:none;"/>
+              ${s.label}
+            </label>`).join('')}
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+  panel.appendChild(inner);
+  panel.addEventListener('click',e=>{if(e.target===panel)panel.remove();});
+  document.body.appendChild(panel);
+}
+function diaryUpdateEventStatus(id,status){
+  const events=diaryGetEvents();
+  const idx=events.findIndex(e=>e.id===id);
+  if(idx<0)return;
+  events[idx].status=status;
+  diarySaveEvents(events);
+  if(window.FB_READY)window.FB.saveCalEvent(id,events[idx]).catch(()=>{});
+  // Refresh radio button styling in the panel
+  document.querySelectorAll(`[name="apst_${id}"]`).forEach(r=>{
+    const lbl=r.closest('label');
+    const s=_APPT_STATUSES.find(x=>x.v===r.value);
+    if(!s||!lbl)return;
+    const active=r.value===status;
+    lbl.style.borderColor=active?s.color:'#e5e7eb';
+    lbl.style.background=active?s.bg:'#fff';
+    lbl.style.color=active?s.color:'#6b7280';
+  });
+  // Update badge in the panel
+  const row=document.querySelector(`[name="apst_${id}"]`)?.closest('div[style*="background:#f9fafb"]');
+  if(row){const badge=row.querySelector('span[style*="border-radius:20px"]');const st=_APPT_STATUSES.find(s=>s.v===status);if(badge&&st){badge.style.background=st.bg;badge.style.color=st.color;badge.textContent=st.label;}}
 }
 // ── END DIARY / PLANNER ───────────────────────────────────────────────────────
 
