@@ -903,10 +903,11 @@ function renderStatsManagerPreview(data){
   if(!advisors.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;text-align:center;padding:8px 0;">No stats saved for this period yet.</div>';return;}
   el.innerHTML='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-top:10px;border-top:1px solid #f4f2ed;">Current period — all advisors</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;">'+
-    advisors.sort((a,b)=>a.name.localeCompare(b.name)).map(a=>{
+    advisors.sort((a,b)=>(_advisorNameMap[a.code]||a.name).localeCompare(_advisorNameMap[b.code]||b.name)).map(a=>{
       const cp=a.targetCases?Math.round(a.actualCases/a.targetCases*100):0;
       const c=cp>=100?'#16a34a':cp>=70?'#c9922a':'#dc2626';
-      return`<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 10px;background:#f9f9f9;border-radius:8px;"><div style="font-weight:700;color:#0d1f3c;">${a.name}</div><div style="display:flex;gap:14px;"><span style="font-weight:700;color:${c};">${a.actualCases}/${a.targetCases} cases</span><span style="color:#6b7280;">R${a.actualPremium.toLocaleString()}/R${a.targetPremium.toLocaleString()}</span></div></div>`;
+      const displayName=_advisorNameMap[a.code]||a.name;
+      return`<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 10px;background:#f9f9f9;border-radius:8px;"><div style="font-weight:700;color:#0d1f3c;">${displayName}</div><div style="display:flex;gap:14px;"><span style="font-weight:700;color:${c};">${a.actualCases}/${a.targetCases} cases</span><span style="color:#6b7280;">R${a.actualPremium.toLocaleString()}/R${a.targetPremium.toLocaleString()}</span></div></div>`;
     }).join('')+'</div>';
 }
 function getYTDStats(){
@@ -919,7 +920,7 @@ function getYTDStats(){
       const d=JSON.parse(localStorage.getItem(key)||'null');
       if(!d?.advisors)continue;
       Object.entries(d.advisors).forEach(([code,a])=>{
-        if(!ytd[code])ytd[code]={code,name:a.name||code,cases:0,premium:0};
+        if(!ytd[code])ytd[code]={code,name:_advisorNameMap[code]||a.name||code,cases:0,premium:0};
         ytd[code].cases+=(a.actualCases||0);
         ytd[code].premium+=(a.actualPremium||0);
       });
