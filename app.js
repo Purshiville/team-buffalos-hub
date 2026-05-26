@@ -3898,8 +3898,11 @@ function renderDailyBrief(){
   // Today's diary appointments — ops/manager see all, advisors see only their own
   const todayKey=y+'-'+(''+(m+1)).padStart(2,'0')+'-'+(''+d).padStart(2,'0');
   const todayEvs=diaryGetEvents().filter(e=>e.date===todayKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
-  if(todayEvs.length)items.push({icon:'🗓️',text:`<b>${todayEvs.length} appointment${todayEvs.length>1?'s':''} today:</b> `+todayEvs.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(', ')});
-  else items.push({icon:'🗓️',text:'No appointments logged for today in your diary.'});
+  if(todayEvs.length){
+    items.push({icon:'🗓️',onclick:`showPage('diary')`,text:`<b>${todayEvs.length} appointment${todayEvs.length>1?'s':''} today:</b> `+todayEvs.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(', ')+` <span style="color:#c9922a;font-size:11px;">→ Calendar</span>`});
+  } else {
+    items.push({icon:'🗓️',text:`No appointments for today. <span onclick="showPage('diary')" style="color:#c9922a;font-weight:600;cursor:pointer;text-decoration:underline;">📅 Go to calendar</span>`});
+  }
 
   // Day of week motivation
   const dow=today.getDay();
@@ -3908,7 +3911,7 @@ function renderDailyBrief(){
 
   el.innerHTML=`<div class="brief-card">
     <div class="brief-title">📋 Daily Brief — ${DAYS[dow]}, ${d} ${MONTHS[m]} ${y}</div>
-    ${items.map(i=>`<div class="brief-item"><span class="brief-item-icon">${i.icon}</span><span>${i.text}</span></div>`).join('')}
+    ${items.map(i=>`<div class="brief-item"${i.onclick?` onclick="${i.onclick}" style="cursor:pointer;"`:''} >${i.onclick?`<span class="brief-item-icon">${i.icon}</span><span style="flex:1;">${i.text}</span><span style="color:#c9922a;font-size:14px;margin-left:4px;">›</span>`:`<span class="brief-item-icon">${i.icon}</span><span>${i.text}</span>`}</div>`).join('')}
   </div>`;
 }
 // ── END DAILY BRIEF & TOP 3 ──────────────────────────────────────────────────
