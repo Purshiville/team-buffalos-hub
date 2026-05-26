@@ -532,6 +532,14 @@ function requestNotificationPermission(){
 }
 
 function enterHub(user){
+  // Keep lastActive fresh in Firebase so the manager roster is accurate
+  const _users=getUsers();
+  if(_users[user.code]){
+    _users[user.code].lastActive=now();
+    saveUsers(_users);
+    user=_users[user.code];
+    if(window.FB_READY&&window.FB.saveUser)window.FB.saveUser(user.code,_users[user.code]).catch(()=>{});
+  }
   requestNotificationPermission();
   startInactivityTimer();
   // Load compliance from Firebase
