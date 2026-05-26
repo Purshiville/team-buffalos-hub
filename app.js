@@ -552,7 +552,6 @@ function enterHub(user){
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
-  const formsTab=document.querySelector('.nav-tab[onclick*="\'forms\'"]');if(formsTab)formsTab.style.display='inline-flex';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
