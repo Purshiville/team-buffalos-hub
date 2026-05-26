@@ -312,6 +312,10 @@ window.addEventListener('load',()=>{
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
 const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
 
+// ── NEW ADVISORS — show "New" badge in rankings ──
+const NEW_ADVISOR_CODES = new Set(['SKA315568']); // Stefan Barnard
+const _newBadge=(code)=>NEW_ADVISOR_CODES.has(code)?` <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:6px;padding:1px 5px;vertical-align:middle;">New</span>`:'';
+
 // ── APPROVED ADVISOR WHITELIST ──
 const APPROVED_CODES = new Set([
   'SKA312009', // Adrian Roelfse
@@ -867,7 +871,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${pc};">R${(a.actualPremium||0).toLocaleString()}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${pp}%</td>`+
       `</tr>`;
@@ -881,7 +885,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${cc};">${a.actualCases||0}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${cp}%</td>`+
       `</tr>`;
@@ -954,8 +958,8 @@ function renderYTDStats(){
     <div style="width:1px;background:#f4f2ed;margin:0 4px;"></div>
     <div style="flex:1;text-align:center;padding:0 8px;"><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">YTD Premium</div><div style="font-size:20px;font-weight:800;color:#c9922a;">R${my.premium.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;">#${myRankPrem} of ${n}</div></div>
   </div>`:'' ;
-  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td></tr>`;}).join('');
-  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
+  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td></tr>`;}).join('');
+  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📅 ${yr} Year-to-Date</div>`+myCard+
     `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
@@ -993,7 +997,7 @@ function renderYTDTop3(){
         }
         <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${rank}</div>
       </div>
-      <div class="top3-name">${firstName}</div>
+      <div class="top3-name">${firstName}${_newBadge(r.code)}</div>
       <div class="top3-metrics"><span>R${r.premium.toLocaleString()}</span><span>${r.cases} cases</span></div>
     </div></div>`;
   };
@@ -3704,7 +3708,7 @@ function renderTop3(){
           }
           <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${posLabel}</div>
         </div>
-        <div class="top3-name">${r.name}</div>
+        <div class="top3-name">${r.name}${_newBadge(r.code)}</div>
         ${r.note?`<div style="font-size:10px;color:${cls==='gold'?'#92400e':'#6b7280'};margin-top:3px;">${r.note}</div>`:''}
         <div class="top3-metrics">${r.ntu4!=null?`<span>4M NTU ${r.ntu4}%</span>`:''}${r.ntu15!=null?`<span>15M NTU ${r.ntu15}%</span>`:''}${r.persistency!=null?`<span>Pers ${r.persistency}%</span>`:''}</div>
       </div>
