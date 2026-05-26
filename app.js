@@ -6113,8 +6113,11 @@ function _renderManagerDashInner(){
     const replSoon=dofaDays!==null&&dofaDays>=150&&dofaDays<180;
     const replCls=replEligible?'background:#dcfce7;color:#166534;':replSoon?'background:#fef3c7;color:#92400e;':'background:#fee2e2;color:#991b1b;';
     const replLbl=replEligible?'Eligible':replSoon?`${180-dofaDays}d away`:'Not yet';
+    const avatarHtml=u.photo
+      ?`<img src="${u.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid #e5e7eb;">`
+      :`<div style="width:34px;height:34px;border-radius:50%;background:#0d1f3c;color:#f5d98b;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(u.name||'?').charAt(0).toUpperCase()}</div>`;
     return`<tr>
-      <td>${u.name}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:10px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;margin-left:5px;font-weight:600;">Ops</span>':''}<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${fmtLastActive(u.lastActive)}</div></td>
+      <td><div style="display:flex;align-items:center;gap:9px;">${avatarHtml}<div>${u.name}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:10px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;margin-left:5px;font-weight:600;">Ops</span>':''}<div style="font-size:10px;color:#9ca3af;margin-top:2px;">${fmtLastActive(u.lastActive)}</div></div></div></td>
       <td style="font-family:monospace;font-size:12px;">${u.code}</td>
       <td style="color:#6b7280;font-size:12px;">${u.email}</td>
       <td style="font-size:12px;color:#6b7280;">${dofaDisplay}</td>
