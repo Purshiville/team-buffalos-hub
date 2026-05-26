@@ -927,7 +927,7 @@ function getYTDStats(){
   const now=new Date();
   const year=now.getFullYear();
   for(let m=1;m<=now.getMonth()+1;m++){
-    const key='tl_prod_stats_'+year+(m<10?'0':'')+m;
+    const key='tl_prod_stats_'+year+'-'+(m<10?'0':'')+m;
     try{
       const d=JSON.parse(localStorage.getItem(key)||'null');
       if(!d?.advisors)continue;
@@ -943,6 +943,26 @@ function getYTDStats(){
 function renderYTDStats(){
   const el=document.getElementById('hubYTD');
   if(!el||!currentUser)return;
+  // Sync all months from Firebase then re-render
+  if(window.FB_READY&&window.FB.getYearStats){
+    const yr=String(new Date().getFullYear());
+    window.FB.getYearStats(yr).then(fbMonths=>{
+      Object.entries(fbMonths).forEach(([period,data])=>{
+        const k='tl_prod_stats_'+period;
+        try{
+          const local=JSON.parse(localStorage.getItem(k)||'{"advisors":{}}');
+          Object.assign(local.advisors||{},data.advisors||{});
+          local.advisors=Object.assign({},data.advisors||{},local.advisors);
+          localStorage.setItem(k,JSON.stringify({...data,...local}));
+        }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
+      });
+      _renderYTDStatsInner(el);
+    }).catch(()=>_renderYTDStatsInner(el));
+  } else {
+    _renderYTDStatsInner(el);
+  }
+}
+function _renderYTDStatsInner(el){
   const stats=getYTDStats();
   if(!stats.length){
     if(currentUser.isManager||currentUser.isOps){
