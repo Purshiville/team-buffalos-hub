@@ -319,7 +319,6 @@ const APPROVED_CODES = new Set([
   'SKA310889', // Lwahluma Mtsulwana
   'SKA313162', // Ivan Davies
   'SKA313936', // Brian Steve Boucher
-  'SKA313952', // Rivaldo Rossouw
   'SKA315109', // Roger Pretorius
   'SKA315466', // Thomas Taylor
   'SKA315568', // Stefan Barnard
@@ -337,7 +336,6 @@ const ADVISOR_LIST = [
   {code:'SKA310889', name:'Lwahluma Mtsulwana'},
   {code:'SKA313162', name:'Ivan Davies'},
   {code:'SKA313936', name:'Brian Steve Boucher'},
-  {code:'SKA313952', name:'Rivaldo Rossouw'},
   {code:'SKA315109', name:'Roger Pretorius'},
   {code:'SKA315466', name:'Thomas Taylor'},
   {code:'SKA315568', name:'Stefan Barnard'},
