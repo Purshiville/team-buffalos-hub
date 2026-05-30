@@ -1614,16 +1614,32 @@ async function _extractTextFromPDF(file){
   }
   return text;
 }
+async function _pdfFirstPageToBlob(file){
+  await _loadPdfJs();
+  const buf=await file.arrayBuffer();
+  const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+  const pg=await pdf.getPage(1);
+  const vp=pg.getViewport({scale:2.5});
+  const canvas=document.createElement('canvas');
+  canvas.width=vp.width; canvas.height=vp.height;
+  await pg.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+  return new Promise(res=>canvas.toBlob(res,'image/png'));
+}
 function _parseLoaDetails(text){
   const idMatch=text.match(/\b(\d{13})\b/);
   const idNumber=idMatch?idMatch[1]:'';
   let name='';
+  const nameWord='[A-ZÀ-Ö][A-Za-zÀ-öø-ÿ\''-]+';
+  const namePat=`(${nameWord}(?:\\s+${nameWord}){1,5})`;
   const patterns=[
-    /(?:full\s+name|client(?:'s)?\s+name|name\s+of\s+(?:client|policyholder)|policyholder)[:\s,]+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})/i,
-    /I[,\s]+([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})[,\s]+(?:hereby|the undersigned|ID\s*[Nn]o)/i,
-    /(?:name\s*[:\/])\s*([A-Z][A-Za-z'-]+(?:\s+[A-Z][A-Za-z'-]+){1,5})/i,
+    new RegExp(`(?:full\\s+name(?:\\s*[/&]\\s*vo[l]+e\\s*naam)?|client(?:'s)?\\s+name|name\\s+of\\s+(?:client|policyholder)|policyholder(?:'s\\s+name)?|assured(?:'s\\s+name)?|life\\s+assured|member(?:'s\\s+name)?)[:\\s,]+${namePat}`,'i'),
+    new RegExp(`I[,\\s]+${namePat}[,\\s]+(?:hereby|the\\s+undersigned|ID\\s*[Nn]o|\\(ID)`,'i'),
+    new RegExp(`(?:name\\s*[:\\/])\\s*${namePat}`,'i'),
+    new RegExp(`(?:first\\s+name[s]?|forename[s]?)[:\\s]+${namePat}`,'i'),
+    new RegExp(`(?:applicant|claimant|owner)[:\\s,]+${namePat}`,'i'),
+    new RegExp(`(?:surname(?:\\s*[/&]\\s*name)?|name(?:\\s*[/&]\\s*surname))[:\\s,]+${namePat}`,'i'),
   ];
-  for(const p of patterns){const m=text.match(p);if(m){name=m[1].trim();break;}}
+  for(const p of patterns){const m=text.match(p);if(m&&m[1]){name=m[1].trim().replace(/\s+/g,' ');break;}}
   return{name,idNumber};
 }
 async function _ocrImage(file){
@@ -1656,8 +1672,18 @@ async function loaFileSelected(input){
   if(isPdf||isImg){
     if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">${isPdf?'⏳ Reading LOA…':'📷 Scanning — may take ~10 sec…'}</span>`;
     try{
-      const text=isPdf?await _extractTextFromPDF(window._loaFile):await _ocrImage(window._loaFile);
-      const{name,idNumber}=_parseLoaDetails(text);
+      let text=isPdf?await _extractTextFromPDF(window._loaFile):await _ocrImage(window._loaFile);
+      let{name,idNumber}=_parseLoaDetails(text);
+      if(isPdf&&(!name||!idNumber)){
+        if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">📷 Scanning — may take ~15 sec…</span>`;
+        try{
+          const blob=await _pdfFirstPageToBlob(window._loaFile);
+          const ocrText=await _ocrImage(blob);
+          const parsed=_parseLoaDetails(ocrText);
+          if(!name&&parsed.name)name=parsed.name;
+          if(!idNumber&&parsed.idNumber)idNumber=parsed.idNumber;
+        }catch(e2){console.warn('LOA OCR fallback failed:',e2);}
+      }
       if(name){const f=document.getElementById('loaClientName');if(f)f.value=name;}
       if(idNumber){const f=document.getElementById('loaIdInput');if(f){f.value=idNumber;loaIdCheck();}}
     }catch(e){console.warn('LOA extract failed:',e);}
