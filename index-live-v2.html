@@ -1124,7 +1124,7 @@
     <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:20px;padding:14px 20px;margin-bottom:16px;">
       <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📎 Merge Documents</div>
       <div style="color:#fff;font-size:16px;font-weight:700;">Merge Docs into PDF</div>
-      <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:4px;">JPGs &amp; PDFs merged into one file · 4.5MB max output</div>
+      <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:4px;">JPGs &amp; PDFs merged into one file · auto-compresses to fit 4MB IMP limit</div>
     </div>
 
     <!-- Merge tool -->
@@ -1142,6 +1142,14 @@
       </label>
       <!-- File list -->
       <div id="mdFileList"></div>
+      <!-- Filename -->
+      <div id="mdFilenameWrap" style="display:none;margin-top:10px;">
+        <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Save file as</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="text" id="mdFileName" value="merged-document" placeholder="merged-document" style="flex:1;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#0d1f3c;"/>
+          <span style="font-size:12px;color:#9ca3af;flex-shrink:0;font-weight:600;">.pdf</span>
+        </div>
+      </div>
       <!-- Merge button -->
       <button id="mdMergeBtn" onclick="mdMerge()" style="background:#0d1f3c;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;font-size:13px;font-weight:700;cursor:pointer;margin-top:10px;opacity:0.45;pointer-events:none;">Merge &amp; Download PDF</button>
       <!-- Status -->
@@ -2212,19 +2220,19 @@ Please send your Proof of Payment to your advisor once done.</div>
     <div class="dir-group" style="display:flex;flex-direction:column;gap:8px;margin-bottom:8px;">
       <div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.8px;padding:0 2px;">Izulu leadership</div>
       <div class="dir-card" data-search="jacques du preez regional executive 082 551 8170"><div class="dir-av" style="background:#0d1f3c;">J</div><div class="dir-info"><div class="dir-name">Jacques du Preez</div><div class="dir-role">Regional Executive</div></div><a class="dir-wa" href="https://wa.me/27825518170" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="michael branch manager 083 440 9098"><div class="dir-av" style="background:#1b4f8a;">M</div><div class="dir-info"><div class="dir-name">Michael</div><div class="dir-role">Branch Manager</div></div><a class="dir-wa" href="https://wa.me/27834409098" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="purshiville sales manager 067 674 7722"><div class="dir-av" style="background:#c9922a;">P</div><div class="dir-info"><div class="dir-name">Purshiville</div><div class="dir-role">Sales Manager</div></div><a class="dir-wa" href="https://wa.me/27676747722" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="carleen key individual 082 496 8536"><div class="dir-av" style="background:#059669;">C</div><div class="dir-info"><div class="dir-name">Carleen</div><div class="dir-role">Key Individual</div></div><a class="dir-wa" href="https://wa.me/27824968536" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="arlene manager assistant ops 084 088 1666"><div class="dir-av" style="background:#92400e;">A</div><div class="dir-info"><div class="dir-name">Arlene</div><div class="dir-role">Manager's Assistant &amp; Ops</div></div><a class="dir-wa" href="https://wa.me/27840881666" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="mareli hr human resources 083 299 3058"><div class="dir-av" style="background:#be185d;">M</div><div class="dir-info"><div class="dir-name">Mareli</div><div class="dir-role">HR</div></div><a class="dir-wa" href="https://wa.me/27832993058" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="michael bernardt branch manager 083 440 9098"><div class="dir-av" style="background:#1b4f8a;">M</div><div class="dir-info"><div class="dir-name">Michael Bernardt</div><div class="dir-role">Branch Manager</div></div><a class="dir-wa" href="https://wa.me/27834409098" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="purshiville nortje sales manager 067 674 7722"><div class="dir-av" style="background:#c9922a;">P</div><div class="dir-info"><div class="dir-name">Purshiville Nortje</div><div class="dir-role">Sales Manager</div></div><a class="dir-wa" href="https://wa.me/27676747722" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="carleen damant key individual 082 496 8536"><div class="dir-av" style="background:#059669;">C</div><div class="dir-info"><div class="dir-name">Carleen Damant</div><div class="dir-role">Key Individual</div></div><a class="dir-wa" href="https://wa.me/27824968536" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="arlene davis manager assistant ops 084 088 1666"><div class="dir-av" style="background:#92400e;">A</div><div class="dir-info"><div class="dir-name">Arlene Davis</div><div class="dir-role">Manager's Assistant &amp; Ops</div></div><a class="dir-wa" href="https://wa.me/27840881666" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="mareli coetzer hr human resources 083 299 3058"><div class="dir-av" style="background:#be185d;">M</div><div class="dir-info"><div class="dir-name">Mareli Coetzer</div><div class="dir-role">HR</div></div><a class="dir-wa" href="https://wa.me/27832993058" target="_blank">💬 WhatsApp</a></div>
     </div>
 
     <div class="dir-group" style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;">
       <div style="font-size:10px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.8px;padding:0 2px;">Admin &amp; support</div>
-      <div class="dir-card" data-search="anelisa servicing claims 066 128 5500"><div class="dir-av" style="background:#7c3aed;">A</div><div class="dir-info"><div class="dir-name">Anelisa</div><div class="dir-role">Servicing &amp; Claims</div></div><a class="dir-wa" href="https://wa.me/27661285500" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="lynn accounts billing 084 429 6131"><div class="dir-av" style="background:#be185d;">L</div><div class="dir-info"><div class="dir-name">Lynn</div><div class="dir-role">Accounts &amp; Billing</div></div><a class="dir-wa" href="https://wa.me/27844296131" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="reane servicing queries 084 965 0997"><div class="dir-av" style="background:#0891b2;">R</div><div class="dir-info"><div class="dir-name">Reane</div><div class="dir-role">Servicing &amp; Queries</div></div><a class="dir-wa" href="https://wa.me/27849650997" target="_blank">💬 WhatsApp</a></div>
-      <div class="dir-card" data-search="zuki cancellations 079 752 1191"><div class="dir-av" style="background:#dc2626;">Z</div><div class="dir-info"><div class="dir-name">Zuki</div><div class="dir-role">Cancellations</div></div><a class="dir-wa" href="https://wa.me/27797521191" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="anelisa tanda servicing claims 066 128 5500"><div class="dir-av" style="background:#7c3aed;">A</div><div class="dir-info"><div class="dir-name">Anelisa Tanda</div><div class="dir-role">Servicing &amp; Claims</div></div><a class="dir-wa" href="https://wa.me/27661285500" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="lynn williams accounts billing 084 429 6131"><div class="dir-av" style="background:#be185d;">L</div><div class="dir-info"><div class="dir-name">Lynn Williams</div><div class="dir-role">Accounts &amp; Billing</div></div><a class="dir-wa" href="https://wa.me/27844296131" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="reane beyleveldt servicing queries 084 965 0997"><div class="dir-av" style="background:#0891b2;">R</div><div class="dir-info"><div class="dir-name">Reane Beyleveldt</div><div class="dir-role">Servicing &amp; Queries</div></div><a class="dir-wa" href="https://wa.me/27849650997" target="_blank">💬 WhatsApp</a></div>
+      <div class="dir-card" data-search="zuki ketye cancellations 079 752 1191"><div class="dir-av" style="background:#dc2626;">Z</div><div class="dir-info"><div class="dir-name">Zuki Ketye</div><div class="dir-role">Cancellations</div></div><a class="dir-wa" href="https://wa.me/27797521191" target="_blank">💬 WhatsApp</a></div>
       <div class="dir-card" data-search="lerato cancellations 066 359 7401"><div class="dir-av" style="background:#065f46;">L</div><div class="dir-info"><div class="dir-name">Lerato</div><div class="dir-role">Cancellations</div></div><a class="dir-wa" href="https://wa.me/27663597401" target="_blank">💬 WhatsApp</a></div>
     </div>
 

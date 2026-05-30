@@ -4527,6 +4527,7 @@ function setRepReason(type){
 
 const ROA_PLANS = ['Value Funeral Plan','Enhanced Priority Funeral Plan','All-in-One Plan (standalone)','Immediate Life Cover (ILC)','Essential Med'];
 const ROA_LIFE_ROLES = ['Main member','Spouse','Child 1','Child 2','Child 3','Child 4','Extended family member'];
+const ROA_COVER_TYPES = ['Funeral cover','Life cover','Disability cover','Impairment / severe illness cover','Other (manual)'];
 const ROA_REASONS = {
   align:'The client chose to align their existing cover amount with the new policy.',
   better:'The client selected the new policy based on its superior product benefits and overall value for money.',
@@ -4563,7 +4564,7 @@ function setROAType(type){
 }
 
 function roaAddPlan(){
-  _roaPlans.push({plan:'Value Funeral Plan',premium:'',lives:[{role:'Main member',name:'',cover:''}]});
+  _roaPlans.push({plan:'Value Funeral Plan',premium:'',lives:[{role:'Main member',name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''}]});
   roaRenderPlans();
 }
 
@@ -4571,10 +4572,10 @@ function roaAddLife(planIdx,listType){
   const usedRoles = listType==='plan' ? _roaPlans[planIdx].lives.map(l=>l.role) : _roaNewPolicies[planIdx].lives.map(l=>l.role);
   const nextRole = ROA_LIFE_ROLES.find(r=>!usedRoles.includes(r))||'Extended family member';
   if(listType==='plan'){
-    _roaPlans[planIdx].lives.push({role:nextRole,name:'',cover:''});
+    _roaPlans[planIdx].lives.push({role:nextRole,name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''});
     roaRenderPlans();
   } else {
-    _roaNewPolicies[planIdx].lives.push({role:nextRole,name:'',cover:''});
+    _roaNewPolicies[planIdx].lives.push({role:nextRole,name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''});
     roaRenderNewPolicies();
   }
   roaGenerate();
@@ -4595,16 +4596,26 @@ function roaRenderPlans(){
         </div>
         <button onclick="_roaPlans.splice(${i},1);roaRenderPlans();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;">✕</button>
       </div>
-      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Lives assured &amp; funeral cover</div>
-      ${(p.lives||[]).map((lf,li)=>`
-        <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
-          <select onchange="_roaPlans[${i}].lives[${li}].role=this.value;roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
-            ${ROA_LIFE_ROLES.map(r=>`<option value="${r}" ${lf.role===r?'selected':''}>${r}</option>`).join('')}
-          </select>
-          <input placeholder="Full name" value="${lf.name||''}" oninput="_roaPlans[${i}].lives[${li}].name=this.value;roaGenerate();" style="flex:2;min-width:90px;padding:4px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;"/>
-          <input placeholder="Cover e.g. R50 000" value="${lf.cover||''}" oninput="_roaPlans[${i}].lives[${li}].cover=this.value;roaGenerate();" style="flex:1;min-width:80px;padding:4px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;"/>
-          <button onclick="_roaPlans[${i}].lives.splice(${li},1);roaRenderPlans();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:0;flex-shrink:0;">✕</button>
-        </div>`).join('')}
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Lives assured &amp; cover</div>
+      ${(p.lives||[]).map((lf,li)=>{
+        const ct=lf.coverType||'Funeral cover';
+        const isOther=ct==='Other (manual)';
+        return`<div style="margin-bottom:4px;">
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:2px;">
+            <select onchange="_roaPlans[${i}].lives[${li}].role=this.value;roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
+              ${ROA_LIFE_ROLES.map(r=>`<option value="${r}" ${lf.role===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+            <input placeholder="Full name" value="${lf.name||''}" oninput="_roaPlans[${i}].lives[${li}].name=this.value;roaGenerate();" style="flex:2;min-width:90px;padding:4px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;"/>
+            <button onclick="_roaPlans[${i}].lives.splice(${li},1);roaRenderPlans();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:0;flex-shrink:0;">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+            <select onchange="_roaPlans[${i}].lives[${li}].coverType=this.value;roaRenderPlans();roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #d1d5db;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
+              ${ROA_COVER_TYPES.map(r=>`<option value="${r}" ${ct===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+            ${isOther?`<input placeholder="Describe cover type" value="${lf.coverTypeOther||''}" oninput="_roaPlans[${i}].lives[${li}].coverTypeOther=this.value;roaGenerate();" style="flex:2;min-width:100px;padding:4px 8px;font-size:11px;border:1px solid #d1d5db;border-radius:6px;"/>`:''}
+            <input placeholder="Cover e.g. R50 000" value="${lf.cover||''}" oninput="_roaPlans[${i}].lives[${li}].cover=this.value;roaGenerate();" style="flex:1;min-width:80px;padding:4px 8px;font-size:12px;border:1px solid #d1d5db;border-radius:6px;"/>
+          </div>
+        </div>`;}).join('')}
       <button onclick="roaAddLife(${i},'plan')" style="margin-top:4px;background:#f0f9ff;border:1px dashed #bae6fd;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;color:#075985;cursor:pointer;">+ Add life assured</button>
     </div>`).join('');
 }
@@ -4627,7 +4638,7 @@ function roaRenderRepPolicies(){
 }
 
 function roaAddNewPolicy(){
-  _roaNewPolicies.push({plan:'All-in-One Plan (standalone)',premium:'',lives:[{role:'Main member',name:'',cover:''}]});
+  _roaNewPolicies.push({plan:'All-in-One Plan (standalone)',premium:'',lives:[{role:'Main member',name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''}]});
   roaRenderNewPolicies();
 }
 
@@ -4646,16 +4657,26 @@ function roaRenderNewPolicies(){
         </div>
         <button onclick="_roaNewPolicies.splice(${i},1);roaRenderNewPolicies();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;">✕</button>
       </div>
-      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Lives assured &amp; funeral cover</div>
-      ${(p.lives||[]).map((lf,li)=>`
-        <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px;flex-wrap:wrap;">
-          <select onchange="_roaNewPolicies[${i}].lives[${li}].role=this.value;roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #a7f3d0;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
-            ${ROA_LIFE_ROLES.map(r=>`<option value="${r}" ${lf.role===r?'selected':''}>${r}</option>`).join('')}
-          </select>
-          <input placeholder="Full name" value="${lf.name||''}" oninput="_roaNewPolicies[${i}].lives[${li}].name=this.value;roaGenerate();" style="flex:2;min-width:90px;padding:4px 8px;font-size:12px;border:1px solid #a7f3d0;border-radius:6px;"/>
-          <input placeholder="Cover e.g. R50 000" value="${lf.cover||''}" oninput="_roaNewPolicies[${i}].lives[${li}].cover=this.value;roaGenerate();" style="flex:1;min-width:80px;padding:4px 8px;font-size:12px;border:1px solid #a7f3d0;border-radius:6px;"/>
-          <button onclick="_roaNewPolicies[${i}].lives.splice(${li},1);roaRenderNewPolicies();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:0;flex-shrink:0;">✕</button>
-        </div>`).join('')}
+      <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px;">Lives assured &amp; cover</div>
+      ${(p.lives||[]).map((lf,li)=>{
+        const ct=lf.coverType||'Funeral cover';
+        const isOther=ct==='Other (manual)';
+        return`<div style="margin-bottom:4px;">
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:2px;">
+            <select onchange="_roaNewPolicies[${i}].lives[${li}].role=this.value;roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #a7f3d0;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
+              ${ROA_LIFE_ROLES.map(r=>`<option value="${r}" ${lf.role===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+            <input placeholder="Full name" value="${lf.name||''}" oninput="_roaNewPolicies[${i}].lives[${li}].name=this.value;roaGenerate();" style="flex:2;min-width:90px;padding:4px 8px;font-size:12px;border:1px solid #a7f3d0;border-radius:6px;"/>
+            <button onclick="_roaNewPolicies[${i}].lives.splice(${li},1);roaRenderNewPolicies();roaGenerate();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:13px;padding:0;flex-shrink:0;">✕</button>
+          </div>
+          <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;">
+            <select onchange="_roaNewPolicies[${i}].lives[${li}].coverType=this.value;roaRenderNewPolicies();roaGenerate();" style="flex:0 0 auto;font-size:11px;border:1px solid #a7f3d0;border-radius:6px;padding:4px 6px;background:#fff;color:#0d1f3c;">
+              ${ROA_COVER_TYPES.map(r=>`<option value="${r}" ${ct===r?'selected':''}>${r}</option>`).join('')}
+            </select>
+            ${isOther?`<input placeholder="Describe cover type" value="${lf.coverTypeOther||''}" oninput="_roaNewPolicies[${i}].lives[${li}].coverTypeOther=this.value;roaGenerate();" style="flex:2;min-width:100px;padding:4px 8px;font-size:11px;border:1px solid #a7f3d0;border-radius:6px;"/>`:''}
+            <input placeholder="Cover e.g. R50 000" value="${lf.cover||''}" oninput="_roaNewPolicies[${i}].lives[${li}].cover=this.value;roaGenerate();" style="flex:1;min-width:80px;padding:4px 8px;font-size:12px;border:1px solid #a7f3d0;border-radius:6px;"/>
+          </div>
+        </div>`;}).join('')}
       <button onclick="roaAddLife(${i},'new')" style="margin-top:4px;background:#f0fdf4;border:1px dashed #86efac;border-radius:6px;padding:5px 10px;font-size:11px;font-weight:700;color:#166534;cursor:pointer;">+ Add life assured</button>
     </div>`).join('');
 }
@@ -4672,9 +4693,10 @@ function roaGenerate(){
 
     let planBlocks = _roaPlans.map(p=>{
       const livesList = (p.lives||[]).filter(l=>l.name||l.cover).map(l=>{
+        const ct=l.coverType==='Other (manual)'?(l.coverTypeOther||'other cover'):(l.coverType||'funeral cover');
         let line = `  • ${l.role}`;
         if(l.name) line += `: ${l.name}`;
-        if(l.cover) line += ` — ${l.cover} funeral cover`;
+        if(l.cover) line += ` — ${l.cover} ${ct}`;
         return line;
       }).join('\n');
       const lines = [`Plan selected: ${p.plan}`];
@@ -4727,13 +4749,14 @@ function roaGenerate(){
     // Helper: format a new policy block
     const _polBlock = p=>{
       const livesList=(p.lives||[]).filter(l=>l.name||l.cover).map(l=>{
+        const ct=l.coverType==='Other (manual)'?(l.coverTypeOther||'other cover'):(l.coverType||'funeral cover');
         let line=`    • ${l.role}`;
         if(l.name)line+=`: ${l.name}`;
-        if(l.cover)line+=` — ${l.cover} funeral cover`;
+        if(l.cover)line+=` — ${l.cover} ${ct}`;
         return line;
       }).join('\n');
       const lines=[`  ${p.plan}${p.premium?' — Monthly premium: '+p.premium:''}`];
-      if(livesList)lines.push(`  Lives assured and funeral cover:\n${livesList}`);
+      if(livesList)lines.push(`  Lives assured and cover:\n${livesList}`);
       return lines.join('\n');
     };
 
@@ -8410,22 +8433,127 @@ function mdRemoveFile(i){
   mdRenderList();
 }
 
+function loadPdfJs(){
+  return new Promise((resolve,reject)=>{
+    if(window.pdfjsLib){resolve();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      resolve();
+    };
+    s.onerror=reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function mdRasterizePdf(bytes,scale,quality){
+  await loadPdfJs();
+  const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes)}).promise;
+  const pages=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const vp=page.getViewport({scale});
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.round(vp.width);canvas.height=Math.round(vp.height);
+    await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+    const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',quality));
+    const ab=new Uint8Array(await blob.arrayBuffer());
+    pages.push({w:Math.round(vp.width),h:Math.round(vp.height),ab});
+  }
+  return pages;
+}
+
+async function mdBuild(compress,onProg){
+  await loadPdfLib();
+  const {PDFDocument}=window.PDFLib;
+  const merged=await PDFDocument.create();
+  const A4W=595,A4H=842;
+  const imgMax=compress?900:1600,imgQ=compress?0.60:0.82;
+  const n=_mdFiles.length;
+  for(let i=0;i<n;i++){
+    const f=_mdFiles[i];
+    const pct=5+Math.round((i/n)*88);
+    if(onProg)onProg(pct,`${compress?'Compressing':'Processing'} file ${i+1} of ${n} — ${f.name.length>28?f.name.slice(0,26)+'…':f.name}`);
+    const bytes=await f.arrayBuffer();
+    const isPdf=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
+    if(isPdf){
+      if(compress){
+        let pages;
+        try{pages=await mdRasterizePdf(bytes,1.0,0.60);}catch(e){showAlert('Could not compress '+f.name+' — skipped.','error');continue;}
+        for(const pg of pages){
+          try{
+            const img=await merged.embedJpg(new Uint8Array(pg.ab));
+            const sc=Math.min(A4W/pg.w,A4H/pg.h,1);
+            const pw=pg.w*sc,ph=pg.h*sc;
+            const p=merged.addPage([A4W,A4H]);
+            p.drawImage(img,{x:(A4W-pw)/2,y:(A4H-ph)/2,width:pw,height:ph});
+          }catch(e){/* skip */}
+        }
+      } else {
+        let src;
+        try{src=await PDFDocument.load(new Uint8Array(bytes),{ignoreEncryption:true});}catch(e){showAlert('Could not read '+f.name+' — skipped.','error');continue;}
+        try{
+          const copied=await merged.copyPages(src,src.getPageIndices());
+          copied.forEach(p=>merged.addPage(p));
+        }catch(e){showAlert('Could not copy pages from '+f.name+' — skipped.','error');}
+      }
+    } else {
+      try{
+        const compBytes=await mdCompressImg(f,imgMax,imgQ);
+        let img;
+        const isPng=f.name.toLowerCase().endsWith('.png');
+        if(isPng&&!compBytes){
+          img=await merged.embedPng(new Uint8Array(bytes));
+        } else {
+          const src=compBytes?new Uint8Array(compBytes):new Uint8Array(bytes);
+          try{img=await merged.embedJpg(src);}
+          catch(e){img=await merged.embedPng(src);}
+        }
+        const sc=Math.min(A4W/img.width,A4H/img.height,1);
+        const w=img.width*sc,h=img.height*sc;
+        const p=merged.addPage([A4W,A4H]);
+        p.drawImage(img,{x:(A4W-w)/2,y:(A4H-h)/2,width:w,height:h});
+      }catch(e){showAlert('Could not embed image '+f.name+' — skipped.','error');}
+    }
+  }
+  return await merged.save();
+}
+
+function mdMoveFile(i,dir){
+  const j=i+dir;
+  if(j<0||j>=_mdFiles.length)return;
+  [_mdFiles[i],_mdFiles[j]]=[_mdFiles[j],_mdFiles[i]];
+  mdRenderList();
+}
+
 function mdRenderList(){
   const el=document.getElementById('mdFileList');
   const btn=document.getElementById('mdMergeBtn');
+  const fnWrap=document.getElementById('mdFilenameWrap');
   if(!el)return;
   if(!_mdFiles.length){
     el.innerHTML='';
     if(btn){btn.style.opacity='0.45';btn.style.pointerEvents='none';}
+    if(fnWrap)fnWrap.style.display='none';
     return;
   }
   if(btn){btn.style.opacity='1';btn.style.pointerEvents='auto';}
+  if(fnWrap)fnWrap.style.display='block';
+  const n=_mdFiles.length;
   el.innerHTML=`<div style="margin-bottom:8px;">`+_mdFiles.map((f,i)=>{
     const isImg=f.type.startsWith('image/')||f.name.match(/\.(jpg|jpeg|png)$/i);
     const icon=isImg?'🖼️':'📄';
     const tag=isImg?'→ PDF':'PDF';
     const sz=(f.size/1024).toFixed(0);
-    return`<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f9f9f9;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:5px;">
+    const upDis=i===0;const dnDis=i===n-1;
+    const btnS='background:#fff;border:1px solid #e5e7eb;border-radius:5px;font-size:10px;line-height:1;padding:3px 5px;cursor:pointer;';
+    return`<div style="display:flex;align-items:center;gap:8px;padding:9px 12px;background:#f9f9f9;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:5px;">
+      <div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0;">
+        <button onclick="mdMoveFile(${i},-1)" ${upDis?'disabled':''} style="${btnS}color:${upDis?'#d1d5db':'#374151'};">▲</button>
+        <button onclick="mdMoveFile(${i},1)" ${dnDis?'disabled':''} style="${btnS}color:${dnDis?'#d1d5db':'#374151'};">▼</button>
+      </div>
+      <span style="font-size:10px;font-weight:700;color:#9ca3af;flex-shrink:0;min-width:12px;text-align:center;">${i+1}</span>
       <span style="font-size:18px;flex-shrink:0;">${icon}</span>
       <div style="flex:1;min-width:0;">
         <div style="font-size:12px;font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
@@ -8433,7 +8561,20 @@ function mdRenderList(){
       </div>
       <button onclick="mdRemoveFile(${i})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;">✕</button>
     </div>`;
-  }).join('')+`</div><div style="font-size:10px;color:#9ca3af;padding:0 2px;">${_mdFiles.length}/8 files · ${_mdFiles.length<8?'Tap above to add more':'Maximum reached'}</div>`;
+  }).join('')+`</div><div style="font-size:10px;color:#9ca3af;padding:0 2px;">${n}/8 files · ${n<8?'Tap above to add more':'Maximum reached'}</div>`;
+}
+
+function mdSetProgress(status,pct,msg){
+  if(!status)return;
+  status.innerHTML=`<div style="padding:4px 0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">
+      <span style="font-size:11px;color:#6b7280;">${msg}</span>
+      <span style="font-size:11px;font-weight:700;color:#374151;">${Math.round(pct)}%</span>
+    </div>
+    <div style="background:#e5e7eb;border-radius:999px;height:7px;overflow:hidden;">
+      <div style="background:linear-gradient(90deg,#1b4f8a,#c9922a);height:100%;width:${pct}%;border-radius:999px;transition:width 0.25s ease;"></div>
+    </div>
+  </div>`;
 }
 
 async function mdMerge(){
@@ -8441,65 +8582,52 @@ async function mdMerge(){
   const btn=document.getElementById('mdMergeBtn');
   const status=document.getElementById('mdStatus');
   btn.disabled=true;btn.textContent='Merging…';
-  if(status)status.innerHTML='<div style="font-size:12px;color:#6b7280;padding:6px 0;">Loading PDF engine…</div>';
-  try{
-    await loadPdfLib();
-    const {PDFDocument}=window.PDFLib;
-    const merged=await PDFDocument.create();
-    const A4W=595,A4H=842;
-    for(let i=0;i<_mdFiles.length;i++){
-      const f=_mdFiles[i];
-      if(status)status.innerHTML=`<div style="font-size:12px;color:#6b7280;padding:6px 0;">Processing file ${i+1} of ${_mdFiles.length}…</div>`;
-      const bytes=await f.arrayBuffer();
-      const isPdf=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
-      if(isPdf){
-        let src;
-        try{src=await PDFDocument.load(bytes,{ignoreEncryption:true});}catch(e){showAlert('Could not read '+f.name+' — skipped.','error');continue;}
-        const copied=await merged.copyPages(src,src.getPageIndices());
-        copied.forEach(p=>merged.addPage(p));
-      } else {
-        // Compress image first if large
-        const compBytes=await mdCompressImg(f);
-        let img;
-        if(f.name.toLowerCase().endsWith('.png')&&!compBytes){
-          img=await merged.embedPng(bytes);
-        } else {
-          img=await merged.embedJpg(compBytes||bytes);
-        }
-        const scale=Math.min(A4W/img.width,A4H/img.height,1);
-        const w=img.width*scale,h=img.height*scale;
-        const page=merged.addPage([A4W,A4H]);
-        page.drawImage(img,{x:(A4W-w)/2,y:(A4H-h)/2,width:w,height:h});
-      }
-    }
-    if(status)status.innerHTML='<div style="font-size:12px;color:#6b7280;padding:6px 0;">Finalising PDF…</div>';
-    const out=await merged.save();
-    const mb=(out.byteLength/(1024*1024)).toFixed(2);
-    if(parseFloat(mb)>4.5){
-      if(status)status.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991b1b;font-weight:600;">⚠️ Merged file is ${mb}MB — exceeds the 4.5MB limit. Try removing pages or using smaller images.</div>`;
-      btn.disabled=false;btn.textContent='Merge & Download PDF';return;
-    }
+  mdSetProgress(status,2,'Loading PDF engine…');
+  const dl=(out,mb,label)=>{
+    const fnInput=document.getElementById('mdFileName');
+    const rawName=(fnInput&&fnInput.value.trim())||'merged-document';
+    const fname=rawName.toLowerCase().endsWith('.pdf')?rawName:rawName+'.pdf';
     const blob=new Blob([out],{type:'application/pdf'});
     const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;a.download='merged-document.pdf';
+    const a=document.createElement('a');a.href=url;a.download=fname;
     document.body.appendChild(a);a.click();document.body.removeChild(a);
     setTimeout(()=>URL.revokeObjectURL(url),2000);
-    if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Downloaded — ${mb}MB · ${_mdFiles.length} file${_mdFiles.length!==1?'s':''} merged</div>`;
+    if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Downloaded${label?' ('+label+')':''} — ${mb}MB · ${_mdFiles.length} file${_mdFiles.length!==1?'s':''} merged · saved as ${fname}</div>`;
+  };
+  try{
+    const out=await mdBuild(false,(pct,msg)=>mdSetProgress(status,pct,msg));
+    mdSetProgress(status,98,'Finalising…');
+    const mb=(out.byteLength/(1024*1024)).toFixed(2);
+    if(parseFloat(mb)>4.0){
+      mdSetProgress(status,2,`📦 ${mb}MB — auto-compressing to fit 4MB IMP limit…`);
+      btn.textContent='Compressing…';
+      const outC=await mdBuild(true,(pct,msg)=>mdSetProgress(status,pct,msg));
+      mdSetProgress(status,98,'Finalising compressed PDF…');
+      const mbC=(outC.byteLength/(1024*1024)).toFixed(2);
+      if(parseFloat(mbC)>4.0){
+        if(status)status.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991b1b;font-weight:600;">⚠️ Compressed file is still ${mbC}MB — still exceeds 4MB. Upload the bank statement or payslip separately to IMP.</div>`;
+        btn.disabled=false;btn.textContent='Merge & Download PDF';return;
+      }
+      dl(outC,mbC,'compressed');
+    } else {
+      dl(out,mb,'');
+    }
   } catch(err){
     if(status)status.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991b1b;font-weight:600;">Error: ${err.message}</div>`;
   }
   btn.disabled=false;btn.textContent='Merge & Download PDF';
 }
 
-function mdCompressImg(file){
+function mdCompressImg(file,maxPx,quality){
+  if(maxPx===undefined)maxPx=1600;
+  if(quality===undefined)quality=0.82;
   return new Promise(resolve=>{
     const url=URL.createObjectURL(file);
     const img=new Image();
     img.onload=()=>{
       URL.revokeObjectURL(url);
-      const MAX=1600;let w=img.width,h=img.height;
-      if(w>MAX||h>MAX){if(w>h){h=Math.round(h*MAX/w);w=MAX;}else{w=Math.round(w*MAX/h);h=MAX;}}
+      let w=img.width,h=img.height;
+      if(w>maxPx||h>maxPx){if(w>h){h=Math.round(h*maxPx/w);w=maxPx;}else{w=Math.round(w*maxPx/h);h=maxPx;}}
       const c=document.createElement('canvas');c.width=w;c.height=h;
       c.getContext('2d').drawImage(img,0,0,w,h);
       c.toBlob(b=>{
