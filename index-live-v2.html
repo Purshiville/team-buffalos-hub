@@ -2981,6 +2981,14 @@ Please send your Proof of Payment to your advisor once done.</div>
             <option value="15">Urgent Attention Required</option>
             <option value="16">New Notice from Management</option>
           </optgroup>
+          <optgroup label="🔔 Alerts &amp; Announcements">
+            <option value="17">General Announcement</option>
+            <option value="18">Policy Update Alert</option>
+            <option value="19">Public Holiday Notice</option>
+            <option value="20">Office Closure Notice</option>
+            <option value="21">Compliance Reminder</option>
+            <option value="22">Achievement Announcement</option>
+          </optgroup>
         </select>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <select id="noticeType" style="padding:7px 10px;font-size:12px;font-weight:700;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#0d1f3c;flex-shrink:0;">
@@ -2989,9 +2997,6 @@ Please send your Proof of Payment to your advisor once done.</div>
             <option value="qlink">⚡ Qlink</option>
             <option value="success">✅ Good news</option>
             <option value="reminder">🔔 Reminder</option>
-          </select>
-          <select id="noticeRecipient" onchange="const b=document.getElementById('noticePostBtn');if(b)b.textContent=this.value==='ALL'?'📌 Post to dashboard':'📌 Post to '+this.options[this.selectedIndex].text;" style="padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#0d1f3c;flex-shrink:0;min-width:0;">
-            <option value="ALL">👥 All advisors</option>
           </select>
           <input id="noticeTitle" placeholder="Notice title — e.g. All Qlinks completed for April" onfocus="noticeLastField=this" style="flex:1;padding:7px 10px;font-size:13px;font-weight:600;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;"/>
         </div>

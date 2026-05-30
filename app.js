@@ -2815,6 +2815,13 @@ const NOTICE_TEMPLATES=[
   {group:'👥 Team & Operations',type:'urgent',title:'Outstanding Feedback Required',body:'Management is awaiting feedback on previously requested client updates. Please respond urgently.'},
   {group:'👥 Team & Operations',type:'urgent',title:'Urgent Attention Required',body:'Certain cases require urgent advisor attention to prevent delays, lapses, or cancellations. Please review immediately.'},
   {group:'👥 Team & Operations',type:'info',title:'New Notice from Management',body:'Management has shared an important update. Please review the notice carefully and action where required.'},
+  // Alerts & Announcements
+  {group:'🔔 Alerts & Announcements',type:'info',title:'General Announcement',body:'Please take note of the following announcement from management. Ensure all team members are informed accordingly.'},
+  {group:'🔔 Alerts & Announcements',type:'urgent',title:'Policy Update Alert',body:'An important policy update has been issued. All advisors are required to familiarise themselves with the changes and apply them effective immediately.'},
+  {group:'🔔 Alerts & Announcements',type:'reminder',title:'Public Holiday Notice',body:'Please note that the upcoming public holiday may affect client collections, Qlink processing, and Connect Me availability. Plan accordingly and communicate with your clients where necessary.'},
+  {group:'🔔 Alerts & Announcements',type:'info',title:'Office Closure Notice',body:'Please be advised that the office will be closed. Any urgent matters should be communicated before the closure date. Normal operations will resume thereafter.'},
+  {group:'🔔 Alerts & Announcements',type:'reminder',title:'Compliance Reminder',body:'All advisors are reminded to adhere to FAIS, TCF, and POPIA compliance requirements. Ensure all client interactions, documentation, and disclosures are completed in full and on record.'},
+  {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
 ];
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
