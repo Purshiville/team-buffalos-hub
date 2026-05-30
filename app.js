@@ -6305,11 +6305,11 @@ function _renderManagerDashInner(){
     const replCls=replEligible?'background:#dcfce7;color:#166534;':replSoon?'background:#fef3c7;color:#92400e;':'background:#fee2e2;color:#991b1b;';
     const replLbl=replEligible?'Eligible':replSoon?`${180-dofaDays}d away`:'Not yet';
     const avatarHtml=u.photo
-      ?`<img src="${u.photo}" style="width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid #e5e7eb;">`
-      :`<div style="width:34px;height:34px;border-radius:50%;background:#0d1f3c;color:#f5d98b;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(u.name||'?').charAt(0).toUpperCase()}</div>`;
+      ?`<img src="${u.photo}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1.5px solid #e5e7eb;">`
+      :`<div style="width:28px;height:28px;border-radius:50%;background:#0d1f3c;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">${(u.name||'?').charAt(0).toUpperCase()}</div>`;
     const displayName=_advisorNameMap[u.code]||u.name;
     return`<tr>
-      <td><div style="display:flex;align-items:center;gap:9px;">${avatarHtml}<div><div style="font-weight:600;">${displayName}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:10px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 7px;margin-left:5px;font-weight:600;">Ops</span>':''}</div><div style="font-size:10px;color:#9ca3af;margin-top:1px;font-family:monospace;">${u.code}</div><div style="font-size:10px;color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px;">${u.email}</div></div></div></td>
+      <td><div style="display:flex;align-items:center;gap:7px;">${avatarHtml}<div><div style="font-weight:600;font-size:12px;">${displayName}${u.isManager?'<span class="badge-mgr">Manager</span>':''}${u.isOps?'<span class="badge-ops" style="font-size:9px;background:#dbeafe;color:#1e3a8a;border:1px solid #bfdbfe;border-radius:20px;padding:1px 6px;margin-left:4px;font-weight:600;">Ops</span>':''}</div><div style="font-size:9px;color:#9ca3af;margin-top:1px;font-family:monospace;">${u.code}</div></div></div></td>
       <td style="font-size:12px;color:#6b7280;white-space:nowrap;">${dofaDisplay}</td>
       <td style="font-size:12px;color:${b&&b.isToday?'#92400e':'#6b7280'};white-space:nowrap;">${bdayDsp}</td>
       <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;${replCls}">${replLbl}</span></td>
