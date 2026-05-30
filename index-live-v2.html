@@ -8,6 +8,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, limit, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app-check.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDa5ADJs7Ujy7zjstNvDj59KI6w76dScoU",
@@ -21,6 +22,12 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
+
+    // Firebase App Check — replace RECAPTCHA_SITE_KEY with your reCAPTCHA v3 site key from Firebase Console
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider('RECAPTCHA_SITE_KEY'),
+      isTokenAutoRefreshEnabled: true
+    });
 
     // ── Expose Firebase helpers to global scope ──
     window.FB = {
@@ -95,6 +102,11 @@
       async saveCalEvent(id,data){ await setDoc(doc(db,'diary',id),{...data,updatedAt:serverTimestamp()},{merge:true}); },
       async deleteCalEvent(id){ await deleteDoc(doc(db,'diary',id)); },
       async getAllCalEvents(){ const s=await getDocs(collection(db,'diary')); return s.docs.map(d=>({id:d.id,...d.data()})); },
+      // Signing requests
+      async saveSigningRequest(id,data){ await setDoc(doc(db,'signingRequests',id),{...data,createdAt:serverTimestamp()}); },
+      async getSigningRequest(id){ const d=await getDoc(doc(db,'signingRequests',id)); return d.exists()?{id:d.id,...d.data()}:null; },
+      async updateSigningRequest(id,data){ await setDoc(doc(db,'signingRequests',id),{...data,updatedAt:serverTimestamp()},{merge:true}); },
+      onSigningRequest(id,cb){ return onSnapshot(doc(db,'signingRequests',id), d=>cb(d.exists()?{id:d.id,...d.data()}:null)); },
     };
 
     // Real-time notice listener — updates hub board as soon as a notice is posted
@@ -149,6 +161,18 @@
   </script>
 </head>
 <body>
+
+<!-- CLIENT SIGNING SCREEN — shown when URL hash is #sign/TOKEN (no login required) -->
+<div id="signingScreen" style="display:none;position:fixed;inset:0;background:#f8f7f4;z-index:9999;overflow-y:auto;padding:20px 16px;box-sizing:border-box;">
+  <div style="max-width:420px;margin:0 auto;">
+    <div style="text-align:center;margin-bottom:24px;padding-top:16px;">
+      <div style="font-size:44px;margin-bottom:8px;">🦬</div>
+      <div style="font-size:20px;font-weight:700;color:#0d1f3c;">Team Buffalos</div>
+      <div style="font-size:12px;color:#9ca3af;margin-top:2px;">Document Signing</div>
+    </div>
+    <div id="signingContent"><div style="text-align:center;padding:40px 0;color:#9ca3af;font-size:14px;">Loading...</div></div>
+  </div>
+</div>
 
 <div id="authScreen" class="screen active">
   <div class="auth-card">
@@ -264,6 +288,7 @@
         <div>
           <div class="ai-popup-title">Team Buffalos Assistant</div>
           <div class="ai-popup-sub">Ask me anything about the business</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.45);margin-top:2px;line-height:1.4;">For guidance only — verify compliance, regulatory &amp; product answers with your manager or KI before acting</div>
         </div>
       </div>
       <div class="ai-popup-hdr-right">
@@ -400,7 +425,7 @@
         <div class="st-icon">🏢</div><div class="st-name">Commercial Worksites</div><div class="st-desc">Stop order worksites</div>
       </a>
       <a class="secondary-tool" href="https://purshiville.github.io/team-buffalos-intel" target="_blank">
-        <div class="st-icon">📋</div><div class="st-name">Beyond Enemy Lines</div><div class="st-desc">Full competitor training</div>
+        <div class="st-icon">📋</div><div class="st-name">Beyond Enemy Lines</div><div class="st-desc">Competitor comparison — client benefit first</div>
       </a>
       <div class="secondary-tool" onclick="showPage('tools')">
         <div class="st-icon">🧰</div><div class="st-name">Tools &amp; More</div><div class="st-desc">All tools A–Z</div>
@@ -455,6 +480,11 @@
       <div style="padding:4px 20px 16px;">
         <div style="font-size:11px;color:#9ca3af;font-style:italic;line-height:1.6;text-align:center;">"The standard is not a ceiling. It is the floor. The herd expects you to clear it every single month."</div>
       </div>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:12px;padding:14px 18px;margin-top:12px;">
+      <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-bottom:6px;">🛡️ TCF Commitment — Treating Customers Fairly</div>
+      <div style="font-size:12px;color:#1e40af;line-height:1.7;">The production standard measures activity. It does not measure the quality of advice. <strong>The suitability and fairness of every recommendation to a client takes precedence over meeting volume targets at all times.</strong> Advisors must never write a case, initiate a replacement, or recommend a product solely to meet a production target. Cases that do not genuinely benefit the client must not be submitted. Meeting the standard through unsuitable advice is a FAIS General Code violation and a breach of the TCF Outcome 1 requirement that fair treatment of customers is at the heart of our business culture.</div>
     </div>
 
     <div class="about-buffalo-hero" style="border-radius:16px;margin-top:12px;margin-bottom:12px;">
@@ -539,7 +569,7 @@
       <span style="font-size:22px;flex-shrink:0;">🔒</span>
       <div>
         <div style="font-size:13px;font-weight:700;color:#166534;margin-bottom:3px;">This is your private budget — only you can see it</div>
-        <div style="font-size:12px;color:#15803d;line-height:1.6;">Your income, expenses and financial data are stored only on this device. No one else on the team — not your manager, not Arlene — can view your budget. It is completely private to you.</div>
+        <div style="font-size:12px;color:#15803d;line-height:1.6;">Your income, expenses and financial data are stored only on this device using your browser's local storage. No one else on the team — not your manager, not Arlene — can view your budget. It is completely private to you. <strong>Important:</strong> this data exists only in this browser on this device. Clearing your browser data or switching devices will erase it. Do not use this section to store any client personal information — it is for your personal financial planning only.</div>
       </div>
     </div>
 
@@ -603,6 +633,23 @@
         <div class="fp-hero-caption" id="fpPct" style="display:none;">0%</div>
       </div>
     </div>
+    <div style="background:#fef9ec;border:1px solid #f5d98b;border-left:4px solid #c9922a;border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:5px;">📎 Supporting evidence must be kept on file</div>
+      <div style="font-size:11px;color:#78350f;line-height:1.7;">Ticking an item here records your self-declaration only. Under <strong>Board Notice 194 of 2017 (Fit and Proper Requirements)</strong>, you are required to retain the original supporting documents — RE certificates, CPD certificates, qualifications, appointment letters — and make them available to your Key Individual or the FSCA on request. Do not tick an item unless the physical or digital evidence is already filed and retrievable. Your Key Individual may audit these at any time.</div>
+    </div>
+
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-left:4px solid #2563eb;border-radius:12px;padding:12px 16px;margin-bottom:14px;">
+      <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-bottom:8px;">🛡️ The 6 TCF Outcomes — Know them. Live them.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>1. Culture:</strong> Clients are confident they are dealing with an FSP where fair treatment is central to the business culture.</div>
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>2. Products:</strong> Products and services are designed to meet the needs of identified client groups and targeted accordingly.</div>
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>3. Information:</strong> Clients are given clear, timely and appropriate information before, during and after the sale.</div>
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>4. Advice:</strong> Where advice is given, it is suitable and takes account of the client's specific circumstances.</div>
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>5. Performance:</strong> Products perform as clients have been led to expect and service is of an acceptable standard.</div>
+        <div style="font-size:11px;color:#1e40af;line-height:1.5;"><strong>6. No barriers:</strong> Clients do not face unreasonable post-sale barriers to change products, switch providers, submit claims, or make complaints.</div>
+      </div>
+    </div>
+
     <div id="fpCategories"></div>
   </div>
 
@@ -679,6 +726,12 @@
         <div class="tc-desc">Stop order commissions</div>
       </div>
 
+      <div class="tool-card" onclick="showPage('forms')">
+        <div class="tc-icon">📄</div>
+        <div class="tc-name">FSP Forms</div>
+        <div class="tc-desc">Fill · Sign · Send</div>
+      </div>
+
     </div>
 
     <!-- Manager Tools -->
@@ -751,7 +804,7 @@
       <a class="tool-card" href="https://purshiville.github.io/team-buffalos-intel" target="_blank">
         <div class="tc-icon">📋</div>
         <div class="tc-name">Beyond Enemy Lines</div>
-        <div class="tc-desc">Competitor training</div>
+        <div class="tc-desc">Competitor comparison — replacements only where in client's best interest</div>
       </a>
 
       <div class="tool-card" onclick="showPage('competitor')">
@@ -1263,7 +1316,7 @@
     </div>
     <div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;">
       <span style="font-size:16px;flex-shrink:0;">🎯</span>
-      <div style="font-size:11px;color:#991b1b;font-weight:600;line-height:1.6;">Danger zones: NTU above 15% or persistency below 65% will trigger compliance review. Use this dashboard to catch advisors trending towards these thresholds early.</div>
+      <div style="font-size:11px;color:#991b1b;font-weight:600;line-height:1.6;">Danger zones: NTU above 15% or persistency below 65% will trigger a commission review <em>and</em> a <strong>FAIS compliance investigation</strong>. Under the FAIS Act, persistently poor NTU or persistency is treated as evidence of churning (inappropriate replacements) or unsuitable advice — both of which are conduct violations, not just performance issues. Use this dashboard to catch advisors trending towards these thresholds early and investigate the root cause of each lapse or NTU case before it becomes a regulatory matter.</div>
     </div>
     <!-- Log NTU / lapse (manager only) -->
     <div class="full-card" id="ntuLogForm" style="margin-bottom:12px;">
@@ -1573,6 +1626,9 @@ Please send your Proof of Payment to your advisor once done.</div>
     <!-- Step 1: Client info + LOA -->
     <div class="full-card" style="margin-bottom:12px;">
       <div class="full-card-header"><div class="full-card-title">Step 1 — Client details &amp; Letter of Authority</div></div>
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:11px;color:#166534;line-height:1.6;">
+        🔒 <strong>POPIA — Client consent required.</strong> By entering this client's personal information you confirm that the client has consented to their data being used for the purpose of a policy review, in accordance with the Protection of Personal Information Act (POPIA, Act 4 of 2013). Do not capture client details without explicit prior consent.
+      </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
         <div class="field" style="margin:0;"><label>Client full name</label><input id="prClientName" placeholder="e.g. Zanele Dlamini" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/></div>
         <div class="field" style="margin:0;"><label>ID number</label><input id="prClientId" placeholder="13-digit ID" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;font-family:monospace;"/></div>
@@ -1698,7 +1754,7 @@ Please send your Proof of Payment to your advisor once done.</div>
     <!-- ADVISOR VIEW -->
     <div id="ccAdvisorSection" style="display:none;">
       <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;color:#075985;">
-        📋 Cases captured for you by your manager appear below. Your 10% referral fee is shown so you know how much to set aside.
+        📋 Cases captured for you by your manager appear below. Your 10% referral fee is shown so you know how much to set aside. <strong>Conflict of interest notice:</strong> under the FAIS General Code and your FSP's conflict of interest policy, any referral fee or incentive arrangement that could influence advice must be disclosed to the client. Ensure you are familiar with your FSP's conflict of interest management policy and that you disclose this arrangement where required before giving advice.
       </div>
       <!-- Advisor Query Form -->
       <div class="full-card" style="margin-bottom:12px;">
@@ -2045,7 +2101,16 @@ Please send your Proof of Payment to your advisor once done.</div>
             <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="roa_ben_cashback" onchange="roaGenerate()" style="margin-top:2px;"> <span>Lump sum cash back — <select id="roa_ben_cashback_pct" onclick="document.getElementById('roa_ben_cashback').checked=true;roaGenerate();" onchange="roaGenerate()" style="font-size:11px;border:1px solid #d1d5db;border-radius:4px;padding:1px 4px;"><option value="50">50% after 15 years</option><option value="100">100% after 15 years</option></select></span></label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="roa_ben_doubleacc" onchange="roaGenerate()"> Double accident benefit</label>
             <label style="display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:6px;cursor:pointer;"><input type="checkbox" id="roa_ben_repatriation" onchange="roaGenerate()"> Repatriation benefit</label>
-            <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="roa_ben_bettervalue" onchange="roaGenerate()"> Better overall value and coverage</label>
+            <div style="margin-top:4px;">
+              <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;cursor:pointer;">
+                <input type="checkbox" id="roa_ben_bettervalue" onchange="document.getElementById('roa_ben_bettervalue_wrap').style.display=this.checked?'block':'none';roaGenerate()" style="margin-top:2px;flex-shrink:0;">
+                <span>Other specific benefit — describe below <span style="color:#dc2626;font-size:10px;font-weight:700;">(required — cannot be left generic)</span></span>
+              </label>
+              <div id="roa_ben_bettervalue_wrap" style="display:none;margin-top:4px;">
+                <textarea id="roa_ben_bettervalue_text" placeholder="Describe the specific, demonstrable benefit to this client that justifies the replacement (e.g. 'Client requires paid-up benefit at retirement which existing policy does not offer')..." rows="2" oninput="roaGenerate()" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #fca5a5;border-radius:7px;background:#fff;box-sizing:border-box;resize:vertical;line-height:1.5;"></textarea>
+                <div style="font-size:10px;color:#dc2626;margin-top:2px;">⚠️ Generic justifications ('better value', 'more cover') are not acceptable under the Replacement Regulations. Be specific.</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -2101,8 +2166,9 @@ Please send your Proof of Payment to your advisor once done.</div>
           <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Lives insured changes noted (any additions or removals)</span></label>
           <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Previous policy benefits explained to client before cancellation</span></label>
           <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Client's financial needs analysis conducted</span></label>
-          <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Section 14 / paid-up benefit implications addressed (if applicable)</span></label>
+          <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Section 14 / paid-up benefit implications addressed (if applicable) <span style="font-size:10px;color:#9ca3af;display:block;margin-top:2px;">Under Section 14 of the Long-term Insurance Act, the client must be informed before cancellation of any paid-up, surrender or maturity rights they are forfeiting. If the policy being cancelled has a paid-up or cash value, this must be noted in the ROA and confirmed the client understood before proceeding.</span></span></label>
           <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Premium affordability confirmed — PERSAL deduction verified</span></label>
+          <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>Commission / remuneration disclosed to client before or at point of advice (FAIS General Code Section 8(1)(b))</span></label>
           <label class="roa-cl-item"><input type="checkbox" class="roa-cl-cb"/> <span>ROA wording reviewed and matches actual advice given</span></label>
         </div>
         <div id="roaClStatus" style="margin-top:10px;font-size:12px;font-weight:700;color:#9ca3af;"></div>
@@ -2111,15 +2177,79 @@ Please send your Proof of Payment to your advisor once done.</div>
 
     <!-- Generated ROA -->
     <div class="full-card">
-      <div class="full-card-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="full-card-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
         <div class="full-card-title">Generated ROA wording</div>
-        <button onclick="roaCopy()" style="background:#0d1f3c;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">📋 Copy</button>
+        <div style="display:flex;gap:6px;">
+          <button onclick="roaCopy()" style="background:#0d1f3c;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">📋 Copy</button>
+          <button onclick="roaSendForSignature()" style="background:#c9922a;color:#fff;border:none;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;">✍️ Send for signature</button>
+        </div>
       </div>
       <div id="roaOutput" style="background:#f8f7f4;border-radius:10px;padding:14px;font-size:13px;line-height:1.7;color:#0d1f3c;min-height:100px;white-space:pre-wrap;border:1px solid #e8e4db;"></div>
+      <!-- Client signature display — populated when client signs -->
+      <div id="roaClientSigWrap" style="display:none;margin-top:12px;border-top:1px solid #e8e4db;padding-top:12px;">
+        <div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Client signature</div>
+        <img id="roaClientSigImg" src="" style="max-width:260px;height:auto;border:1px solid #e8e4db;border-radius:8px;background:#fff;padding:6px;" alt="Client signature"/>
+        <div style="font-size:11px;color:#9ca3af;margin-top:4px;" id="roaClientSigDate"></div>
+      </div>
     </div>
   </div>
 
   <!-- SPOT CHECK NOTES GENERATOR (Manager only) -->
+  <!-- FSP FORMS CATALOG -->
+  <div class="page" id="page-forms">
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:20px;padding:14px 20px;margin-bottom:16px;">
+      <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">HUB</div>
+      <div style="color:#fff;font-size:16px;font-weight:700;">FSP Forms</div>
+      <div style="color:rgba(255,255,255,0.6);font-size:11px;margin-top:3px;">Fill on-screen · Sign · Send to client</div>
+    </div>
+
+    <input id="formsSearch" type="text" placeholder="Search forms..." oninput="formsFilter(this.value)" style="width:100%;padding:10px 14px;font-size:13px;border:1px solid #e5e7eb;border-radius:12px;background:#fff;box-sizing:border-box;margin-bottom:16px;"/>
+
+    <div class="section-label" id="fmLblUniversal" style="margin-bottom:8px;">Universal Forms</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px;" id="fmListUniversal">
+      <div class="full-card fsp-form-card" onclick="openFormModal('cancel')" style="cursor:pointer;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0d1f3c;">Cancellation Letter</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Multi-insurer multi-policy cancellation</div>
+          </div>
+          <div style="color:#9ca3af;font-size:18px;">›</div>
+        </div>
+      </div>
+      <div class="full-card fsp-form-card" onclick="openFormModal('refund')" style="cursor:pointer;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0d1f3c;">Refund Request Letter</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Request premium refund after cancellation</div>
+          </div>
+          <div style="color:#9ca3af;font-size:18px;">›</div>
+        </div>
+      </div>
+      <div class="full-card fsp-form-card" onclick="openFormModal('reversal')" style="cursor:pointer;padding:14px 16px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0d1f3c;">Pre-Cancellation Reversal</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Withdraw a previous cancellation request</div>
+          </div>
+          <div style="color:#9ca3af;font-size:18px;">›</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-label" id="fmLblRegulatory" style="margin-bottom:8px;color:#7c3aed;">Regulatory</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="fmListRegulatory">
+      <div class="full-card fsp-form-card" onclick="openFormModal('rpar')" style="cursor:pointer;padding:14px 16px;border-left:3px solid #7c3aed;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#0d1f3c;">Replacement Disclosure &amp; Client Acknowledgment</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:2px;">Client confirms voluntary replacement — adviser + client sign</div>
+          </div>
+          <div style="color:#9ca3af;font-size:18px;">›</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="page" id="page-spotcheck">
     <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:20px;padding:14px 20px;margin-bottom:16px;">
       <div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📋 Spot Check</div>
