@@ -2793,6 +2793,46 @@ function getNotices(){
 function saveNotices(d){try{localStorage.setItem('tl_notices',JSON.stringify(d));}catch(e){}}
 
 const NOTICE_ICONS={info:'📢',urgent:'🚨',qlink:'⚡',success:'✅',reminder:'🔔'};
+const NOTICE_TEMPLATES=[
+  // Qlink & Operations
+  {group:'⚡ Qlink & Operations',type:'qlink',title:'Qlinks Completed for the Day',body:'All Qlinks for today have been successfully processed and sent. Advisors may now follow up with clients for completion and confirmation.'},
+  {group:'⚡ Qlink & Operations',type:'urgent',title:'Outstanding Qlinks Require Attention',body:'There are still outstanding Qlinks that require advisor follow-up. Please ensure clients complete their mandates as soon as possible to avoid delays.'},
+  {group:'⚡ Qlink & Operations',type:'urgent',title:'Conversion Errors Available',body:'New conversion errors have been loaded on Connect Me. These policies are affordable and require updated mandates. Please attend to them urgently.'},
+  {group:'⚡ Qlink & Operations',type:'urgent',title:'Mandates Still Outstanding',body:'Some mandates are still outstanding. Advisors are requested to follow up with clients and submit signed documents as soon as possible.'},
+  // Collections & Premium
+  {group:'💰 Collections & Premium',type:'info',title:'Issue Date Collections Pending',body:'There are clients scheduled for issue date deductions that still require payment confirmation. Please follow up and request proof of payment where applicable.'},
+  {group:'💰 Collections & Premium',type:'urgent',title:'Missed First Premium Clients',body:'Some clients have missed their first premium collection. Please urgently contact clients to avoid policies not taking effect.'},
+  {group:'💰 Collections & Premium',type:'urgent',title:'Pending Lapse Clients Require Feedback',body:'Pending lapse clients require urgent advisor feedback and payment follow-up to prevent policies from lapsing.'},
+  {group:'💰 Collections & Premium',type:'urgent',title:'Termination List Available',body:'The latest termination list is now available. Please review your affected clients and provide feedback urgently.'},
+  {group:'💰 Collections & Premium',type:'info',title:'Reinstatement Feedback Required',body:'Advisors are requested to provide feedback on outstanding reinstatements and confirm whether clients have signed the required forms.'},
+  {group:'💰 Collections & Premium',type:'success',title:'Reinstatements Submitted',body:'All reinstatement documents received today have been submitted successfully for processing.'},
+  // Administration
+  {group:'📎 Administration',type:'info',title:'Outstanding Documents Required',body:'There are still outstanding client documents required for processing. Please upload all necessary documents to avoid delays.'},
+  // Team & Operations
+  {group:'👥 Team & Operations',type:'reminder',title:'Daily Inbox Reminder',body:'Please remember to review your Connect Me Inbox daily for issue dates, pending lapses, Qlinks, reinstatements, and conversion updates.'},
+  {group:'👥 Team & Operations',type:'reminder',title:'Team Meeting Reminder',body:'Reminder: Team meeting scheduled for today. Attendance is compulsory unless otherwise communicated.'},
+  {group:'👥 Team & Operations',type:'info',title:'System Maintenance Notice',body:'Connect Me may experience temporary downtime due to scheduled maintenance. Updates will be communicated once the system is fully operational.'},
+  {group:'👥 Team & Operations',type:'urgent',title:'Outstanding Feedback Required',body:'Management is awaiting feedback on previously requested client updates. Please respond urgently.'},
+  {group:'👥 Team & Operations',type:'urgent',title:'Urgent Attention Required',body:'Certain cases require urgent advisor attention to prevent delays, lapses, or cancellations. Please review immediately.'},
+  {group:'👥 Team & Operations',type:'info',title:'New Notice from Management',body:'Management has shared an important update. Please review the notice carefully and action where required.'},
+];
+function noticeApplyTemplate(sel){
+  const idx=parseInt(sel.value);if(isNaN(idx))return;
+  const t=NOTICE_TEMPLATES[idx];if(!t)return;
+  const titleEl=document.getElementById('noticeTitle');
+  const bodyEl=document.getElementById('noticeBody');
+  const typeEl=document.getElementById('noticeType');
+  if(titleEl)titleEl.value=t.title;
+  if(bodyEl)bodyEl.value=t.body;
+  if(typeEl)typeEl.value=t.type;
+  if(titleEl)titleEl.focus();
+  sel.value='';
+}
+function noticeCopy(id){
+  const notices=getNotices();const n=notices.find(x=>x.id===id);if(!n)return;
+  const text=n.title+(n.body?'\n\n'+n.body:'');
+  navigator.clipboard.writeText(text).then(()=>showAlert('Copied to clipboard','success')).catch(()=>{const ta=document.createElement('textarea');ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);showAlert('Copied','success');});
+}
 const NOTICE_LABELS={info:'Announcement',urgent:'Urgent',qlink:'Qlink Update',success:'Good News',reminder:'Reminder'};
 
 let noticeLastField=null;
@@ -3030,16 +3070,38 @@ function renderNoticeManage(){
   if(!el)return;
   const notices=getNotices();
   if(!notices.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">No notices posted yet.</div>';return;}
-  el.innerHTML='<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-top:8px;border-top:1px solid #f4f2ed;">Posted notices</div>'+
-  notices.slice(0,10).map(n=>{
+  const now=new Date();
+  const curKey=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const moFull=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const groups={};
+  notices.forEach(n=>{
     const dt=n.postedAt?.toDate?n.postedAt.toDate():new Date(n.postedAt);
-    const dateStr=dt.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()];
-    return`<div class="notice-manage-row">
-      <span>${NOTICE_ICONS[n.type]||'📌'}</span>
-      <span style="flex:1;font-weight:600;color:#0d1f3c;">${n.title}</span>
-      <span style="color:#9ca3af;font-size:10px;">${dateStr}</span>
-      <button class="del-btn" onclick="deleteNotice('${n.id}')">✕</button>
-    </div>`;
+    const key=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0');
+    if(!groups[key])groups[key]={label:moFull[dt.getMonth()]+' '+dt.getFullYear(),notices:[]};
+    groups[key].notices.push({...n,_dt:dt});
+  });
+  const sortedKeys=Object.keys(groups).sort().reverse();
+  el.innerHTML='<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-top:8px;border-top:1px solid #f4f2ed;">Posted notices</div>'+
+  sortedKeys.map(key=>{
+    const g=groups[key];const isCur=key===curKey;
+    const rows=g.notices.map(n=>{
+      const dateStr=n._dt.getDate()+' '+mo[n._dt.getMonth()];
+      return`<div class="notice-manage-row">
+        <span>${NOTICE_ICONS[n.type]||'📌'}</span>
+        <span style="flex:1;font-weight:600;color:#0d1f3c;">${n.title}</span>
+        <span style="color:#9ca3af;font-size:10px;white-space:nowrap;">${dateStr}</span>
+        <button class="del-btn" onclick="noticeCopy('${n.id}')" title="Copy" style="background:#f0fdf4;color:#16a34a;border:1px solid #86efac;margin-right:2px;">📋</button>
+        <button class="del-btn" onclick="deleteNotice('${n.id}')">✕</button>
+      </div>`;
+    }).join('');
+    return`<details ${isCur?'open':''} style="margin-bottom:4px;">
+      <summary style="font-size:11px;font-weight:700;color:#374151;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;padding:7px 2px;border-bottom:1px solid #f4f2ed;user-select:none;">
+        <span>${g.label}</span>
+        <span style="font-size:10px;color:#9ca3af;font-weight:400;">${g.notices.length} notice${g.notices.length===1?'':'s'} &nbsp;${isCur?'▾':'▸'}</span>
+      </summary>
+      <div style="padding-top:4px;">${rows}</div>
+    </details>`;
   }).join('');
 }
 

@@ -2954,6 +2954,34 @@ Please send your Proof of Payment to your advisor once done.</div>
         </div>
       </div>
       <div style="margin-bottom:12px;">
+        <select id="noticeTemplate" onchange="noticeApplyTemplate(this)" style="width:100%;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#6b7280;margin-bottom:8px;">
+          <option value="">⚡ Choose a template (optional)...</option>
+          <optgroup label="⚡ Qlink &amp; Operations">
+            <option value="0">Qlinks Completed for the Day</option>
+            <option value="1">Outstanding Qlinks Require Attention</option>
+            <option value="2">Conversion Errors Available</option>
+            <option value="3">Mandates Still Outstanding</option>
+          </optgroup>
+          <optgroup label="💰 Collections &amp; Premium">
+            <option value="4">Issue Date Collections Pending</option>
+            <option value="5">Missed First Premium Clients</option>
+            <option value="6">Pending Lapse Clients Require Feedback</option>
+            <option value="7">Termination List Available</option>
+            <option value="8">Reinstatement Feedback Required</option>
+            <option value="9">Reinstatements Submitted</option>
+          </optgroup>
+          <optgroup label="📎 Administration">
+            <option value="10">Outstanding Documents Required</option>
+          </optgroup>
+          <optgroup label="👥 Team &amp; Operations">
+            <option value="11">Daily Inbox Reminder</option>
+            <option value="12">Team Meeting Reminder</option>
+            <option value="13">System Maintenance Notice</option>
+            <option value="14">Outstanding Feedback Required</option>
+            <option value="15">Urgent Attention Required</option>
+            <option value="16">New Notice from Management</option>
+          </optgroup>
+        </select>
         <div style="display:flex;gap:8px;margin-bottom:8px;">
           <select id="noticeType" style="padding:7px 10px;font-size:12px;font-weight:700;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#0d1f3c;flex-shrink:0;">
             <option value="info">📢 Announcement</option>
