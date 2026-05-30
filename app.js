@@ -924,6 +924,8 @@ function renderStatsManagerPreview(data){
 }
 function getYTDStats(){
   const ytd={};
+  // Seed all known advisors so everyone appears even with 0
+  ADVISOR_LIST.forEach(a=>{if(!REVOKED_CODES.has(a.code))ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0};});
   const now=new Date();
   const year=now.getFullYear();
   for(let m=1;m<=now.getMonth()+1;m++){
@@ -932,13 +934,14 @@ function getYTDStats(){
       const d=JSON.parse(localStorage.getItem(key)||'null');
       if(!d?.advisors)continue;
       Object.entries(d.advisors).forEach(([code,a])=>{
+        if(REVOKED_CODES.has(code))return;
         if(!ytd[code])ytd[code]={code,name:_advisorNameMap[code]||a.name||code,cases:0,premium:0};
         ytd[code].cases+=(a.actualCases||0);
         ytd[code].premium+=(a.actualPremium||0);
       });
     }catch(e){}
   }
-  return Object.values(ytd).filter(a=>(a.cases>0||a.premium>0)&&!REVOKED_CODES.has(a.code));
+  return Object.values(ytd);
 }
 function renderYTDStats(){
   const el=document.getElementById('stdYTD');
