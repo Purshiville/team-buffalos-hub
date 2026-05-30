@@ -3164,6 +3164,15 @@ Please send your Proof of Payment to your advisor once done.</div>
     <div class="admin-modal-body">
       <input type="hidden" id="admin_code"/>
       <div class="admin-field" id="admin_new_code_field" style="display:none;"><label>Employee Code</label><input id="admin_new_code" type="text" placeholder="e.g. SKA312345" style="text-transform:uppercase;"/></div>
+      <!-- Photo -->
+      <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+        <div id="adminPhotoPreview" style="width:56px;height:56px;border-radius:50%;background:#0d1f3c;color:#f5d98b;font-size:20px;font-weight:700;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;cursor:pointer;border:2px solid #e5e7eb;" onclick="document.getElementById('admin_photo_file').click()"><span>?</span></div>
+        <div>
+          <input type="file" id="admin_photo_file" accept="image/*" style="display:none;" onchange="adminPhotoPreview(this)"/>
+          <button onclick="document.getElementById('admin_photo_file').click()" style="font-size:11px;font-weight:700;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:7px;padding:5px 10px;cursor:pointer;color:#374151;">📷 Change photo</button>
+          <button onclick="adminClearPhoto()" style="font-size:11px;font-weight:700;background:none;border:none;color:#9ca3af;cursor:pointer;padding:5px 6px;">Remove</button>
+        </div>
+      </div>
       <div class="admin-field"><label>Full Name</label><input id="admin_name" type="text" placeholder="Full name"/></div>
       <div class="admin-field"><label>Email</label><input id="admin_email" type="email" placeholder="email@address.com"/></div>
       <div class="admin-field"><label>Date of Birth</label><input id="admin_dob" type="date"/></div>
