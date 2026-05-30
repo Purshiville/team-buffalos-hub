@@ -1632,7 +1632,7 @@ function _parseLoaDetails(text){
   const idMatch=text.match(/\b(\d{13})\b/);
   const idNumber=idMatch?idMatch[1]:'';
   let name='';
-  const nameWord='[A-ZÀ-Ö][A-Za-zÀ-öø-ÿ\''-]+';
+  const nameWord="[A-Z\xC0-\xD6][A-Za-z\xC0-\xF6\xF8-\xFF'\\-]+";
   const namePat=`(${nameWord}(?:\\s+${nameWord}){1,5})`;
   const patterns=[
     new RegExp(`(?:full\\s+name(?:\\s*[/&]\\s*vo[l]+e\\s*naam)?|client(?:'s)?\\s+name|name\\s+of\\s+(?:client|policyholder)|policyholder(?:'s\\s+name)?|assured(?:'s\\s+name)?|life\\s+assured|member(?:'s\\s+name)?)[:\\s,]+${namePat}`,'i'),
