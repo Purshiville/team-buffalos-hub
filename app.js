@@ -4539,7 +4539,7 @@ async function handleIMPUpload(input, mode){
     const parsed = JSON.parse(clean||'{}');
 
     // Auto-switch form type based on detected type
-    const detectedType = parsed.type || mode === 'rep' ? 'replacement' : 'new';
+    const detectedType = parsed.type || (mode === 'rep' ? 'replacement' : 'new');
     if(detectedType === 'replacement' && _roaType !== 'replacement'){
       setROAType('replacement');
     } else if(detectedType === 'new' && _roaType !== 'new'){
