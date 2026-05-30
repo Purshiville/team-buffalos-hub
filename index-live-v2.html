@@ -8,7 +8,6 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, limit, arrayUnion, serverTimestamp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
-    import { initializeAppCheck, ReCaptchaV3Provider } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app-check.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDa5ADJs7Ujy7zjstNvDj59KI6w76dScoU",
@@ -22,12 +21,6 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
-    // Firebase App Check — replace RECAPTCHA_SITE_KEY with your reCAPTCHA v3 site key from Firebase Console
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider('RECAPTCHA_SITE_KEY'),
-      isTokenAutoRefreshEnabled: true
-    });
 
     // ── Expose Firebase helpers to global scope ──
     window.FB = {
