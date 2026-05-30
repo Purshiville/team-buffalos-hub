@@ -6294,7 +6294,7 @@ function _renderManagerDashInner(){
     const fp=u.fpPct!==undefined?u.fpPct:getFpPercent(u.code);
     const fpCls=fp>=90?'full':fp<=40&&fp>0?'none':fp>0?'partial':'none',fpLbl=fp===100?'Compliant ✓':fp>=90?fp+'% — almost':fp<=40&&fp>0?fp+'% — urgent':fp>0?fp+'% done':'Not started';
     const b=u.dob?getBdayInfo(u.dob):null;
-    const dobFull=(()=>{if(!u.dob)return'—';const d=new Date(u.dob);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const yr=d.getFullYear();const badYr=isNaN(yr)||yr<1930||yr>2015;return`${d.getDate()} ${mo[d.getMonth()]}${badYr?'<span style="color:#dc2626;font-size:10px;"> ⚠️ year?</span>':' '+yr}`;})();
+    const dobFull=(()=>{if(!u.dob)return'—';const d=new Date(u.dob);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const yr=d.getFullYear();const badYr=isNaN(yr)||yr<1930||yr>2015;if(badYr)return`<span style="color:#6b7280;">${isNaN(d.getDate())?'—':d.getDate()+' '+(mo[d.getMonth()]||'')}</span><br><span style="font-size:9px;color:#f59e0b;font-weight:600;">⚠ fix DOB year</span>`;return`${d.getDate()} ${mo[d.getMonth()]} ${yr}`;})();
     const bdayDsp=b?`${dobFull}${b.isToday?' 🎂':b.daysUntil<=7?' 🎁':''}` :'—';
     const lastSeenDsp=(()=>{if(!u.lastActive)return'—';const d=new Date(u.lastActive),diff=Date.now()-d,mins=Math.floor(diff/60000),hrs=Math.floor(diff/3600000);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(mins<2)return'Just now';if(mins<60)return mins+'m ago';if(hrs<24)return'Today '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');if(hrs<48)return'Yesterday';return d.getDate()+' '+mo[d.getMonth()];})();
     // DOFA & replacement eligibility
