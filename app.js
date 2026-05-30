@@ -6293,7 +6293,10 @@ function _renderManagerDashInner(){
     const isActive=u.lastActive&&(Date.now()-new Date(u.lastActive))<3600000;
     const fp=u.fpPct!==undefined?u.fpPct:getFpPercent(u.code);
     const fpCls=fp>=90?'full':fp<=40&&fp>0?'none':fp>0?'partial':'none',fpLbl=fp===100?'Compliant ✓':fp>=90?fp+'% — almost':fp<=40&&fp>0?fp+'% — urgent':fp>0?fp+'% done':'Not started';
-    const b=u.dob?getBdayInfo(u.dob):null,bdayDsp=b?`${b.dateStr}${b.isToday?' 🎂':b.daysUntil<=7?' 🎁':''}` :'—';
+    const b=u.dob?getBdayInfo(u.dob):null;
+    const dobFull=(()=>{if(!u.dob)return'—';const d=new Date(u.dob);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];const yr=d.getFullYear();const badYr=isNaN(yr)||yr<1930||yr>2015;return`${d.getDate()} ${mo[d.getMonth()]}${badYr?'<span style="color:#dc2626;font-size:10px;"> ⚠️ year?</span>':' '+yr}`;})();
+    const bdayDsp=b?`${dobFull}${b.isToday?' 🎂':b.daysUntil<=7?' 🎁':''}` :'—';
+    const lastSeenDsp=(()=>{if(!u.lastActive)return'—';const d=new Date(u.lastActive),diff=Date.now()-d,mins=Math.floor(diff/60000),hrs=Math.floor(diff/3600000);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];if(mins<2)return'Just now';if(mins<60)return mins+'m ago';if(hrs<24)return'Today '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');if(hrs<48)return'Yesterday';return d.getDate()+' '+mo[d.getMonth()];})();
     // DOFA & replacement eligibility
     const dofaDisplay=u.dofa?fmtShortDate(u.dofa):'—';
     const dofaDays=u.dofa?Math.floor((new Date()-new Date(u.dofa))/86400000):null;
@@ -6311,6 +6314,7 @@ function _renderManagerDashInner(){
       <td style="font-size:12px;color:${b&&b.isToday?'#92400e':'#6b7280'};white-space:nowrap;">${bdayDsp}</td>
       <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;${replCls}">${replLbl}</span></td>
       <td>${u.isSuspended?'<span style="font-size:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:1px 7px;font-weight:700;">⏸ Suspended</span>':`<span class="status-dot ${isActive?'active':'offline'}"></span><span style="font-size:12px;">${isActive?'Active':'Offline'}</span>`}</td>
+      <td style="font-size:12px;color:#6b7280;white-space:nowrap;">${lastSeenDsp}</td>
       <td><span class="fp-pill ${fpCls}">${fpLbl}</span></td>
       <td><div class="pass-cell"><span class="pass-val" id="pass_val_${u.code}">••••••</span><button class="pass-eye" id="pass_btn_${u.code}" onclick="adminTogglePassVis('${u.code}')" title="Show/hide password">👁️</button></div></td>
       <td style="white-space:nowrap;text-align:right;"><button class="user-act-btn edit" onclick="adminEditUser('${u.code}')" title="Edit">✏️</button> <button class="user-act-btn" onclick="adminToggleSuspend('${u.code}')" title="${u.isSuspended?'Restore':'Suspend'}" style="background:${u.isSuspended?'#d1fae5;color:#065f46':'#fef3c7;color:#92400e'};">${u.isSuspended?'▶':'⏸'}</button> <button class="user-act-btn del" onclick="adminDeleteUser('${u.code}')" title="Delete">🗑️</button></td>
