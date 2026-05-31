@@ -8938,7 +8938,7 @@ function diaryIsQlinkDay(date){
 function diaryGetSystemChips(date,isCutoff){
   const chips=[];
   if(!isCutoff&&diaryIsQlinkDay(date))chips.push({cls:'qlink-lbl',label:'⚡ Qlink 13:00',title:'Qlink run — submit before 13:00',nav:null});
-  if(diaryIsWorkingDay(date))chips.push({cls:'precan-lbl',label:'⚠️ Precan 08:00',title:'Pre-cancellation list at 08:00',nav:'precansheet'});
+  if(diaryIsWorkingDay(date))chips.push({cls:'precan-lbl',label:'⚠️ Precan 08:00',title:'Pre-cancellation list at 08:00',url:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk'});
   return chips;
 }
 function diaryChipNav(e,page){e.stopImmediatePropagation();e.preventDefault();showPage(page);}
@@ -9011,7 +9011,7 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     h+=`<div class="diary-cell-num">${d}</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}"${s.nav?` data-chipnav="${s.nav}" onclick="showPage('${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`event.preventDefault();showPage('${s.nav}')`:''}">${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div class="diary-chip ${s.cls}" title="${s.title}"${act?` data-chipnav="1" onclick="${act}" style="cursor:pointer;"`:''} ontouchend="${act?`event.preventDefault();${act}`:''}">${s.label}</div>`;});
     evs.slice(0,1).forEach(ev=>{h+=`<div class="diary-chip ${ev.type||'other'}" onclick="event.stopPropagation();diaryViewEvent('${ev.id}')" title="${ev.title}">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     if(evs.length>1)h+=`<div class="diary-chip more" onclick="event.stopPropagation();diaryShowDayPanel('${dk}')">+${evs.length-1}</div>`;
     if(phol&&!isCutoff)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;margin-top:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
@@ -9050,7 +9050,7 @@ function _renderDiaryWeek(el,ws,DAYS3,DAYS1,MONTHS){
     if(isCutoff)h+=`<div style="font-size:8px;font-weight:700;color:#f5d98b;text-align:center;margin-bottom:3px;">CUT-OFF</div>`;
     else if(isMini)h+=`<div style="font-size:8px;font-weight:700;color:#92400e;text-align:center;margin-bottom:3px;">Mini ↓</div>`;
     if(phol)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;text-align:center;margin-bottom:3px;line-height:1.2;">${phol}</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}"${s.nav?` data-chipnav="${s.nav}" onclick="showPage('${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`event.preventDefault();showPage('${s.nav}')`:''}">${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}"${act?` data-chipnav="1" onclick="${act}" style="cursor:pointer;"`:''} ontouchend="${act?`event.preventDefault();${act}`:''}">${s.label}</div>`;});
     evs.forEach(ev=>{h+=`<div class="diary-week-ev diary-chip ${ev.type||'other'}" onclick="diaryViewEvent('${ev.id}')">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     h+=`<div onclick="diaryOpenAdd('${dk}')" style="text-align:center;font-size:16px;color:#d1d5db;cursor:pointer;margin-top:4px;">+</div>`;
     h+='</div>';
@@ -9069,7 +9069,7 @@ function _renderDiaryDay(el,MONTHS){
   const isCutoffDay=diaryIsCutoff(_diaryDate);
   const sysChips=diaryGetSystemChips(_diaryDate,isCutoffDay);
   if(sysChips.length){
-    sysChips.forEach(s=>{h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${s.nav?'cursor:pointer;':''}"${s.nav?` onclick="showPage('${s.nav}')" ontouchend="event.preventDefault();showPage('${s.nav}')"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
+    sysChips.forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${act?'cursor:pointer;':''}"${act?` onclick="${act}" ontouchend="event.preventDefault();${act}"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
   }
   if(!evs.length){
     h+=`<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">No appointments for this day.<br><span style="font-size:11px;">Tap <b>+ Add</b> to schedule one.</span></div>`;
