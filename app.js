@@ -6816,13 +6816,23 @@ let _prExtracted=[];
 
 const PR_LOA_PROMPT=`Read this Letter of Authority document and extract the client's personal details. Return ONLY valid JSON — no markdown, no explanation.
 
-Look for: full name, South African 13-digit ID number, cellphone or telephone number, email address.
+Extract:
+- FULL name: include both first name AND surname exactly as written — do not truncate or omit any part of the name
+- South African 13-digit ID number (digits only, no spaces)
+- Cellphone or telephone number
+- Email address — look in ALL sections of the document: contact details block, header, bottom of form, any pre-printed fields. Include any @-sign address you find.
 
 Return exactly: {"name":"","id_number":"","phone":"","email":""}
 
 Use empty string for any field not found.`;
 
 const PR_EXTRACT_PROMPT=`You are reading a South African life insurance policy document (schedule or full contract). Extract all details and return ONLY valid JSON — no explanation, no markdown.
+
+CRITICAL — POLICY NUMBER ACCURACY: Read every digit of the policy/member number with extreme care. Similar-looking characters that are commonly confused — read each one precisely:
+- 6 vs 8 vs 0: look at the shape carefully — 6 is open at bottom, 8 is closed both loops, 0 is a plain oval
+- 1 vs 7 vs l (lowercase L): 1 is straight, 7 has a crossbar or angle at top, l is narrow
+- 5 vs S: 5 has a horizontal top bar, S is curved
+- Do NOT guess or approximate digits. If uncertain about one digit in a policy number, prefer the digit that makes a more natural sequence.
 
 IDENTIFY POLICY TYPE — use one of these exact values or combinations:
 - "Funeral" — funeral cover, burial policy, final expenses plan
@@ -6854,7 +6864,7 @@ Also:
 - Account in arrears, overdue premiums, lapsed → in_arrears: true AND add to red_flags
 - Any exclusions, waiting periods, high-risk notes → add to red_flags
 - Any beneficiary with NO cover (no sum assured) → include in lives with cover: 0 and is_beneficiary_only: true
-- extra: remaining benefits not captured above, semicolon-separated; empty string if none
+- extra: ONLY include here benefits that are EXPLICITLY listed in the document as optional, add-on, rider, or a separately chosen benefit — do NOT include standard plan features or benefits that are simply part of the base plan. If a benefit is a standard inclusion of the plan with no indication it was optionally added, leave it out of extra. Semicolon-separated; empty string if none
 - IMPORTANT: Do NOT list the main policyholder twice under different relationship labels. If "Extended" or any non-Main life has the same name and date of birth as the Main life, omit that duplicate entry entirely.
 
 Return this exact structure:
