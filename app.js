@@ -2896,21 +2896,55 @@ function insertNoticeEmoji(em,pickerId){
   field.focus();field.setSelectionRange(newPos,newPos);
   document.getElementById(pickerId||'noticeEmojiPicker').classList.remove('open');
 }
+let _noticeRecipSelected=new Set();
+function toggleNoticeRecipPicker(e){
+  e.stopPropagation();
+  const picker=document.getElementById('noticeRecipPicker');if(!picker)return;
+  if(picker.style.display==='block'){picker.style.display='none';return;}
+  if(!picker.dataset.built){
+    picker.dataset.built='1';
+    let h=`<label style="display:flex;align-items:center;gap:8px;padding:4px 2px 6px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:1px solid #f0f0f0;margin-bottom:4px;"><input type="checkbox" id="noticeRecipAll" onchange="noticeRecipToggleAll(this)" checked> 👥 All advisors</label>`;
+    ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{h+=`<label style="display:flex;align-items:center;gap:8px;padding:3px 2px;font-size:12px;cursor:pointer;"><input type="checkbox" value="${a.code}" class="noticeRecipCheck" onchange="noticeRecipCheckChanged()"> ${a.name}</label>`;});
+    picker.innerHTML=h;
+  }
+  picker.style.display='block';
+  setTimeout(()=>document.addEventListener('click',function _h(ev){if(!picker.contains(ev.target)&&ev.target.id!=='noticeRecipBtn'){picker.style.display='none';document.removeEventListener('click',_h);}}),10);
+}
+function noticeRecipToggleAll(chk){
+  _noticeRecipSelected.clear();
+  document.querySelectorAll('.noticeRecipCheck').forEach(c=>{c.checked=false;});
+  _updateNoticeRecipBtn();
+}
+function noticeRecipCheckChanged(){
+  _noticeRecipSelected=new Set([...document.querySelectorAll('.noticeRecipCheck:checked')].map(c=>c.value));
+  const a=document.getElementById('noticeRecipAll');if(a)a.checked=_noticeRecipSelected.size===0;
+  _updateNoticeRecipBtn();
+}
+function _updateNoticeRecipBtn(){
+  const btn=document.getElementById('noticeRecipBtn');if(!btn)return;
+  if(_noticeRecipSelected.size===0)btn.textContent='👥 All advisors ▾';
+  else if(_noticeRecipSelected.size===1){const code=[..._noticeRecipSelected][0];const name=ADVISOR_LIST.find(a=>a.code===code)?.name||code;btn.textContent=`👤 ${name} ▾`;}
+  else btn.textContent=`👥 ${_noticeRecipSelected.size} advisors selected ▾`;
+  const p=document.getElementById('noticeRecipPicker');if(p)p.style.display='none';
+}
 async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
   const title=(titleArg!==undefined?titleArg:(document.getElementById('noticeTitle')?.value||'')).trim();
   const body=(bodyArg!==undefined?bodyArg:(document.getElementById('noticeBody')?.value||'')).trim();
   const type=typeArg||document.getElementById('noticeType')?.value||'info';
-  const recipient=recipientArg||document.getElementById('noticeRecipient')?.value||'ALL';
+  const recipCodes=recipientArg!==undefined?null:(_noticeRecipSelected.size>0?[..._noticeRecipSelected]:null);
+  const recipient=recipientArg!==undefined?recipientArg:(recipCodes?.length===1?recipCodes[0]:'ALL');
   const link=(linkArg!==undefined?linkArg:(document.getElementById('noticeLinkField')?.value||'')).trim();
   if(!title)return alert('Please add a title for the notice.');
   const noticeData={type,title,body,postedBy:currentUser.name,active:true};
-  if(recipient&&recipient!=='ALL')noticeData.recipientCode=recipient;
+  if(recipCodes&&recipCodes.length===1)noticeData.recipientCode=recipCodes[0];
+  else if(recipCodes&&recipCodes.length>1)noticeData.recipientCodes=recipCodes;
   if(link)noticeData.link=link;
   if(window.FB_READY){
     try{
       await window.FB.postNotice(noticeData);
       if(title){
-        window.FB.sendInbox({to:recipient,from:currentUser?.code||'manager',fromName:currentUser?.name||'Manager',title:title,body:body||'',type:'notice'}).catch(()=>{});
+        const targets=recipCodes||['ALL'];
+        targets.forEach(to=>{window.FB.sendInbox({to,from:currentUser?.code||'manager',fromName:currentUser?.name||'Manager',title,body:body||'',type:'notice'}).catch(()=>{});});
       }
     }
     catch(e){console.warn('Firebase notice failed, using localStorage',e);
@@ -2921,7 +2955,7 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
   if(titleArg===undefined){
     const nt=document.getElementById('noticeTitle');if(nt)nt.value='';
     const nb=document.getElementById('noticeBody');if(nb)nb.value='';
-    const nr=document.getElementById('noticeRecipient');if(nr)nr.value='ALL';
+    _noticeRecipSelected.clear();const rb=document.getElementById('noticeRecipBtn');if(rb)rb.textContent='👥 All advisors ▾';const rp=document.getElementById('noticeRecipPicker');if(rp){rp.dataset.built='';rp.style.display='none';}
     const nl=document.getElementById('noticeLinkField');if(nl)nl.value='';
     const npb=document.getElementById('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
     const fb=document.getElementById('noticePostFeedback');
@@ -2995,7 +3029,7 @@ function renderNoticeBoard(){
   const MS_30=30*24*60*60*1000;
   const now=Date.now();
   const getAge=n=>{const d=n.postedAt?.toDate?n.postedAt.toDate():new Date(n.postedAt);return now-d.getTime();};
-  const matchesRecipient=n=>(!n.recipientCode||n.recipientCode==='ALL')||isOps||(n.recipientCode===currentUser?.code);
+  const matchesRecipient=n=>(!n.recipientCode&&!n.recipientCodes)||isOps||(n.recipientCode===currentUser?.code)||(n.recipientCodes?.includes(currentUser?.code));
 
   const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=MS_30&&matchesRecipient(n));
   const archived=allNotices.filter(n=>getAge(n)>MS_30&&matchesRecipient(n));
@@ -8930,11 +8964,11 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     const dk=diaryDateKey(date);
     const evs=diaryEventsForKey(dk);const phol=tcPubHol(date);
     let cls=`diary-cell ${dc}${isToday?' today':''}${isMini?' minicutoff':''}`;
-    h+=`<div class="${cls}" onclick="diaryOpenAdd('${dk}')">`;
+    h+=`<div class="${cls}" onclick="if(!event.target.closest('[data-chipnav]'))diaryOpenAdd('${dk}')">`;
     h+=`<div class="diary-cell-num">${d}</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}"${s.nav?` onclick="diaryChipNav(event,'${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`diaryChipNav(event,'${s.nav}')`:''}">${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}"${s.nav?` data-chipnav="${s.nav}" onclick="showPage('${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`event.preventDefault();showPage('${s.nav}')`:''}">${s.label}</div>`);
     evs.slice(0,1).forEach(ev=>{h+=`<div class="diary-chip ${ev.type||'other'}" onclick="event.stopPropagation();diaryViewEvent('${ev.id}')" title="${ev.title}">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     if(evs.length>1)h+=`<div class="diary-chip more" onclick="event.stopPropagation();diaryShowDayPanel('${dk}')">+${evs.length-1}</div>`;
     if(phol&&!isCutoff)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;margin-top:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
@@ -8973,7 +9007,7 @@ function _renderDiaryWeek(el,ws,DAYS3,DAYS1,MONTHS){
     if(isCutoff)h+=`<div style="font-size:8px;font-weight:700;color:#f5d98b;text-align:center;margin-bottom:3px;">CUT-OFF</div>`;
     else if(isMini)h+=`<div style="font-size:8px;font-weight:700;color:#92400e;text-align:center;margin-bottom:3px;">Mini ↓</div>`;
     if(phol)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;text-align:center;margin-bottom:3px;line-height:1.2;">${phol}</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}"${s.nav?` onclick="diaryChipNav(event,'${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`diaryChipNav(event,'${s.nav}')`:''}">${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}"${s.nav?` data-chipnav="${s.nav}" onclick="showPage('${s.nav}')" style="cursor:pointer;"`:''} ontouchend="${s.nav?`event.preventDefault();showPage('${s.nav}')`:''}">${s.label}</div>`);
     evs.forEach(ev=>{h+=`<div class="diary-week-ev diary-chip ${ev.type||'other'}" onclick="diaryViewEvent('${ev.id}')">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     h+=`<div onclick="diaryOpenAdd('${dk}')" style="text-align:center;font-size:16px;color:#d1d5db;cursor:pointer;margin-top:4px;">+</div>`;
     h+='</div>';
@@ -8992,7 +9026,7 @@ function _renderDiaryDay(el,MONTHS){
   const isCutoffDay=diaryIsCutoff(_diaryDate);
   const sysChips=diaryGetSystemChips(_diaryDate,isCutoffDay);
   if(sysChips.length){
-    sysChips.forEach(s=>{h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${s.nav?'cursor:pointer;':''}"${s.nav?` onclick="diaryChipNav(event,'${s.nav}')" ontouchend="diaryChipNav(event,'${s.nav}')"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
+    sysChips.forEach(s=>{h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${s.nav?'cursor:pointer;':''}"${s.nav?` onclick="showPage('${s.nav}')" ontouchend="event.preventDefault();showPage('${s.nav}')"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
   }
   if(!evs.length){
     h+=`<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">No appointments for this day.<br><span style="font-size:11px;">Tap <b>+ Add</b> to schedule one.</span></div>`;
