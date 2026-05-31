@@ -2127,6 +2127,7 @@ function showPage(p){
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
+  if(p==='policyreview'){loadPRSavedReviews();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -7044,11 +7045,11 @@ function updatePRButtons(){
     analyseBtn.style.opacity=canAnalyse?'1':'.4';
     analyseBtn.style.cursor=canAnalyse?'pointer':'not-allowed';
   }
-  if(generateBtn){
+  const saveBtn=document.getElementById('prSaveBtn');
+  if(generateBtn||saveBtn){
     const canGen=allDone&&_prExtracted.some(Boolean);
-    generateBtn.disabled=!canGen;
-    generateBtn.style.opacity=canGen?'1':'.4';
-    generateBtn.style.cursor=canGen?'pointer':'not-allowed';
+    if(generateBtn){generateBtn.disabled=!canGen;generateBtn.style.opacity=canGen?'1':'.4';generateBtn.style.cursor=canGen?'pointer':'not-allowed';}
+    if(saveBtn){saveBtn.disabled=!canGen;saveBtn.style.opacity=canGen?'1':'.4';saveBtn.style.cursor=canGen?'pointer':'not-allowed';}
   }
 }
 
@@ -7252,32 +7253,121 @@ function _prCheckMissing(){
   </div>`;
 }
 
+function _prKeyFeatures(b){
+  if(!b)return'—';
+  const f=[];
+  if(b.no_more_premiums)f.push('Premium waiver');
+  if(b.cashback)f.push('Cashback');
+  if(b.payment_holiday)f.push('Payment holiday');
+  if(b.accident_double)f.push('Accidental ×2');
+  if(b.burial)f.push('Burial benefit');
+  if(b.paid_up)f.push('Paid-up option');
+  if(b.extra)f.push(b.extra);
+  return f.length?f.join(' · '):'—';
+}
+
+function _prCoverageSummary(policies, allLives){
+  const main=allLives.find(l=>l.relationship==='Main');
+  const t={funeral:0,life:0,dread:0,accidental:0,impairment:0};
+  const has={disability:false,ra:false,dread:false,accidental:false,impairment:false};
+  policies.forEach((p,pIdx)=>{
+    const type=(p.policy_type||'').toLowerCase();
+    if(type.includes('disability'))has.disability=true;
+    if(type.includes('retirement'))has.ra=true;
+    if(type.includes('dread'))has.dread=true;
+    if(type.includes('accidental')||type.includes('accident'))has.accidental=true;
+    if(type.includes('impairment'))has.impairment=true;
+    if(!main)return;
+    const c=main.policies[pIdx]||0;
+    if(type.includes('funeral'))t.funeral+=c;
+    else if(type.includes('life'))t.life+=c;
+    else if(type.includes('dread'))t.dread+=c;
+    else if(type.includes('accidental')||type.includes('accident'))t.accidental+=c;
+    else if(type.includes('impairment'))t.impairment+=c;
+  });
+  return{covers:t,has};
+}
+
+function _prBuildTalkingPoints(policies, allLives){
+  const pts=[];
+  const main=allLives.find(l=>l.relationship==='Main');
+  const mainName=main?.name||'the client';
+  // No premium waiver with covered dependants
+  policies.forEach(p=>{
+    if((p.policy_type||'').includes('Retirement'))return;
+    if(!p.benefits?.no_more_premiums){
+      const dep=(p.lives||[]).filter(l=>l.relationship!=='Main'&&!l.is_beneficiary_only&&(l.cover||0)>0);
+      if(dep.length){
+        const pol=(p.insurer||'This policy')+(p.policy_number?' ('+p.policy_number+')':'');
+        pts.push(`${pol} has no premium waiver. If ${mainName} passes away, premiums will still be owed — ${dep.map(l=>l.name||l.relationship).join(', ')} will lose their cover once the policy lapses.`);
+      }
+    }
+  });
+  // No disability cover
+  if(!policies.some(p=>(p.policy_type||'').includes('Disability'))){
+    pts.push(`No disability or income protection cover found. If ${mainName} cannot work due to illness or injury, there is no income replacement — all policies could lapse from non-payment.`);
+  }
+  // No dread disease
+  if(!policies.some(p=>(p.policy_type||'').includes('Dread'))){
+    pts.push(`No dread disease / critical illness cover found. A serious diagnosis such as cancer, a heart attack, or stroke would not trigger any lump-sum benefit to help cover costs or lost income.`);
+  }
+  // No spouse
+  if(!allLives.some(l=>l.relationship==='Spouse'&&!l.isBeneficiaryOnly)){
+    pts.push(`No spouse or life partner is listed as an insured life on any policy. Confirm relationship status — if ${mainName} has a partner, discuss whether they should be covered.`);
+  }
+  // Arrears
+  const arr=policies.filter(p=>p.in_arrears);
+  if(arr.length)pts.push(`${arr.map(p=>p.insurer||'A policy').join(' and ')} ${arr.length===1?'is':'are'} in arrears and at immediate risk of lapsing. Confirm payment and resolve urgently.`);
+  // Low child cover
+  const lowKids=allLives.filter(l=>l.relationship==='Child'&&!l.isBeneficiaryOnly&&l.totalCover>0&&l.totalCover<20000);
+  if(lowKids.length)pts.push(`${lowKids.map(l=>l.name||'A child').join(', ')} ${lowKids.length===1?'has':'have'} low funeral cover (under R20,000). Confirm whether this is sufficient.`);
+  // No RA
+  if(!policies.some(p=>(p.policy_type||'').includes('Retirement Annuity'))){
+    pts.push(`No retirement annuity found in the portfolio. Discuss retirement planning — a PERSAL pension alone may not be sufficient for a comfortable retirement.`);
+  }
+  return pts;
+}
+
 function renderPRSummary(){
   const policies=_prExtracted.filter(Boolean);
   const previewEl=document.getElementById('prSummaryPreview');
   if(!previewEl)return;
   if(!policies.length){previewEl.innerHTML='';return;}
-  const tick=v=>v?'✓':'';
   const totalPremium=policies.reduce((s,p)=>s+(p.premium||0),0);
   const allLives=_prBuildLivesMap(policies);
   const noteGroups=_prPolicyNotesGroups(policies);
+  const {covers,has}=_prCoverageSummary(policies,allLives);
+  const talkingPts=_prBuildTalkingPoints(policies,allLives);
 
   const th='padding:6px 8px;background:#0d1f3c;color:#fff;text-align:left;white-space:nowrap;border:1px solid #1b3460;font-size:11px;';
   const thC='padding:6px 8px;background:#0d1f3c;color:#fff;text-align:center;white-space:nowrap;border:1px solid #1b3460;font-size:11px;';
-  const thBenef='padding:4px 8px;background:#1b3460;color:#f5d98b;text-align:center;border:1px solid #0d1f3c;font-size:10px;font-weight:700;letter-spacing:.5px;';
 
-  // Policy rows
+  // Policy rows — single Key Features column
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
     const arr=p.in_arrears?` <span style="color:#dc2626;font-size:9px;font-weight:800;"> ⚠ ARREARS</span>`:'';
     const bg=i%2===0?'':'background:#f9f9f9;';
     const tdS=`padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;vertical-align:middle;${bg}`;
     const isRA=(p.policy_type||'').includes('Retirement Annuity');
-    const benefCells=isRA
-      ?`<td colspan="7" style="${tdS}font-size:10px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
-      :`<td style="${tdS}text-align:center;">${tick(b.cashback)}</td><td style="${tdS}text-align:center;">${tick(b.payment_holiday)}</td><td style="${tdS}text-align:center;">${tick(b.no_more_premiums)}</td><td style="${tdS}text-align:center;">${b.accident_double?'✓':''}</td><td style="${tdS}text-align:center;">${tick(b.burial)}</td><td style="${tdS}text-align:center;">${tick(b.paid_up)}</td><td style="${tdS}font-size:10px;">${b.extra||'—'}</td>`;
-    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${benefCells}</tr>`;
+    const feat=isRA?`<td style="${tdS}font-size:10px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
+      :`<td style="${tdS}font-size:10px;color:#374151;">${_prKeyFeatures(b)}</td>`;
+    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${feat}</tr>`;
   }).join('');
+
+  // Coverage gap pills
+  const pill=(label,val,gap)=>{
+    if(gap)return`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;">⚠ No ${label}</div></div>`;
+    return`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;">${label}</div><div style="font-size:14px;font-weight:800;color:#0d1f3c;">${val}</div></div>`;
+  };
+  const pillGreen=(label)=>`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.5px;">✓ ${label}</div></div>`;
+  const coverPills=[
+    covers.funeral>0?pill('Funeral Cover',_prFmtR(covers.funeral),false):pill('Funeral Cover','',true),
+    covers.life>0?pill('Life Cover',_prFmtR(covers.life),false):pill('Life Cover','',true),
+    has.disability?pillGreen('Disability'):pill('Disability Cover','',true),
+    has.dread?pill('Dread Disease',_prFmtR(covers.dread),false):pill('Dread Disease','',true),
+    has.ra?pillGreen('RA / Retirement'):'',
+  ].join('');
+  const gapBar=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">${coverPills}</div>`;
 
   // Lives rows
   const phCols=policies.map((p,i)=>`<th style="${thC}min-width:80px;">${p.policy_number||'P'+(i+1)}</th>`).join('');
@@ -7297,17 +7387,18 @@ function renderPRSummary(){
   // Notes section
   const notesHtml=noteGroups.length?`<div style="margin-top:16px;"><div style="font-size:12px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;border-bottom:2px solid #0d1f3c;padding-bottom:4px;">Notes &amp; Red Flags</div>${noteGroups.map(g=>`<div style="margin-bottom:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;"><div style="font-size:12px;font-weight:800;color:#991b1b;margin-bottom:4px;">⚠ ${g.label}</div>${g.notes.map(n=>`<div style="font-size:11px;color:#7f1d1d;padding:2px 0 2px 8px;">• ${n}</div>`).join('')}</div>`).join('')}</div>`:'';
 
+  // Talking points section
+  const tpHtml=talkingPts.length?`<div style="margin-top:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;"><div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:10px;">💬 Advisor Talking Points</div>${talkingPts.map(pt=>`<div style="font-size:11px;color:#0d1f3c;padding:3px 0 3px 8px;border-left:3px solid #4ade80;margin-bottom:6px;">• ${pt}</div>`).join('')}</div>`:'';
+
   previewEl.innerHTML=`
     <div style="overflow-x:auto;margin-bottom:16px;">
       <table style="width:100%;border-collapse:collapse;">
-        <thead>
-          <tr><th style="${th}min-width:110px;" rowspan="2">Policy</th><th style="${th}min-width:90px;" rowspan="2">Policy #</th><th style="${th}min-width:80px;" rowspan="2">Start date</th><th style="${th}min-width:130px;" rowspan="2">Plan name</th><th style="${th}min-width:90px;" rowspan="2">Type</th><th style="${th}min-width:75px;text-align:right;" rowspan="2">Premium</th><th colspan="7" style="${thBenef}">BENEFITS</th></tr>
-          <tr><th style="${thC}min-width:70px;">Cashback</th><th style="${thC}min-width:70px;">Payment holiday</th><th style="${thC}min-width:70px;">No more premiums</th><th style="${thC}min-width:70px;">Accident cover</th><th style="${thC}min-width:55px;">Burial</th><th style="${thC}min-width:55px;">Paid up</th><th style="${th}min-width:100px;">Extra</th></tr>
-        </thead>
+        <thead><tr><th style="${th}min-width:110px;">Policy</th><th style="${th}min-width:90px;">Policy #</th><th style="${th}min-width:80px;">Start date</th><th style="${th}min-width:130px;">Plan name</th><th style="${th}min-width:90px;">Type</th><th style="${th}min-width:75px;text-align:right;">Premium</th><th style="${th}min-width:180px;">Key Features</th></tr></thead>
         <tbody>${policyRows}</tbody>
-        <tfoot><tr><td colspan="5" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
+        <tfoot><tr><td colspan="5" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
       </table>
     </div>
+    ${gapBar}
     <div style="overflow-x:auto;margin-bottom:4px;">
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr><th style="${th}min-width:100px;">Relationship</th><th style="${th}min-width:140px;">Name</th><th style="${th}min-width:110px;">DOB (Gender)</th>${phCols}</tr></thead>
@@ -7315,12 +7406,10 @@ function renderPRSummary(){
       </table>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:10px;font-weight:600;">
-      <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:6px;padding:3px 10px;">Yellow = no cover</span>
       <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;">Red = under R20 000</span>
-      <span style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:3px 10px;">Green = R80 000 – R100 000</span>
-      <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:3px 10px;">Amber = over R100 000</span>
+      <span style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:3px 10px;">Green = R80 000+</span>
     </div>
-    ${notesHtml}`;
+    ${notesHtml}${tpHtml}`;
   _prCheckMissing();
 }
 
@@ -7343,17 +7432,33 @@ function generatePRPdf(){
   const pageHdr=(pg,ttl)=>`<div class="hdr"><div><div class="pg-label">Page ${pg}</div><h1>Team Buffalos — Policy Review Summary</h1><div class="sub">Generated ${today} &nbsp;|&nbsp; LOA on file &nbsp;|&nbsp; ${clientName} (${clientId})</div></div><div style="font-size:11px;font-weight:700;color:#0d1f3c;background:#f4f2ed;padding:6px 12px;border-radius:8px;">${ttl}</div></div>`;
   const footer=`<div class="footer"><span>Team Buffalos &mdash; Policy Review &middot; ${today}</span><span>For internal use only. All figures must be verified against original policy documents.</span></div>`;
 
-  // Page 1 — Policy summary
+  const talkingPts=_prBuildTalkingPoints(policies,allLives);
+  const {covers,has}=_prCoverageSummary(policies,allLives);
+
+  // Page 1 — Policy summary (single Key Features column)
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
     const arr=p.in_arrears?' <span style="color:#dc2626;font-weight:800;">&#9888; ARREARS</span>':'';
     const bg=i%2===0?'':'background:#f9f9f9;';
     const isRA=(p.policy_type||'').includes('Retirement Annuity');
-    const benefCells=isRA
-      ?`<td colspan="7" style="${bg}font-size:8px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
-      :`<td class="ctr" style="${bg}">${tick(b.cashback)}</td><td class="ctr" style="${bg}">${tick(b.payment_holiday)}</td><td class="ctr" style="${bg}">${tick(b.no_more_premiums)}</td><td class="ctr" style="${bg}">${b.accident_double?'&#10003;':''}</td><td class="ctr" style="${bg}">${tick(b.burial)}</td><td class="ctr" style="${bg}">${tick(b.paid_up)}</td><td style="${bg}font-size:8px;">${b.extra||'—'}</td>`;
-    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td>${benefCells}</tr>`;
+    const feat=isRA
+      ?`<td style="${bg}font-size:8px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
+      :`<td style="${bg}font-size:8px;">${_prKeyFeatures(b)}</td>`;
+    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td>${feat}</tr>`;
   }).join('');
+
+  // Coverage gap summary bar (for Page 2)
+  const gapItem=(label,val,ok)=>ok
+    ?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#1e40af;text-transform:uppercase;">${label}</div><div style="font-size:10px;font-weight:800;color:#0d1f3c;">${val}</div></div>`
+    :`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#991b1b;">&#9888; NO ${label.toUpperCase()}</div></div>`;
+  const gapItemGreen=(label)=>`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#065f46;text-transform:uppercase;">&#10003; ${label}</div></div>`;
+  const gapBar=`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
+    ${covers.funeral>0?gapItem('Funeral Cover',_prFmtR(covers.funeral),true):gapItem('Funeral Cover','',false)}
+    ${covers.life>0?gapItem('Life Cover',_prFmtR(covers.life),true):gapItem('Life Cover','',false)}
+    ${has.disability?gapItemGreen('Disability Cover'):gapItem('Disability Cover','',false)}
+    ${has.dread?(covers.dread>0?gapItem('Dread Disease',_prFmtR(covers.dread),true):gapItemGreen('Dread Disease')):gapItem('Dread Disease','',false)}
+    ${has.ra?gapItemGreen('RA / Retirement'):''}
+  </div>`;
 
   // Page 2 — Lives
   const phCols=policies.map((p,i)=>`<th class="ctr">${p.policy_number||'P'+(i+1)}</th>`).join('');
@@ -7370,10 +7475,11 @@ function generatePRPdf(){
     return`<tr><td style="${bgStyle}">${life.relationship}${tag}</td><td style="${bgStyle}">${life.name||''}</td><td style="${bgStyle}">${life.dob||''} ${life.gender?'('+life.gender+')':''}</td>${cells}</tr>`;
   }).join('');
 
-  // Page 3 — Notes
+  // Page 3 — Notes + talking points
   const notesPage3=noteGroups.map(g=>`<div class="note-group"><div class="note-group-title">&#9888; ${g.label}</div>${g.notes.map(n=>`<div class="note-item">&#8226; ${n}</div>`).join('')}</div>`).join('');
   const advisorBlock=advisorNotes?`<div class="notes-box"><div class="notes-title">Advisor Notes</div><div class="notes-body">${advisorNotes.replace(/\n/g,'<br>')}</div></div>`:'';
-  const hasNotes=noteGroups.length||advisorNotes;
+  const tpBlock=talkingPts.length?`<div class="notes-box" style="background:#f0fdf4;border-color:#86efac;"><div class="notes-title" style="color:#065f46;">&#128172; Advisor Talking Points</div><div class="notes-body">${talkingPts.map(pt=>`<div style="padding:2px 0 2px 8px;border-left:2px solid #4ade80;margin-bottom:5px;">&#8226; ${pt}</div>`).join('')}</div></div>`:'';
+  const hasNotes=noteGroups.length||advisorNotes||talkingPts.length;
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Policy Review — ${clientName}</title>
 <style>
@@ -7412,12 +7518,9 @@ ${pageHdr(1,'Policy Summary')}
 ${clientHdr}
 <div class="sec">Policy Summary</div>
 <table>
-  <thead>
-    <tr><th rowspan="2">Policy</th><th rowspan="2">Policy #</th><th rowspan="2">Start date</th><th rowspan="2">Plan name</th><th rowspan="2" class="ctr">Type</th><th rowspan="2" class="num">Premium</th><th colspan="7" class="th-benef">BENEFITS</th></tr>
-    <tr><th class="ctr">Cashback</th><th class="ctr">Payment holiday</th><th class="ctr">No more premiums</th><th class="ctr">Accident cover</th><th class="ctr">Burial</th><th class="ctr">Paid up</th><th>Extra</th></tr>
-  </thead>
+  <thead><tr><th>Policy</th><th>Policy #</th><th>Start date</th><th>Plan name</th><th class="ctr">Type</th><th class="num">Premium</th><th>Key Features</th></tr></thead>
   <tbody>${policyRows}</tbody>
-  <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td class="num gold" style="background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="background:#f4f2ed;"></td></tr></tfoot>
+  <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td class="num gold" style="background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td style="background:#f4f2ed;"></td></tr></tfoot>
 </table>
 ${footer}
 
@@ -7425,24 +7528,24 @@ ${footer}
 <div class="page-break">
 ${pageHdr(2,'Lives &amp; Cover')}
 ${clientHdr}
+${gapBar}
 <div class="sec">Lives Assured &amp; Cover per Policy</div>
 <table>
   <thead><tr><th>Relationship</th><th>Name</th><th>DOB (Gender)</th>${phCols}</tr></thead>
   <tbody>${livesRows}</tbody>
 </table>
 <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:8px;font-weight:700;">
-  <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;">Yellow = no cover</span>
   <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;">Red = under R20 000</span>
-  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;">Green = R80 000&ndash;R100 000</span>
-  <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:2px 8px;">Amber = over R100 000</span>
+  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;">Green = R80 000+</span>
 </div>
 ${footer}
 </div>
 
-<!-- PAGE 3: NOTES (only if there are notes) -->
+<!-- PAGE 3: NOTES + TALKING POINTS -->
 ${hasNotes?`<div class="page-break">
-${pageHdr(3,'Notes &amp; Advisor Comments')}
+${pageHdr(3,'Notes &amp; Advisor Talking Points')}
 ${clientHdr}
+${talkingPts.length?`<div class="sec">Advisor Talking Points</div>${tpBlock}`:''}
 ${noteGroups.length?`<div class="sec">Red Flags &amp; System Notes</div>${notesPage3}`:''}
 ${advisorNotes?`<div class="sec">Advisor Notes</div>${advisorBlock}`:''}
 ${footer}
@@ -7467,6 +7570,73 @@ function clearPolicyReview(){
   const warn=document.getElementById('prMissingWarning');if(warn)warn.style.display='none';
   const notes=document.getElementById('prAdvisorNotes');if(notes)notes.value='';
   updatePRButtons();
+}
+async function savePRReview(){
+  const policies=_prExtracted.filter(Boolean);
+  if(!policies.length)return alert('No policy data to save.');
+  const clientName=document.getElementById('prClientName').value.trim();
+  const clientId=document.getElementById('prClientId').value.trim();
+  if(!clientName&&!clientId)return alert('Please fill in the client name or ID before saving.');
+  const btn=document.getElementById('prSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    await window.FB.savePolicyReview({
+      clientName,clientId,
+      clientPhone:document.getElementById('prClientPhone').value.trim(),
+      clientEmail:document.getElementById('prClientEmail').value.trim(),
+      advisorCode:currentUser?.code||'',
+      advisorName:currentUser?.name||'',
+      policies,
+      advisorNotes:document.getElementById('prAdvisorNotes').value.trim(),
+    });
+    if(btn){btn.textContent='✓ Saved';setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Save Review';},2000);}
+    loadPRSavedReviews();
+  }catch(e){
+    alert('Save failed: '+e.message);
+    if(btn){btn.disabled=false;btn.textContent='💾 Save Review';}
+  }
+}
+
+async function loadPRSavedReviews(){
+  const el=document.getElementById('prSavedList');
+  if(!el)return;
+  if(!window.FB_READY){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">Not connected.</div>';return;}
+  el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">Loading…</div>';
+  try{
+    const reviews=await window.FB.getPolicyReviews();
+    if(!reviews.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">No saved reviews yet.</div>';return;}
+    el.innerHTML=reviews.map(r=>{
+      const dt=r.savedAt?.toDate?r.savedAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):(r.savedAt||'');
+      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #f3f4f6;gap:8px;">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${r.clientName||'—'} <span style="font-weight:400;color:#6b7280;">${r.clientId?'('+r.clientId+')':''}</span></div>
+          <div style="font-size:10px;color:#9ca3af;">${dt} · ${r.policies?.length||0} polic${r.policies?.length===1?'y':'ies'} · ${r.advisorName||r.advisorCode||''}</div>
+        </div>
+        <button onclick="restorePRReview('${r.id}')" style="background:#0d1f3c;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Load</button>
+      </div>`;
+    }).join('');
+  }catch(e){el.innerHTML='<div style="font-size:12px;color:#dc2626;padding:8px;">Could not load reviews.</div>';}
+}
+
+async function restorePRReview(id){
+  if(!confirm('Load this saved review? Your current data will be replaced.'))return;
+  try{
+    const r=await window.FB.getPolicyReviewById(id);
+    if(!r)return alert('Review not found.');
+    const set=(elId,val)=>{const el=document.getElementById(elId);if(el)el.value=val||'';};
+    set('prClientName',r.clientName);set('prClientId',r.clientId);
+    set('prClientPhone',r.clientPhone);set('prClientEmail',r.clientEmail);
+    set('prAdvisorNotes',r.advisorNotes);
+    _prExtracted=r.policies||[];
+    _prDocFiles=(r.policies||[]).map((p,i)=>({files:[],label:p.plan_name||p.insurer||'Policy '+(i+1),status:'done',data:p,error:null}));
+    _prLoaFile={b64:'',mediaType:'',name:'(restored)'};
+    renderPRDocList();
+    renderPRSummary();
+    const sec=document.getElementById('prSummarySection');if(sec)sec.style.display='block';
+    updatePRButtons();
+    const loaStatus=document.getElementById('prLoaStatus');
+    if(loaStatus)loaStatus.innerHTML=`<span style="color:#16a34a;font-weight:700;">✓ Review loaded: ${r.clientName||''} — ${r.policies?.length||0} policies</span>`;
+  }catch(e){alert('Could not load review: '+e.message);}
 }
 // ── END POLICY REVIEW ──────────────────────────────────────────────────────
 
