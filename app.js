@@ -2933,6 +2933,17 @@ function _updateNoticeRecipBtn(){
   else btn.textContent=`👥 ${_noticeRecipSelected.size} advisors selected ▾`;
   const p=document.getElementById('noticeRecipPicker');if(p)p.style.display='none';
 }
+const _NOTICE_TYPE_LINKS={
+  qlink:'https://connect-me-cz7b.bolt.host/#/submission-trackers',
+  urgent:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
+};
+function noticeTypeChanged(){
+  const type=document.getElementById('noticeType')?.value;
+  const lf=document.getElementById('noticeLinkField');
+  if(!lf)return;
+  if(_NOTICE_TYPE_LINKS[type]){lf.value=_NOTICE_TYPE_LINKS[type];}
+  else{lf.value='';}
+}
 async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
   const title=(titleArg!==undefined?titleArg:(document.getElementById('noticeTitle')?.value||'')).trim();
   const body=(bodyArg!==undefined?bodyArg:(document.getElementById('noticeBody')?.value||'')).trim();
