@@ -631,6 +631,12 @@ function enterHub(user){
   renderYTDStats();
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
+  // Mini cutoff auto-reminder — check on login and every 5 min (manager/ops only)
+  if(user.isOps||user.isManager){
+    if(window._miniCutoffTimer)clearInterval(window._miniCutoffTimer);
+    setTimeout(checkMiniCutoffReminder,4000);
+    window._miniCutoffTimer=setInterval(checkMiniCutoffReminder,5*60*1000);
+  }
 }
 
 // ── INACTIVITY TIMER ──
@@ -8887,6 +8893,32 @@ function diaryIsMiniCutoff(date){
 function diaryIsWorkingDay(date){
   const dow=date.getDay();
   return dow>0&&dow<6&&!tcPubHol(date);
+}
+
+// ── MINI CUTOFF AUTO-REMINDER ──
+function _todayIsMiniCutoffReminderDay(){
+  const today=new Date();today.setHours(0,0,0,0);
+  const dow=today.getDay();
+  if(dow===5){return diaryIsMiniCutoff(today)&&!tcPubHol(today);}
+  if(dow===4){const tom=new Date(today);tom.setDate(today.getDate()+1);return diaryIsMiniCutoff(tom)&&!!tcPubHol(tom);}
+  return false;
+}
+async function checkMiniCutoffReminder(){
+  if(!currentUser?.isOps&&!currentUser?.isManager)return;
+  if(!window.FB_READY)return;
+  if(!_todayIsMiniCutoffReminderDay())return;
+  const now=new Date();
+  if(now.getHours()<16||(now.getHours()===16&&now.getMinutes()<30))return;
+  const todayKey=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0')+'-'+(''+now.getDate()).padStart(2,'0');
+  try{
+    const flag=await window.FB.getFlag('miniCutoffReminder');
+    if(flag.lastSentDate===todayKey)return;
+    await window.FB.postNotice({type:'reminder',title:'⏰ Mini cut-off today — submit before 16:30',body:'Today is a mini cut-off day. Please ensure all applications and policy requests are submitted before 16:30.',postedBy:'System',active:true});
+    ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{
+      window.FB.sendInbox({to:a.code,from:'SYSTEM',fromName:'Team Buffalos',title:'⏰ Mini cut-off today — submit before 16:30',body:'Reminder: Today is a mini cut-off day. Please submit all applications and policy changes before 16:30.',type:'reminder'}).catch(()=>{});
+    });
+    await window.FB.setFlag('miniCutoffReminder',{lastSentDate:todayKey});
+  }catch(e){console.warn('Mini cutoff reminder error:',e);}
 }
 function diaryIsQlinkDay(date){
   const dk=diaryDateKey(date);
