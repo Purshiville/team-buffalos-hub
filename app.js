@@ -6834,14 +6834,24 @@ CRITICAL — POLICY NUMBER ACCURACY: Read every digit of the policy/member numbe
 - 5 vs S: 5 has a horizontal top bar, S is curved
 - Do NOT guess or approximate digits. If uncertain about one digit in a policy number, prefer the digit that makes a more natural sequence.
 
+IMPORTANT — DOCUMENT ACCURACY: Extract ONLY what is explicitly stated in the uploaded document. Do NOT add, assume, or infer benefits, terms, or conditions from your general knowledge of the insurer or product. Only mark a benefit as true if the document explicitly states it. The review must reflect the actual policy terms for THIS specific document.
+
 IDENTIFY POLICY TYPE — use one of these exact values or combinations:
 - "Funeral" — funeral cover, burial policy, final expenses plan
 - "Life" — life cover/assurance, death benefit only
 - "Disability" — disability cover, income protection, temporary/permanent disability
 - "Dread Disease" — critical illness, severe illness, dread disease cover
 - "Accidental Death" — personal accident, accidental death only policy
+- "Impairment" — severe impairment benefit, functional impairment, permanent impairment cover (lump sum for specific permanent impairments)
+- "Retirement Annuity" — RA, retirement annuity, living annuity, preservation fund, retirement fund
 - For combined cover use plus sign: "Life + Funeral", "Life + Disability", "Life + Disability + Dread Disease" etc.
 - Default to "Life" only if truly unclear.
+
+RETIREMENT ANNUITY — special rules (only when policy_type is "Retirement Annuity"):
+- Set ALL benefits fields to false — cashback, payment_holiday, no_more_premiums, accident_double, burial, paid_up do not apply to an RA
+- In the extra field, record: "Balance: R[fund value]; Termination value: R[surrender/termination value]" — extract the figures from the document if shown; omit whichever value is not shown
+- List any named beneficiaries in lives[] with is_beneficiary_only: true and cover: 0
+- Do NOT assign a cover amount to any life on an RA — the death benefit is the fund value at death (variable) not a fixed sum assured
 
 NORMALISE terminology:
 - "Sum assured" / "benefit amount" / "cover amount" / "insured amount" / "total benefit" / "death benefit" → cover per life
@@ -6870,7 +6880,8 @@ Also:
 Return this exact structure:
 {"insurer":"","policy_number":null,"start_date":null,"plan_name":"","policy_type":"Funeral","premium":0,"benefits":{"cashback":false,"payment_holiday":false,"no_more_premiums":false,"accident_double":false,"burial":false,"paid_up":false,"extra":""},"in_arrears":false,"lives":[{"name":null,"relationship":"Main","dob":null,"gender":null,"cover":0,"is_beneficiary_only":false}],"red_flags":[]}
 
-Use null for unknown strings, 0 for unknown numbers, false for unknown booleans.`;
+Use null for unknown strings, 0 for unknown numbers, false for unknown booleans.
+Cover amounts apply to: Funeral, Life, Dread Disease, Accidental Death, Impairment policies only. For Disability and Retirement Annuity, set cover: 0 for all lives.`;
 
 function handlePRLOAUpload(input){
   const file=input.files[0];
@@ -7155,31 +7166,50 @@ function _prAutoFillNotes(){
 }
 
 function _prBuildLivesMap(policies){
-  const map={};
+  const entries=[];
+  // Find existing entry by DOB + relationship (handles initials vs full name)
+  const findEntry=(dob,rel)=>{
+    if(!dob)return -1;
+    return entries.findIndex(e=>e.dob===dob&&e.relationship===rel);
+  };
   policies.forEach((p,pIdx)=>{
-    // Find main life DOB and surname for duplicate detection
+    const isRA=(p.policy_type||'').includes('Retirement Annuity');
     const mainLife=(p.lives||[]).find(l=>l.relationship==='Main');
     const mainDob=mainLife?.dob||'';
     const mainSurname=(mainLife?.name||'').split(' ').pop().toLowerCase();
     (p.lives||[]).forEach(life=>{
-      // Skip if this non-Main life appears to be the policyholder listed again
+      // Skip non-Main lives that are clearly the same person as the main life (same DOB + same surname)
       if(life.relationship!=='Main'&&mainDob&&life.dob===mainDob){
         const lifeSurname=(life.name||'').split(' ').pop().toLowerCase();
         if(mainSurname&&lifeSurname&&lifeSurname===mainSurname)return;
       }
-      const key=(life.name||'')+'|'+(life.relationship||'')+'|'+(life.dob||'');
-      if(!map[key])map[key]={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:!!life.is_beneficiary_only,totalCover:0};
-      map[key].policies[pIdx]=life.cover||0;
-      if(!life.is_beneficiary_only)map[key].totalCover+=(life.cover||0);
+      // RA policies: beneficiary only, no fixed cover
+      const isBenef=!!life.is_beneficiary_only||isRA;
+      const cover=isBenef?0:(life.cover||0);
+      // Deduplicate by DOB + relationship — same DOB = same person (handles full name vs initials)
+      const existIdx=findEntry(life.dob||'',life.relationship||'Other');
+      if(existIdx>=0){
+        const ex=entries[existIdx];
+        // Keep the more complete (longer) name — full name beats initials
+        if((life.name||'').replace(/\s/g,'').length>(ex.name||'').replace(/\s/g,'').length)ex.name=life.name||'';
+        if(!ex.gender&&life.gender)ex.gender=life.gender;
+        ex.policies[pIdx]=cover;
+        if(!isBenef)ex.totalCover+=cover;
+      } else {
+        const entry={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:isBenef,totalCover:0};
+        entry.policies[pIdx]=cover;
+        if(!isBenef)entry.totalCover+=cover;
+        entries.push(entry);
+      }
     });
   });
   const relOrder=['Main','Spouse','Child','Parent','Sibling','Uncle','Aunt','Cousin','Nephew','Niece','In-Law','Extended','Other'];
-  return Object.values(map).sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+  return entries.sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
 }
 
 function _prTypeBadge(type,forPdf){
   if(!type)return'—';
-  const colors={'Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626'};
+  const colors={'Retirement Annuity':'#0369a1','Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626','Accidental':'#dc2626','Impairment':'#9333ea'};
   let bg='#6b7280';
   for(const[k,c]of Object.entries(colors)){if(type.includes(k)){bg=c;break;}}
   if(forPdf)return`<span style="background:${bg};color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;">${type}</span>`;
@@ -7242,7 +7272,11 @@ function renderPRSummary(){
     const arr=p.in_arrears?` <span style="color:#dc2626;font-size:9px;font-weight:800;"> ⚠ ARREARS</span>`:'';
     const bg=i%2===0?'':'background:#f9f9f9;';
     const tdS=`padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;vertical-align:middle;${bg}`;
-    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td><td style="${tdS}text-align:center;">${tick(b.cashback)}</td><td style="${tdS}text-align:center;">${tick(b.payment_holiday)}</td><td style="${tdS}text-align:center;">${tick(b.no_more_premiums)}</td><td style="${tdS}text-align:center;">${b.accident_double?'✓':''}</td><td style="${tdS}text-align:center;">${tick(b.burial)}</td><td style="${tdS}text-align:center;">${tick(b.paid_up)}</td><td style="${tdS}font-size:10px;">${b.extra||'—'}</td></tr>`;
+    const isRA=(p.policy_type||'').includes('Retirement Annuity');
+    const benefCells=isRA
+      ?`<td colspan="7" style="${tdS}font-size:10px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
+      :`<td style="${tdS}text-align:center;">${tick(b.cashback)}</td><td style="${tdS}text-align:center;">${tick(b.payment_holiday)}</td><td style="${tdS}text-align:center;">${tick(b.no_more_premiums)}</td><td style="${tdS}text-align:center;">${b.accident_double?'✓':''}</td><td style="${tdS}text-align:center;">${tick(b.burial)}</td><td style="${tdS}text-align:center;">${tick(b.paid_up)}</td><td style="${tdS}font-size:10px;">${b.extra||'—'}</td>`;
+    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${benefCells}</tr>`;
   }).join('');
 
   // Lives rows
@@ -7252,6 +7286,8 @@ function renderPRSummary(){
     const bgStyle=rowBg?`background:${rowBg};`:'';
     const cells=policies.map((p,pIdx)=>{
       const c=life.policies[pIdx];
+      const isRA=(p.policy_type||'').includes('Retirement Annuity');
+      if(isRA)return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;color:#9ca3af;${bgStyle}">—</td>`;
       return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
     }).join('');
     const badge=rowLabel?` <span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;">${rowLabel}</span>`:'';
@@ -7312,7 +7348,11 @@ function generatePRPdf(){
     const b=p.benefits||{};
     const arr=p.in_arrears?' <span style="color:#dc2626;font-weight:800;">&#9888; ARREARS</span>':'';
     const bg=i%2===0?'':'background:#f9f9f9;';
-    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td><td class="ctr" style="${bg}">${tick(b.cashback)}</td><td class="ctr" style="${bg}">${tick(b.payment_holiday)}</td><td class="ctr" style="${bg}">${tick(b.no_more_premiums)}</td><td class="ctr" style="${bg}">${b.accident_double?'&#10003;':''}</td><td class="ctr" style="${bg}">${tick(b.burial)}</td><td class="ctr" style="${bg}">${tick(b.paid_up)}</td><td style="${bg}font-size:8px;">${b.extra||'—'}</td></tr>`;
+    const isRA=(p.policy_type||'').includes('Retirement Annuity');
+    const benefCells=isRA
+      ?`<td colspan="7" style="${bg}font-size:8px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
+      :`<td class="ctr" style="${bg}">${tick(b.cashback)}</td><td class="ctr" style="${bg}">${tick(b.payment_holiday)}</td><td class="ctr" style="${bg}">${tick(b.no_more_premiums)}</td><td class="ctr" style="${bg}">${b.accident_double?'&#10003;':''}</td><td class="ctr" style="${bg}">${tick(b.burial)}</td><td class="ctr" style="${bg}">${tick(b.paid_up)}</td><td style="${bg}font-size:8px;">${b.extra||'—'}</td>`;
+    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td>${benefCells}</tr>`;
   }).join('');
 
   // Page 2 — Lives
@@ -7320,7 +7360,12 @@ function generatePRPdf(){
   const livesRows=allLives.map(life=>{
     const {bg:rowBg,label:rowLabel}=_prLiveBg(life);
     const bgStyle=rowBg?`background:${rowBg};`:'';
-    const cells=policies.map((p,pIdx)=>{const c=life.policies[pIdx];return`<td class="ctr" style="${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;}).join('');
+    const cells=policies.map((p,pIdx)=>{
+      const c=life.policies[pIdx];
+      const isRA=(p.policy_type||'').includes('Retirement Annuity');
+      if(isRA)return`<td class="ctr" style="${bgStyle}color:#9ca3af;">&#8212;</td>`;
+      return`<td class="ctr" style="${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
+    }).join('');
     const tag=rowLabel?` <span class="no-cover-badge">${rowLabel}</span>`:'';
     return`<tr><td style="${bgStyle}">${life.relationship}${tag}</td><td style="${bgStyle}">${life.name||''}</td><td style="${bgStyle}">${life.dob||''} ${life.gender?'('+life.gender+')':''}</td>${cells}</tr>`;
   }).join('');
