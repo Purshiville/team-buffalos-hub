@@ -6186,17 +6186,28 @@ function saveModal(){
     const mDate=v('m_date'),mTime=v('m_time'),mBooked=v('m_booked'),mNotes=v('m_notes');
     saveTracker('meeting',[{date:mDate,time:mTime,booked:mBooked,notes:mNotes}]);
     if(mDate){
-      // Post notice so it shows on everyone's hub
+      const mtgTitle='📅 Team Meeting — '+mDate+(mTime?' at '+mTime:'');
+      const mtgBody=(mNotes||'')+(mBooked==='Yes'?'\n✅ Boardroom confirmed':'');
+      // Post notice so it shows on everyone's hub (localStorage)
       const notices=getNotices();
       const existNi=notices.findIndex(n=>n.id&&n.id.startsWith('mtg_notice_')&&n.meetingDate===mDate);
       if(existNi>-1)notices.splice(existNi,1);
-      notices.unshift({id:'mtg_notice_'+mDate,type:'reminder',title:'📅 Team Meeting — '+mDate+(mTime?' at '+mTime:''),body:(mNotes||'')+(mBooked==='Yes'?' · Boardroom booked':''),recipient:'ALL',active:true,postedAt:new Date().toISOString(),meetingDate:mDate});
+      notices.unshift({id:'mtg_notice_'+mDate,type:'reminder',title:mtgTitle,body:mtgBody,recipient:'ALL',active:true,postedAt:new Date().toISOString(),meetingDate:mDate});
       saveNotices(notices);
       if(typeof renderNoticeBoard==='function')renderNoticeBoard();
       // Add to Herd Strategy calendar for all — stored with advisorCode='ALL'
       const diaryEvs=diaryGetEvents().filter(e=>!(e.id&&e.id.startsWith('mtg_diary_')&&e.date===mDate));
       diaryEvs.push({id:'mtg_diary_'+mDate,date:mDate,title:'Team Meeting',startTime:mTime||'',notes:mNotes||''+(mBooked==='Yes'?' (Boardroom booked)':''),type:'meeting',advisorCode:'ALL',system:true});
       diarySaveEvents(diaryEvs);
+      // Push to Firebase — notice board + inbox for every advisor
+      if(window.FB_READY){
+        window.FB.saveMeeting({date:mDate,time:mTime,booked:mBooked,notes:mNotes}).catch(()=>{});
+        window.FB.setNotice('mtg_notice_'+mDate,{type:'reminder',title:mtgTitle,body:mtgBody,postedBy:currentUser?.name||'Manager',active:true,meetingDate:mDate}).catch(()=>{});
+        const inboxBody='Our monthly team meeting has been scheduled'+(mDate?' for '+mDate:'')+(mTime?' at '+mTime:'')+'.'+(mNotes?'\n\n'+mNotes:'')+(mBooked==='Yes'?'\n✅ Boardroom is confirmed.':'');
+        ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{
+          window.FB.sendInbox({to:a.code,from:currentUser?.code||'MANAGER',fromName:currentUser?.name||'Manager',title:mtgTitle,body:inboxBody,type:'meeting'}).catch(()=>{});
+        });
+      }
     }
     closeModal();renderMeetingCard();
   }
