@@ -2934,8 +2934,13 @@ function _updateNoticeRecipBtn(){
   const p=document.getElementById('noticeRecipPicker');if(p)p.style.display='none';
 }
 const _NOTICE_TYPE_LINKS={
-  qlink:'https://connect-me-cz7b.bolt.host/#/submission-trackers',
-  urgent:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
+  precan:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
+  qlink:'https://connect-me-cz7b.bolt.host/#/conversions',
+  submissions:'https://connect-me-cz7b.bolt.host/#/submission-trackers',
+  issuedate:'https://connect-me-cz7b.bolt.host/#/issue-date',
+  firstpremium:'https://connect-me-cz7b.bolt.host/#/first-premium',
+  pendinglapse:'https://connect-me-cz7b.bolt.host/#/pending-lapse',
+  terminations:'https://connect-me-cz7b.bolt.host/#/terminations',
 };
 function noticeTypeChanged(){
   const type=document.getElementById('noticeType')?.value;
