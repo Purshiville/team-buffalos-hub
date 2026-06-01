@@ -8556,6 +8556,176 @@ function loadPdfLib(){
   });
 }
 
+/* ── UNLOCK PDF ── */
+let _updfBytes=null;       // raw bytes of uploaded file
+let _updfUnlocked=null;    // unlocked bytes ready to download
+let _updfName='unlocked.pdf';
+
+function updfHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('updfDropZone').style.borderColor='#e5e7eb';
+  const f=e.dataTransfer.files[0];
+  if(f)updfHandleFile(f);
+}
+function updfHandleFile(f){
+  if(!f||f.type!=='application/pdf'&&!f.name.endsWith('.pdf'))return showAlert('Please choose a PDF file.','error');
+  _updfBytes=null;_updfUnlocked=null;
+  _updfName=f.name.replace(/\.pdf$/i,'')+'_unlocked.pdf';
+  document.getElementById('updfFileName').textContent=f.name;
+  document.getElementById('updfFileSize').textContent=(f.size/1024).toFixed(0)+' KB';
+  document.getElementById('updfFileRow').style.display='block';
+  document.getElementById('updfPwdRow').style.display='none';
+  document.getElementById('updfResult').style.display='none';
+  document.getElementById('updfBtn').style.display='block';
+  updfSetStatus('');
+  const reader=new FileReader();
+  reader.onload=e=>{_updfBytes=new Uint8Array(e.target.result);};
+  reader.readAsArrayBuffer(f);
+}
+function updfSetStatus(msg,type){
+  const el=document.getElementById('updfStatus');
+  if(!msg){el.style.display='none';return;}
+  el.style.display='block';
+  el.style.background=type==='error'?'#fef2f2':type==='ok'?'#f0fdf4':'#f0f9ff';
+  el.style.color=type==='error'?'#991b1b':type==='ok'?'#065f46':'#075985';
+  el.style.border=`1px solid ${type==='error'?'#fca5a5':type==='ok'?'#86efac':'#bae6fd'}`;
+  el.textContent=msg;
+}
+async function updfUnlock(){
+  if(!_updfBytes)return showAlert('Please select a PDF first.','error');
+  const pwd=document.getElementById('updfPwd').value||'';
+  document.getElementById('updfBtn').disabled=true;
+  document.getElementById('updfBtn').textContent='Working…';
+  updfSetStatus('Reading PDF…','info');
+  try{
+    await loadPdfLib();
+    const {PDFDocument}=window.PDFLib;
+
+    /* — try loading: ignoreEncryption works for owner/permissions restricted — */
+    let pdfDoc;
+    let usedPassword=false;
+    try{
+      pdfDoc=await PDFDocument.load(_updfBytes,{ignoreEncryption:true});
+    }catch(e){
+      updfSetStatus('Could not read the PDF. It may be severely corrupted.','error');
+      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
+      return;
+    }
+
+    /* Check if pdf-lib sees it as encrypted */
+    const isEncrypted=pdfDoc.context.lookup(pdfDoc.context.trailerInfo.Encrypt)!=null;
+
+    if(isEncrypted&&!pwd){
+      /* Might be truly user-encrypted — show password field */
+      updfSetStatus('This PDF requires an open password to unlock. Enter it above.','info');
+      document.getElementById('updfPwdRow').style.display='block';
+      document.getElementById('updfPwd').focus();
+      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
+      return;
+    }
+
+    if(isEncrypted&&pwd){
+      /* Use PDF.js to render with password then rebuild as image PDF */
+      updfSetStatus('Decrypting with password…','info');
+      await updfDecryptWithPdfJs(pwd);
+      return;
+    }
+
+    /* Not encrypted (or only owner-restricted) — save cleanly */
+    updfSetStatus('Saving unlocked copy…','info');
+    _updfUnlocked=await pdfDoc.save();
+    updfShowResult('Permissions restrictions removed. The PDF is fully unlocked.');
+  }catch(err){
+    console.error(err);
+    updfSetStatus('Something went wrong: '+err.message,'error');
+    document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
+  }
+}
+
+function loadPdfJs(){
+  return new Promise((resolve,reject)=>{
+    if(window.pdfjsLib){resolve();return;}
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve();};
+    s.onerror=reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function updfDecryptWithPdfJs(password){
+  try{
+    await loadPdfJs();
+    await loadPdfLib();
+    const {PDFDocument,rgb}=window.PDFLib;
+    const loadingTask=window.pdfjsLib.getDocument({data:_updfBytes,password});
+    let pdfSource;
+    try{pdfSource=await loadingTask.promise;}
+    catch(e){
+      if(e.name==='PasswordException'){
+        updfSetStatus('Incorrect password — please try again.','error');
+      }else{
+        updfSetStatus('Could not open PDF: '+e.message,'error');
+      }
+      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
+      return;
+    }
+
+    const numPages=pdfSource.numPages;
+    updfSetStatus(`Rendering ${numPages} page${numPages!==1?'s':''}…`,'info');
+
+    const outDoc=await PDFDocument.create();
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d');
+
+    for(let p=1;p<=numPages;p++){
+      updfSetStatus(`Rendering page ${p} of ${numPages}…`,'info');
+      const page=await pdfSource.getPage(p);
+      const vp=page.getViewport({scale:2});
+      canvas.width=vp.width;canvas.height=vp.height;
+      await page.render({canvasContext:ctx,viewport:vp}).promise;
+      const imgData=canvas.toDataURL('image/jpeg',0.92);
+      const jpgBytes=Uint8Array.from(atob(imgData.split(',')[1]),c=>c.charCodeAt(0));
+      const img=await outDoc.embedJpg(jpgBytes);
+      const pg=outDoc.addPage([vp.width/2,vp.height/2]);
+      pg.drawImage(img,{x:0,y:0,width:vp.width/2,height:vp.height/2});
+    }
+
+    _updfUnlocked=await outDoc.save();
+    updfShowResult(`Password removed. Note: the output is an image-based PDF (${numPages} page${numPages!==1?'s':''}). Text may not be selectable.`);
+  }catch(err){
+    console.error(err);
+    updfSetStatus('Error during decryption: '+err.message,'error');
+    document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
+  }
+}
+
+function updfShowResult(note){
+  document.getElementById('updfBtn').style.display='none';
+  updfSetStatus('');
+  document.getElementById('updfResultNote').textContent=note;
+  document.getElementById('updfResult').style.display='block';
+}
+function updfDownload(){
+  if(!_updfUnlocked)return;
+  const blob=new Blob([_updfUnlocked],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=_updfName;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),5000);
+}
+function updfReset(){
+  _updfBytes=null;_updfUnlocked=null;
+  document.getElementById('updfInput').value='';
+  document.getElementById('updfFileRow').style.display='none';
+  document.getElementById('updfPwdRow').style.display='none';
+  document.getElementById('updfResult').style.display='none';
+  document.getElementById('updfBtn').disabled=false;
+  document.getElementById('updfBtn').textContent='🔓 Remove Password';
+  document.getElementById('updfBtn').style.display='block';
+  document.getElementById('updfPwd').value='';
+  updfSetStatus('');
+}
+
 /* ── PROSPECT MAP ── */
 const PM_TYPES={
   school:{label:'School/College',icon:'🏫',color:'#1b3460',
