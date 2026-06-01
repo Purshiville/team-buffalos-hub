@@ -7058,10 +7058,22 @@ async function analysePRDocuments(){
   if(analyseBtn){analyseBtn.disabled=true;analyseBtn.textContent='Analysing…';}
   // Ensure extracted array matches doc array length
   while(_prExtracted.length<_prDocFiles.length)_prExtracted.push(null);
+  const _prTotal=_prDocFiles.filter(f=>f.status!=='done').length;
+  let _prDone=0;
+  const _prTimeStart=Date.now();
+  const _prTimeSt=document.getElementById('prTimeStatus');
+  if(_prTimeSt&&_prTotal>0){_prTimeSt.style.display='block';_prTimeSt.textContent='Starting analysis…';}
   for(let i=0;i<_prDocFiles.length;i++){
     if(_prDocFiles[i].status==='done')continue; // skip already-analysed docs
     await _prExtractOne(i);
+    _prDone++;
+    if(_prTimeSt&&_prDone<_prTotal){
+      const avgMs=(Date.now()-_prTimeStart)/_prDone;
+      const remSec=Math.round(avgMs*(_prTotal-_prDone)/1000);
+      _prTimeSt.textContent=`Doc ${_prDone} of ${_prTotal} read — ~${remSec<60?remSec+'s':Math.ceil(remSec/60)+'m'} remaining`;
+    }
   }
+  if(_prTimeSt){_prTimeSt.style.display='none';}
   if(analyseBtn){analyseBtn.disabled=false;analyseBtn.textContent='Analyse new documents';}
   // Record timestamp for 24-hour rate limit
   localStorage.setItem('prLastAnalysis_'+(currentUser?.code||'default'),Date.now().toString());
@@ -8677,9 +8689,14 @@ async function updfDecryptWithPdfJs(password){
     const outDoc=await PDFDocument.create();
     const canvas=document.createElement('canvas');
     const ctx=canvas.getContext('2d');
+    const _updfPageStart=Date.now();
 
     for(let p=1;p<=numPages;p++){
-      updfSetStatus(`Rendering page ${p} of ${numPages}…`,'info');
+      const _updfEl=Date.now()-_updfPageStart;
+      const _updfAvg=p>1?_updfEl/(p-1):0;
+      const _updfRem=p>1?Math.round(_updfAvg*(numPages-p+1)/1000):null;
+      const _updfTimeStr=_updfRem&&_updfRem>1?` — ~${_updfRem<60?_updfRem+'s':Math.ceil(_updfRem/60)+'m'} left`:'';
+      updfSetStatus(`Rendering page ${p} of ${numPages}${_updfTimeStr}…`,'info');
       const page=await pdfSource.getPage(p);
       const vp=page.getViewport({scale:2});
       canvas.width=vp.width;canvas.height=vp.height;
@@ -9132,6 +9149,12 @@ async function mdMerge(){
   const status=document.getElementById('mdStatus');
   btn.disabled=true;btn.textContent='Merging…';
   mdSetProgress(status,2,'Loading PDF engine…');
+  const _mdStart=Date.now();
+  const _mdTimedProgress=(pct,msg)=>{
+    let timeStr='';
+    if(pct>5&&pct<97){const el=Date.now()-_mdStart;const remSec=Math.round((el/pct)*(100-pct)/1000);if(remSec>1)timeStr=` — ~${remSec<60?remSec+'s':Math.ceil(remSec/60)+'m'} left`;}
+    mdSetProgress(status,pct,msg+timeStr);
+  };
   const dl=(out,mb,label)=>{
     const fnInput=document.getElementById('mdFileName');
     const rawName=(fnInput&&fnInput.value.trim())||'merged-document';
@@ -9144,13 +9167,13 @@ async function mdMerge(){
     if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Downloaded${label?' ('+label+')':''} — ${mb}MB · ${_mdFiles.length} file${_mdFiles.length!==1?'s':''} merged · saved as ${fname}</div>`;
   };
   try{
-    const out=await mdBuild(false,(pct,msg)=>mdSetProgress(status,pct,msg));
+    const out=await mdBuild(false,_mdTimedProgress);
     mdSetProgress(status,98,'Finalising…');
     const mb=(out.byteLength/(1024*1024)).toFixed(2);
     if(parseFloat(mb)>4.0){
       mdSetProgress(status,2,`📦 ${mb}MB — auto-compressing to fit 4MB IMP limit…`);
       btn.textContent='Compressing…';
-      const outC=await mdBuild(true,(pct,msg)=>mdSetProgress(status,pct,msg));
+      const outC=await mdBuild(true,_mdTimedProgress);
       mdSetProgress(status,98,'Finalising compressed PDF…');
       const mbC=(outC.byteLength/(1024*1024)).toFixed(2);
       if(parseFloat(mbC)>4.0){
