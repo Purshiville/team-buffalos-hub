@@ -2937,6 +2937,9 @@ const _NOTICE_TYPE_LINKS={
   firstpremium:'https://connect-me-cz7b.bolt.host/#/first-premium',
   pendinglapse:'https://connect-me-cz7b.bolt.host/#/pending-lapse',
   terminations:'https://connect-me-cz7b.bolt.host/#/terminations',
+  newfirstpremium:'https://connect-me-cz7b.bolt.host/#/first-premium',
+  newpendinglapse:'https://connect-me-cz7b.bolt.host/#/pending-lapse',
+  newterminations:'https://connect-me-cz7b.bolt.host/#/terminations',
 };
 function noticeTypeChanged(){
   const type=document.getElementById('noticeType')?.value;
