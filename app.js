@@ -956,14 +956,9 @@ function renderYTDStats(){
   if(window.FB_READY&&window.FB.getYearStats){
     const yr=String(new Date().getFullYear());
     window.FB.getYearStats(yr).then(fbMonths=>{
+      // Firebase is the source of truth — write each month straight to localStorage
       Object.entries(fbMonths).forEach(([period,data])=>{
-        const k='tl_prod_stats_'+period;
-        try{
-          const local=JSON.parse(localStorage.getItem(k)||'{"advisors":{}}');
-          Object.assign(local.advisors||{},data.advisors||{});
-          local.advisors=Object.assign({},data.advisors||{},local.advisors);
-          localStorage.setItem(k,JSON.stringify({...data,...local}));
-        }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
+        try{localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}catch(e){}
       });
       _renderYTDStatsInner(el);
     }).catch(()=>_renderYTDStatsInner(el));
