@@ -2104,7 +2104,7 @@ function showPage(p){
   if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderYTDStats();}
   if(p==='commcases'){renderCommCases();renderCommQueries();}
   if(p==='referrals')renderReferrals();
-  if(p==='canpack'){mdInit();}
+  if(p==='canpack'||p==='cancellations'){mdInit();}
   if(p==='termcal')renderTermCal();
   if(p==='ntu')renderNTUDash();
   if(p==='prospectmap')renderProspectMap();
@@ -2855,6 +2855,7 @@ const NOTICE_TEMPLATES=[
   {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
 ];
 function _noticeEl(id){return document.querySelector('.page.active #'+id)||document.getElementById(id);}
+function _mdEl(id){return document.querySelector('.page.active #'+id)||document.getElementById(id);}
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
   const t=NOTICE_TEMPLATES[idx];if(!t)return;
@@ -8974,7 +8975,7 @@ function mdInit(){
 
 function mdHandleDrop(e){
   e.preventDefault();
-  document.getElementById('mdDropZone').style.borderColor='#e5e7eb';
+  const _dz=_mdEl('mdDropZone');if(_dz)_dz.style.borderColor='#e5e7eb';
   const files=Array.from(e.dataTransfer.files);
   mdPushFiles(files);
 }
@@ -9094,9 +9095,9 @@ function mdMoveFile(i,dir){
 }
 
 function mdRenderList(){
-  const el=document.getElementById('mdFileList');
-  const btn=document.getElementById('mdMergeBtn');
-  const fnWrap=document.getElementById('mdFilenameWrap');
+  const el=_mdEl('mdFileList');
+  const btn=_mdEl('mdMergeBtn');
+  const fnWrap=_mdEl('mdFilenameWrap');
   if(!el)return;
   if(!_mdFiles.length){
     el.innerHTML='';
@@ -9145,8 +9146,8 @@ function mdSetProgress(status,pct,msg){
 
 async function mdMerge(){
   if(!_mdFiles.length)return;
-  const btn=document.getElementById('mdMergeBtn');
-  const status=document.getElementById('mdStatus');
+  const btn=_mdEl('mdMergeBtn');
+  const status=_mdEl('mdStatus');
   btn.disabled=true;btn.textContent='Merging…';
   mdSetProgress(status,2,'Loading PDF engine…');
   const _mdStart=Date.now();
@@ -9156,7 +9157,7 @@ async function mdMerge(){
     mdSetProgress(status,pct,msg+timeStr);
   };
   const dl=(out,mb,label)=>{
-    const fnInput=document.getElementById('mdFileName');
+    const fnInput=_mdEl('mdFileName');
     const rawName=(fnInput&&fnInput.value.trim())||'merged-document';
     const fname=rawName.toLowerCase().endsWith('.pdf')?rawName:rawName+'.pdf';
     const blob=new Blob([out],{type:'application/pdf'});
