@@ -2104,7 +2104,8 @@ function showPage(p){
   if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderYTDStats();}
   if(p==='commcases'){renderCommCases();renderCommQueries();}
   if(p==='referrals')renderReferrals();
-  if(p==='canpack'||p==='cancellations'){mdInit();}
+  if(p==='canpack'){mdInit();}
+  if(p==='cancellations'){cpInit();}
   if(p==='termcal')renderTermCal();
   if(p==='ntu')renderNTUDash();
   if(p==='prospectmap')renderProspectMap();
@@ -8966,6 +8967,92 @@ function pmRenderPipeline(){
       <button onclick="pmRemoveProspect(${p.id})" style="background:none;border:none;color:#d1d5db;cursor:pointer;font-size:18px;padding:0;line-height:1;margin-top:2px;" title="Remove">✕</button>
     </div>`;
   }).join('');
+}
+
+// ── CANCELLATION PACK BUILDER ──
+const _CP_SLOTS=[
+  {label:'Client ID / Driver\'s licence',icon:'🪪',hint:'Clear, legible copy',required:true},
+  {label:'Letter of Authority (LOA)',icon:'✍️',hint:'Signed by client authorising cancellation',required:true},
+  {label:'Cancellation instruction / form',icon:'📝',hint:'Signed cancellation form or instruction letter',required:true},
+  {label:'Bank statement or proof of banking',icon:'🏦',hint:'1 month sufficient',required:true},
+  {label:'Additional document (e.g. AL9 / company form)',icon:'📎',hint:'e.g. AVBOB AL9 form, Workerslife form',required:false},
+  {label:'Additional document (e.g. surrender form)',icon:'📎',hint:'e.g. AVBOB surrender form if surrender value exists',required:false},
+];
+let _cpFiles=new Array(_CP_SLOTS.length).fill(null);
+
+function cpInit(){_cpFiles=new Array(_CP_SLOTS.length).fill(null);cpRender();}
+
+function cpRender(){
+  const el=document.getElementById('cpSlotList');
+  if(!el)return;
+  el.innerHTML=_CP_SLOTS.map((slot,i)=>{
+    const f=_cpFiles[i];
+    const done=!!f;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ${done?'#86efac':'#e5e7eb'};border-radius:10px;background:${done?'#f0fdf4':'#fff'};transition:border-color .2s,background .2s;">
+      <span style="font-size:20px;flex-shrink:0;">${done?'✅':slot.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#374151;">${slot.label}${slot.required?'':' <span style="font-size:10px;color:#9ca3af;font-weight:400;">(optional)</span>'}</div>
+        <div style="font-size:11px;color:${done?'#16a34a':'#9ca3af'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${done?'✓ '+f.name:slot.hint}</div>
+      </div>
+      <label style="background:${done?'#dcfce7':'#0d1f3c'};color:${done?'#166534':'#fff'};border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        ${done?'↺ Replace':'Upload'}
+        <input type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="cpSlotUpload(${i},this)"/>
+      </label>
+    </div>`;
+  }).join('');
+  cpUpdateBtn();
+}
+
+function cpSlotUpload(idx,input){
+  if(!input.files.length)return;
+  _cpFiles[idx]=input.files[0];
+  cpRender();
+}
+
+function cpUpdateBtn(){
+  const btn=document.getElementById('cpBuildBtn');
+  if(!btn)return;
+  const ready=_CP_SLOTS.every((s,i)=>!s.required||_cpFiles[i]);
+  btn.style.opacity=ready?'1':'0.45';
+  btn.style.pointerEvents=ready?'auto':'none';
+}
+
+async function cpBuild(){
+  const files=_cpFiles.filter(Boolean);
+  if(!files.length)return;
+  const btn=document.getElementById('cpBuildBtn');
+  const status=document.getElementById('cpStatus');
+  if(btn){btn.disabled=true;btn.textContent='Building pack…';}
+  const saved=_mdFiles.splice(0);
+  files.forEach(f=>_mdFiles.push(f));
+  const cpStart=Date.now();
+  const onProg=(pct,msg)=>{
+    if(!status)return;
+    const el=Date.now()-cpStart;
+    let t='';if(pct>5&&pct<97){const r=Math.round((el/pct)*(100-pct)/1000);if(r>1)t=` — ~${r<60?r+'s':Math.ceil(r/60)+'m'} left`;}
+    status.innerHTML=`<div style="padding:4px 0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:11px;color:#6b7280;">${msg}${t}</span><span style="font-size:11px;font-weight:700;color:#374151;">${Math.round(pct)}%</span></div><div style="background:#e5e7eb;border-radius:999px;height:7px;overflow:hidden;"><div style="background:linear-gradient(90deg,#dc2626,#c9922a);height:100%;width:${pct}%;border-radius:999px;transition:width 0.25s ease;"></div></div></div>`;
+  };
+  try{
+    const fnEl=document.getElementById('cpFileName');
+    const rawName=(fnEl&&fnEl.value.trim())||'cancellation-pack';
+    const fname=rawName.toLowerCase().endsWith('.pdf')?rawName:rawName+'.pdf';
+    let out=await mdBuild(false,onProg);
+    const mb=(out.byteLength/(1024*1024)).toFixed(2);
+    if(parseFloat(mb)>4.0){
+      if(status)status.innerHTML=`<div style="padding:8px 12px;font-size:12px;color:#6b7280;">📦 ${mb}MB — compressing…</div>`;
+      out=await mdBuild(true,onProg);
+    }
+    const mb2=(out.byteLength/(1024*1024)).toFixed(2);
+    const blob=new Blob([out],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),2000);
+    if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Pack downloaded — ${mb2}MB · ${files.length} document${files.length!==1?'s':''} merged · saved as ${fname}</div>`;
+  }catch(err){
+    if(status)status.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991b1b;font-weight:600;">Error: ${err.message}</div>`;
+  }
+  _mdFiles.length=0;saved.forEach(f=>_mdFiles.push(f));
+  if(btn){btn.disabled=false;btn.textContent='Build Cancellation Pack';}
 }
 
 function mdInit(){
