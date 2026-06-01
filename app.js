@@ -572,7 +572,7 @@ function enterHub(user){
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
-  ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
+  const noticeRecip=document.getElementById('noticeRecipient');if(noticeRecip){noticeRecip.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}
   const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='flex';
   const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='flex';
   const opsTileEl=document.getElementById('opsTile');if(opsTileEl)opsTileEl.style.display='block';
@@ -2854,12 +2854,13 @@ const NOTICE_TEMPLATES=[
   {group:'🔔 Alerts & Announcements',type:'reminder',title:'Compliance Reminder',body:'All advisors are reminded to adhere to FAIS, TCF, and POPIA compliance requirements. Ensure all client interactions, documentation, and disclosures are completed in full and on record.'},
   {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
 ];
+function _noticeEl(id){return document.querySelector('.page.active #'+id)||document.getElementById(id);}
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
   const t=NOTICE_TEMPLATES[idx];if(!t)return;
-  const titleEl=document.getElementById('noticeTitle');
-  const bodyEl=document.getElementById('noticeBody');
-  const typeEl=document.getElementById('noticeType');
+  const titleEl=_noticeEl('noticeTitle');
+  const bodyEl=_noticeEl('noticeBody');
+  const typeEl=_noticeEl('noticeType');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
@@ -2901,7 +2902,7 @@ function insertNoticeEmoji(em,pickerId){
 let _noticeRecipSelected=new Set();
 function toggleNoticeRecipPicker(e){
   e.stopPropagation();
-  const picker=document.getElementById('noticeRecipPicker');if(!picker)return;
+  const picker=_noticeEl('noticeRecipPicker');if(!picker)return;
   if(picker.style.display==='block'){picker.style.display='none';return;}
   if(!picker.dataset.built){
     picker.dataset.built='1';
@@ -2914,20 +2915,22 @@ function toggleNoticeRecipPicker(e){
 }
 function noticeRecipToggleAll(chk){
   _noticeRecipSelected.clear();
-  document.querySelectorAll('.noticeRecipCheck').forEach(c=>{c.checked=false;});
+  const activePage=document.querySelector('.page.active');
+  (activePage||document).querySelectorAll('.noticeRecipCheck').forEach(c=>{c.checked=false;});
   _updateNoticeRecipBtn();
 }
 function noticeRecipCheckChanged(){
-  _noticeRecipSelected=new Set([...document.querySelectorAll('.noticeRecipCheck:checked')].map(c=>c.value));
-  const a=document.getElementById('noticeRecipAll');if(a)a.checked=_noticeRecipSelected.size===0;
+  const activePage=document.querySelector('.page.active');
+  _noticeRecipSelected=new Set([...(activePage||document).querySelectorAll('.noticeRecipCheck:checked')].map(c=>c.value));
+  const a=_noticeEl('noticeRecipAll');if(a)a.checked=_noticeRecipSelected.size===0;
   _updateNoticeRecipBtn();
 }
 function _updateNoticeRecipBtn(){
-  const btn=document.getElementById('noticeRecipBtn');if(!btn)return;
+  const btn=_noticeEl('noticeRecipBtn');if(!btn)return;
   if(_noticeRecipSelected.size===0)btn.textContent='👥 All advisors ▾';
   else if(_noticeRecipSelected.size===1){const code=[..._noticeRecipSelected][0];const name=ADVISOR_LIST.find(a=>a.code===code)?.name||code;btn.textContent=`👤 ${name} ▾`;}
   else btn.textContent=`👥 ${_noticeRecipSelected.size} advisors selected ▾`;
-  const p=document.getElementById('noticeRecipPicker');if(p)p.style.display='none';
+  const p=_noticeEl('noticeRecipPicker');if(p)p.style.display='none';
 }
 const _NOTICE_TYPE_LINKS={
   precan:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
@@ -2942,19 +2945,19 @@ const _NOTICE_TYPE_LINKS={
   newterminations:'https://connect-me-cz7b.bolt.host/#/terminations',
 };
 function noticeTypeChanged(){
-  const type=document.getElementById('noticeType')?.value;
-  const lf=document.getElementById('noticeLinkField');
+  const type=_noticeEl('noticeType')?.value;
+  const lf=_noticeEl('noticeLinkField');
   if(!lf)return;
   if(_NOTICE_TYPE_LINKS[type]){lf.value=_NOTICE_TYPE_LINKS[type];}
   else{lf.value='';}
 }
 async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
-  const title=(titleArg!==undefined?titleArg:(document.getElementById('noticeTitle')?.value||'')).trim();
-  const body=(bodyArg!==undefined?bodyArg:(document.getElementById('noticeBody')?.value||'')).trim();
-  const type=typeArg||document.getElementById('noticeType')?.value||'info';
+  const title=(titleArg!==undefined?titleArg:(_noticeEl('noticeTitle')?.value||'')).trim();
+  const body=(bodyArg!==undefined?bodyArg:(_noticeEl('noticeBody')?.value||'')).trim();
+  const type=typeArg||_noticeEl('noticeType')?.value||'info';
   const recipCodes=recipientArg!==undefined?null:(_noticeRecipSelected.size>0?[..._noticeRecipSelected]:null);
   const recipient=recipientArg!==undefined?recipientArg:(recipCodes?.length===1?recipCodes[0]:'ALL');
-  const link=(linkArg!==undefined?linkArg:(document.getElementById('noticeLinkField')?.value||'')).trim();
+  const link=(linkArg!==undefined?linkArg:(_noticeEl('noticeLinkField')?.value||'')).trim();
   if(!title)return alert('Please add a title for the notice.');
   const noticeData={type,title,body,postedBy:currentUser.name,active:true};
   if(recipCodes&&recipCodes.length===1)noticeData.recipientCode=recipCodes[0];
@@ -2974,12 +2977,12 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
     const notices=getNotices();notices.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),...noticeData,postedAt:new Date().toISOString()});saveNotices(notices);
   }
   if(titleArg===undefined){
-    const nt=document.getElementById('noticeTitle');if(nt)nt.value='';
-    const nb=document.getElementById('noticeBody');if(nb)nb.value='';
-    _noticeRecipSelected.clear();const rb=document.getElementById('noticeRecipBtn');if(rb)rb.textContent='👥 All advisors ▾';const rp=document.getElementById('noticeRecipPicker');if(rp){rp.dataset.built='';rp.style.display='none';}
-    const nl=document.getElementById('noticeLinkField');if(nl)nl.value='';
-    const npb=document.getElementById('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
-    const fb=document.getElementById('noticePostFeedback');
+    const nt=_noticeEl('noticeTitle');if(nt)nt.value='';
+    const nb=_noticeEl('noticeBody');if(nb)nb.value='';
+    _noticeRecipSelected.clear();const rb=_noticeEl('noticeRecipBtn');if(rb)rb.textContent='👥 All advisors ▾';const rp=_noticeEl('noticeRecipPicker');if(rp){rp.dataset.built='';rp.style.display='none';}
+    const nl=_noticeEl('noticeLinkField');if(nl)nl.value='';
+    const npb=_noticeEl('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
+    const fb=_noticeEl('noticePostFeedback');
     if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2500);}
   }
   renderNoticeBoard();
@@ -3104,22 +3107,6 @@ function addNoticeComment(noticeId){
 }
 
 
-function hubPostNotice(){
-  const type=document.getElementById('hubNoticeType').value;
-  const title=document.getElementById('hubNoticeTitle').value.trim();
-  const body=document.getElementById('hubNoticeBody').value.trim();
-  const recipient=document.getElementById('hubNoticeRecipient')?.value||'ALL';
-  const link=document.getElementById('hubNoticeLink')?.value.trim()||'';
-  if(!title)return alert('Please enter a notice title.');
-  postNotice(type,title,body,recipient,link).then(()=>{
-    document.getElementById('hubNoticeTitle').value='';
-    document.getElementById('hubNoticeBody').value='';
-    const rs=document.getElementById('hubNoticeRecipient');if(rs)rs.value='ALL';
-    const hl=document.getElementById('hubNoticeLink');if(hl)hl.value='';
-    const btn=document.getElementById('hubNoticeBtn');if(btn)btn.textContent='Post to all advisors';
-  });
-}
-
 function generateBusinessSummary(){
   const now=new Date();
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -3150,14 +3137,14 @@ function generateBusinessSummary(){
     if(top)lines.push(`Leading: ${top.name} — ${top.actualCases} case${top.actualCases!==1?'s':''}`);
     body=lines.join('\n');
   }
-  const tEl=document.getElementById('hubNoticeTitle');if(tEl)tEl.value=title;
-  const bEl=document.getElementById('hubNoticeBody');if(bEl)bEl.value=body;
-  const tyEl=document.getElementById('hubNoticeType');if(tyEl)tyEl.value='info';
-  document.getElementById('hubNoticeTitle')?.focus();
+  const tEl=_noticeEl('noticeTitle');if(tEl)tEl.value=title;
+  const bEl=_noticeEl('noticeBody');if(bEl)bEl.value=body;
+  const tyEl=_noticeEl('noticeType');if(tyEl)tyEl.value='info';
+  _noticeEl('noticeTitle')?.focus();
 }
 
 function renderNoticeManage(){
-  const el=document.getElementById('noticeManageList');
+  const el=_noticeEl('noticeManageList');
   if(!el)return;
   const notices=getNotices();
   if(!notices.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">No notices posted yet.</div>';return;}
