@@ -856,9 +856,17 @@ function renderProdStats(data,period){
   const personalEl=document.getElementById('hubProdStats');
   const teamEl=document.getElementById('hubTeamStats');
   if(!personalEl||!teamEl||!currentUser)return;
+  // Fall back to previous month if current month has no data yet
+  if(!Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)).length){
+    const [yr,mo]=period.split('-').map(Number);
+    const prevMo=mo===1?12:mo-1;const prevYr=mo===1?yr-1:yr;
+    const prevPeriod=prevYr+'-'+String(prevMo).padStart(2,'0');
+    let fb=null;try{fb=JSON.parse(localStorage.getItem('tl_prod_stats_'+prevPeriod)||'null');}catch(e){}
+    if(!Object.values(fb?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)).length){personalEl.style.display='none';teamEl.style.display='none';return;}
+    data=fb;period=prevPeriod;
+  }
   const periodLabel=formatPeriodLabel(period);
   const advisors=Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code));
-  if(!advisors.length){personalEl.style.display='none';teamEl.style.display='none';return;}
 
   // ── Personal mini card ──
   const my=data?.advisors?.[currentUser.code];
@@ -2863,6 +2871,18 @@ function noticeApplyTemplate(sel){
   const titleEl=_noticeEl('noticeTitle');
   const bodyEl=_noticeEl('noticeBody');
   const typeEl=_noticeEl('noticeType');
+  if(titleEl)titleEl.value=t.title;
+  if(bodyEl)bodyEl.value=t.body;
+  if(typeEl)typeEl.value=t.type;
+  if(titleEl)titleEl.focus();
+  sel.value='';
+}
+function hubNoticeApplyTemplate(sel){
+  const idx=parseInt(sel.value);if(isNaN(idx))return;
+  const t=NOTICE_TEMPLATES[idx];if(!t)return;
+  const titleEl=document.getElementById('hubNoticeTitle');
+  const bodyEl=document.getElementById('hubNoticeBody');
+  const typeEl=document.getElementById('hubNoticeType');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
