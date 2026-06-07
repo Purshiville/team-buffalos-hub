@@ -161,6 +161,16 @@
         if(typeof renderYTDStats==='function')renderYTDStats();
       });
     };
+    let top3Unsub=null;
+    window.startTop3Listener=function(){
+      if(top3Unsub){top3Unsub();top3Unsub=null;}
+      top3Unsub=onSnapshot(collection(db,'top3'),snap=>{
+        const data={};snap.docs.forEach(d=>data[d.id]=d.data());
+        if(Object.keys(data).length){try{localStorage.setItem('tl_top3',JSON.stringify(data));}catch(e){}}
+        if(typeof renderTop3==='function')renderTop3();
+        if(typeof renderYTDTop3==='function')renderYTDTop3();
+      });
+    };
     window.FB_READY = true;
     // Pre-login sync: pull all registered advisors into localStorage so login works on any device
     window.FB.getAllUsers().then(fbUsers=>{
