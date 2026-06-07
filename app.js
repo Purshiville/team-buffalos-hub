@@ -951,6 +951,7 @@ function getYTDStats(){
       if(!d?.advisors)continue;
       Object.entries(d.advisors).forEach(([code,a])=>{
         if(REVOKED_CODES.has(code))return;
+        if(EXCLUDED_NAMES.has(_advisorNameMap[code]||a.name))return;
         if(!ytd[code])ytd[code]={code,name:_advisorNameMap[code]||a.name||code,cases:0,premium:0};
         ytd[code].cases+=(a.actualCases||0);
         ytd[code].premium+=(a.actualPremium||0);
@@ -1018,7 +1019,7 @@ function _renderYTDStatsInner(el){
   renderYTDTop3();
 }
 function renderYTDTop3(){
-  const els=['stdYTDTop3','opsYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
+  const els=['stdYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
   // Sync user photos from Firebase then render
   if(window.FB_READY&&window.FB.getAllUsers){
