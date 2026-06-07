@@ -2113,7 +2113,7 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderYTDStats();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderYTDStats();renderTop3();}
   if(p==='commcases'){renderCommCases();renderCommQueries();}
   if(p==='referrals')renderReferrals();
   if(p==='canpack'){mdInit();}
