@@ -4550,8 +4550,8 @@ async function handleIMPUpload(input, mode){
   if(!file)return;
   const labelEl = document.getElementById(mode==='new'?'impNewLabel':'impRepLabel');
   const statusEl = document.getElementById(mode==='new'?'impNewStatus':'impRepStatus');
-  if(labelEl) labelEl.textContent = '⏳ Analysing IMP screenshot...';
-  if(statusEl){statusEl.style.display='block';statusEl.textContent='Reading lives and cover amounts...';}
+  if(labelEl) labelEl.textContent = '⏳ Analysing IMP screenshot — may take ~15 sec…';
+  if(statusEl){statusEl.style.display='block';statusEl.textContent='Reading lives and cover amounts — AI analysis in progress…';}
 
   try {
     const b64 = await new Promise((res,rej)=>{
@@ -5403,7 +5403,7 @@ async function handlePayslipUpload(input){
   status.style.color='#92400e';
   status.style.padding='8px 12px';
   status.style.borderRadius='8px';
-  status.textContent='⏳ Analysing payslip with AI — please wait...';
+  status.textContent='⏳ Analysing payslip with AI — may take ~15 sec…';
   zone.style.opacity='0.5';
 
   try {
@@ -5572,8 +5572,8 @@ async function handleSCImpUpload(input){
   const file=input.files[0];if(!file)return;
   const lbl=document.getElementById('scImpLabel');
   const stat=document.getElementById('scImpStatus');
-  if(lbl)lbl.textContent='⏳ Reading IMP screen...';
-  if(stat){stat.style.display='block';stat.textContent='Analysing...';}
+  if(lbl)lbl.textContent='⏳ Reading IMP screen — may take ~15 sec…';
+  if(stat){stat.style.display='block';stat.textContent='AI analysis in progress…';}
   try{
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
     const scPrompt = 'This is an IMP Final Recommendation screen. Find: 1) client cell/phone number, 2) all policy premiums, 3) new business or replacement? Respond with ONLY this JSON: {"phone":"0821234567","premiums":"R350, R194","type":"new"} — empty string if not visible.';
@@ -8828,7 +8828,7 @@ async function mdMerge(){
   const btn=document.getElementById('mdMergeBtn');
   const status=document.getElementById('mdStatus');
   btn.disabled=true;btn.textContent='Merging…';
-  mdSetProgress(status,2,'Loading PDF engine…');
+  mdSetProgress(status,2,'Loading PDF engine — may take 10–30 sec for large files…');
   const dl=(out,mb,label)=>{
     const fnInput=document.getElementById('mdFileName');
     const rawName=(fnInput&&fnInput.value.trim())||'merged-document';
