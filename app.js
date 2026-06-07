@@ -327,7 +327,6 @@ const APPROVED_CODES = new Set([
   'SKA313162', // Ivan Davies
   'SKA313936', // Brian Steve Boucher
   'SKA315109', // Roger Pretorius
-  'SKA315466', // Thomas Taylor
   'SKA315568', // Stefan Barnard
   'PURSHIVILLE',
   'ARLENE',
@@ -344,7 +343,6 @@ const ADVISOR_LIST = [
   {code:'SKA313162', name:'Ivan Davies'},
   {code:'SKA313936', name:'Brian Steve Boucher'},
   {code:'SKA315109', name:'Roger Pretorius'},
-  {code:'SKA315466', name:'Thomas Taylor'},
   {code:'SKA315568', name:'Stefan Barnard'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
 const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
@@ -572,7 +570,7 @@ function enterHub(user){
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
-  const noticeRecip=document.getElementById('noticeRecipient');if(noticeRecip){noticeRecip.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}
+  ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
   const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='flex';
   const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='flex';
   const opsTileEl=document.getElementById('opsTile');if(opsTileEl)opsTileEl.style.display='block';
@@ -631,12 +629,6 @@ function enterHub(user){
   renderYTDStats();
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
-  // Mini cutoff auto-reminder — check on login and every 5 min (manager/ops only)
-  if(user.isOps||user.isManager){
-    if(window._miniCutoffTimer)clearInterval(window._miniCutoffTimer);
-    setTimeout(checkMiniCutoffReminder,4000);
-    window._miniCutoffTimer=setInterval(checkMiniCutoffReminder,5*60*1000);
-  }
 }
 
 // ── INACTIVITY TIMER ──
@@ -812,6 +804,14 @@ async function saveAdvisorStats(){
   if(window.FB_READY){
     try{
       await window.FB.saveStats(period,code,data);
+      // Update localStorage so YTD calculation is immediately current
+      const _k='tl_prod_stats_'+period;
+      let _stored={advisors:{}};
+      try{_stored=JSON.parse(localStorage.getItem(_k)||'{"advisors":{}}')}catch(e){}
+      if(!_stored.advisors)_stored.advisors={};
+      _stored.advisors[code]=data;
+      localStorage.setItem(_k,JSON.stringify(_stored));
+      if(typeof renderYTDStats==='function')renderYTDStats();
       const fb=document.getElementById('statsSaveFeedback');
       if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);}
       // Notify the advisor their stats were updated
@@ -964,9 +964,14 @@ function renderYTDStats(){
   if(window.FB_READY&&window.FB.getYearStats){
     const yr=String(new Date().getFullYear());
     window.FB.getYearStats(yr).then(fbMonths=>{
-      // Firebase is the source of truth — write each month straight to localStorage
       Object.entries(fbMonths).forEach(([period,data])=>{
-        try{localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}catch(e){}
+        const k='tl_prod_stats_'+period;
+        try{
+          const local=JSON.parse(localStorage.getItem(k)||'{"advisors":{}}');
+          Object.assign(local.advisors||{},data.advisors||{});
+          local.advisors=Object.assign({},data.advisors||{},local.advisors);
+          localStorage.setItem(k,JSON.stringify({...data,...local}));
+        }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
       _renderYTDStatsInner(el);
     }).catch(()=>_renderYTDStatsInner(el));
@@ -2113,7 +2118,6 @@ function showPage(p){
   if(p==='commcases'){renderCommCases();renderCommQueries();}
   if(p==='referrals')renderReferrals();
   if(p==='canpack'){mdInit();}
-  if(p==='cancellations'){cpInit();}
   if(p==='termcal')renderTermCal();
   if(p==='ntu')renderNTUDash();
   if(p==='prospectmap')renderProspectMap();
@@ -2131,7 +2135,6 @@ function showPage(p){
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
-  if(p==='policyreview'){loadPRSavedReviews();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -2863,14 +2866,12 @@ const NOTICE_TEMPLATES=[
   {group:'🔔 Alerts & Announcements',type:'reminder',title:'Compliance Reminder',body:'All advisors are reminded to adhere to FAIS, TCF, and POPIA compliance requirements. Ensure all client interactions, documentation, and disclosures are completed in full and on record.'},
   {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
 ];
-function _noticeEl(id){return document.querySelector('.page.active #'+id)||document.getElementById(id);}
-function _mdEl(id){return document.querySelector('.page.active #'+id)||document.getElementById(id);}
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
   const t=NOTICE_TEMPLATES[idx];if(!t)return;
-  const titleEl=_noticeEl('noticeTitle');
-  const bodyEl=_noticeEl('noticeBody');
-  const typeEl=_noticeEl('noticeType');
+  const titleEl=document.getElementById('noticeTitle');
+  const bodyEl=document.getElementById('noticeBody');
+  const typeEl=document.getElementById('noticeType');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
@@ -2921,76 +2922,21 @@ function insertNoticeEmoji(em,pickerId){
   field.focus();field.setSelectionRange(newPos,newPos);
   document.getElementById(pickerId||'noticeEmojiPicker').classList.remove('open');
 }
-let _noticeRecipSelected=new Set();
-function toggleNoticeRecipPicker(e){
-  e.stopPropagation();
-  const picker=_noticeEl('noticeRecipPicker');if(!picker)return;
-  if(picker.style.display==='block'){picker.style.display='none';return;}
-  if(!picker.dataset.built){
-    picker.dataset.built='1';
-    let h=`<label style="display:flex;align-items:center;gap:8px;padding:4px 2px 6px;font-size:12px;font-weight:700;cursor:pointer;border-bottom:1px solid #f0f0f0;margin-bottom:4px;"><input type="checkbox" id="noticeRecipAll" onchange="noticeRecipToggleAll(this)" checked> 👥 All advisors</label>`;
-    ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{h+=`<label style="display:flex;align-items:center;gap:8px;padding:3px 2px;font-size:12px;cursor:pointer;"><input type="checkbox" value="${a.code}" class="noticeRecipCheck" onchange="noticeRecipCheckChanged()"> ${a.name}</label>`;});
-    picker.innerHTML=h;
-  }
-  picker.style.display='block';
-  setTimeout(()=>document.addEventListener('click',function _h(ev){if(!picker.contains(ev.target)&&ev.target.id!=='noticeRecipBtn'){picker.style.display='none';document.removeEventListener('click',_h);}}),10);
-}
-function noticeRecipToggleAll(chk){
-  _noticeRecipSelected.clear();
-  const activePage=document.querySelector('.page.active');
-  (activePage||document).querySelectorAll('.noticeRecipCheck').forEach(c=>{c.checked=false;});
-  _updateNoticeRecipBtn();
-}
-function noticeRecipCheckChanged(){
-  const activePage=document.querySelector('.page.active');
-  _noticeRecipSelected=new Set([...(activePage||document).querySelectorAll('.noticeRecipCheck:checked')].map(c=>c.value));
-  const a=_noticeEl('noticeRecipAll');if(a)a.checked=_noticeRecipSelected.size===0;
-  _updateNoticeRecipBtn();
-}
-function _updateNoticeRecipBtn(){
-  const btn=_noticeEl('noticeRecipBtn');if(!btn)return;
-  if(_noticeRecipSelected.size===0)btn.textContent='👥 All advisors ▾';
-  else if(_noticeRecipSelected.size===1){const code=[..._noticeRecipSelected][0];const name=ADVISOR_LIST.find(a=>a.code===code)?.name||code;btn.textContent=`👤 ${name} ▾`;}
-  else btn.textContent=`👥 ${_noticeRecipSelected.size} advisors selected ▾`;
-  const p=_noticeEl('noticeRecipPicker');if(p)p.style.display='none';
-}
-const _NOTICE_TYPE_LINKS={
-  precan:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
-  qlink:'https://connect-me-cz7b.bolt.host/#/conversions',
-  submissions:'https://connect-me-cz7b.bolt.host/#/submission-trackers',
-  issuedate:'https://connect-me-cz7b.bolt.host/#/issue-date',
-  firstpremium:'https://connect-me-cz7b.bolt.host/#/first-premium',
-  pendinglapse:'https://connect-me-cz7b.bolt.host/#/pending-lapse',
-  terminations:'https://connect-me-cz7b.bolt.host/#/terminations',
-  newfirstpremium:'https://connect-me-cz7b.bolt.host/#/first-premium',
-  newpendinglapse:'https://connect-me-cz7b.bolt.host/#/pending-lapse',
-  newterminations:'https://connect-me-cz7b.bolt.host/#/terminations',
-};
-function noticeTypeChanged(){
-  const type=_noticeEl('noticeType')?.value;
-  const lf=_noticeEl('noticeLinkField');
-  if(!lf)return;
-  if(_NOTICE_TYPE_LINKS[type]){lf.value=_NOTICE_TYPE_LINKS[type];}
-  else{lf.value='';}
-}
 async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
-  const title=(titleArg!==undefined?titleArg:(_noticeEl('noticeTitle')?.value||'')).trim();
-  const body=(bodyArg!==undefined?bodyArg:(_noticeEl('noticeBody')?.value||'')).trim();
-  const type=typeArg||_noticeEl('noticeType')?.value||'info';
-  const recipCodes=recipientArg!==undefined?null:(_noticeRecipSelected.size>0?[..._noticeRecipSelected]:null);
-  const recipient=recipientArg!==undefined?recipientArg:(recipCodes?.length===1?recipCodes[0]:'ALL');
-  const link=(linkArg!==undefined?linkArg:(_noticeEl('noticeLinkField')?.value||'')).trim();
+  const title=(titleArg!==undefined?titleArg:(document.getElementById('noticeTitle')?.value||'')).trim();
+  const body=(bodyArg!==undefined?bodyArg:(document.getElementById('noticeBody')?.value||'')).trim();
+  const type=typeArg||document.getElementById('noticeType')?.value||'info';
+  const recipient=recipientArg||document.getElementById('noticeRecipient')?.value||'ALL';
+  const link=(linkArg!==undefined?linkArg:(document.getElementById('noticeLinkField')?.value||'')).trim();
   if(!title)return alert('Please add a title for the notice.');
   const noticeData={type,title,body,postedBy:currentUser.name,active:true};
-  if(recipCodes&&recipCodes.length===1)noticeData.recipientCode=recipCodes[0];
-  else if(recipCodes&&recipCodes.length>1)noticeData.recipientCodes=recipCodes;
+  if(recipient&&recipient!=='ALL')noticeData.recipientCode=recipient;
   if(link)noticeData.link=link;
   if(window.FB_READY){
     try{
       await window.FB.postNotice(noticeData);
       if(title){
-        const targets=recipCodes||['ALL'];
-        targets.forEach(to=>{window.FB.sendInbox({to,from:currentUser?.code||'manager',fromName:currentUser?.name||'Manager',title,body:body||'',type:'notice'}).catch(()=>{});});
+        window.FB.sendInbox({to:recipient,from:currentUser?.code||'manager',fromName:currentUser?.name||'Manager',title:title,body:body||'',type:'notice'}).catch(()=>{});
       }
     }
     catch(e){console.warn('Firebase notice failed, using localStorage',e);
@@ -2999,12 +2945,12 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
     const notices=getNotices();notices.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),...noticeData,postedAt:new Date().toISOString()});saveNotices(notices);
   }
   if(titleArg===undefined){
-    const nt=_noticeEl('noticeTitle');if(nt)nt.value='';
-    const nb=_noticeEl('noticeBody');if(nb)nb.value='';
-    _noticeRecipSelected.clear();const rb=_noticeEl('noticeRecipBtn');if(rb)rb.textContent='👥 All advisors ▾';const rp=_noticeEl('noticeRecipPicker');if(rp){rp.dataset.built='';rp.style.display='none';}
-    const nl=_noticeEl('noticeLinkField');if(nl)nl.value='';
-    const npb=_noticeEl('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
-    const fb=_noticeEl('noticePostFeedback');
+    const nt=document.getElementById('noticeTitle');if(nt)nt.value='';
+    const nb=document.getElementById('noticeBody');if(nb)nb.value='';
+    const nr=document.getElementById('noticeRecipient');if(nr)nr.value='ALL';
+    const nl=document.getElementById('noticeLinkField');if(nl)nl.value='';
+    const npb=document.getElementById('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
+    const fb=document.getElementById('noticePostFeedback');
     if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2500);}
   }
   renderNoticeBoard();
@@ -3075,7 +3021,7 @@ function renderNoticeBoard(){
   const MS_30=30*24*60*60*1000;
   const now=Date.now();
   const getAge=n=>{const d=n.postedAt?.toDate?n.postedAt.toDate():new Date(n.postedAt);return now-d.getTime();};
-  const matchesRecipient=n=>(!n.recipientCode&&!n.recipientCodes)||isOps||(n.recipientCode===currentUser?.code)||(n.recipientCodes?.includes(currentUser?.code));
+  const matchesRecipient=n=>(!n.recipientCode||n.recipientCode==='ALL')||isOps||(n.recipientCode===currentUser?.code);
 
   const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=MS_30&&matchesRecipient(n));
   const archived=allNotices.filter(n=>getAge(n)>MS_30&&matchesRecipient(n));
@@ -3129,6 +3075,22 @@ function addNoticeComment(noticeId){
 }
 
 
+function hubPostNotice(){
+  const type=document.getElementById('hubNoticeType').value;
+  const title=document.getElementById('hubNoticeTitle').value.trim();
+  const body=document.getElementById('hubNoticeBody').value.trim();
+  const recipient=document.getElementById('hubNoticeRecipient')?.value||'ALL';
+  const link=document.getElementById('hubNoticeLink')?.value.trim()||'';
+  if(!title)return alert('Please enter a notice title.');
+  postNotice(type,title,body,recipient,link).then(()=>{
+    document.getElementById('hubNoticeTitle').value='';
+    document.getElementById('hubNoticeBody').value='';
+    const rs=document.getElementById('hubNoticeRecipient');if(rs)rs.value='ALL';
+    const hl=document.getElementById('hubNoticeLink');if(hl)hl.value='';
+    const btn=document.getElementById('hubNoticeBtn');if(btn)btn.textContent='Post to all advisors';
+  });
+}
+
 function generateBusinessSummary(){
   const now=new Date();
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -3159,14 +3121,14 @@ function generateBusinessSummary(){
     if(top)lines.push(`Leading: ${top.name} — ${top.actualCases} case${top.actualCases!==1?'s':''}`);
     body=lines.join('\n');
   }
-  const tEl=_noticeEl('noticeTitle');if(tEl)tEl.value=title;
-  const bEl=_noticeEl('noticeBody');if(bEl)bEl.value=body;
-  const tyEl=_noticeEl('noticeType');if(tyEl)tyEl.value='info';
-  _noticeEl('noticeTitle')?.focus();
+  const tEl=document.getElementById('hubNoticeTitle');if(tEl)tEl.value=title;
+  const bEl=document.getElementById('hubNoticeBody');if(bEl)bEl.value=body;
+  const tyEl=document.getElementById('hubNoticeType');if(tyEl)tyEl.value='info';
+  document.getElementById('hubNoticeTitle')?.focus();
 }
 
 function renderNoticeManage(){
-  const el=_noticeEl('noticeManageList');
+  const el=document.getElementById('noticeManageList');
   if(!el)return;
   const notices=getNotices();
   if(!notices.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px 0;">No notices posted yet.</div>';return;}
@@ -6210,28 +6172,17 @@ function saveModal(){
     const mDate=v('m_date'),mTime=v('m_time'),mBooked=v('m_booked'),mNotes=v('m_notes');
     saveTracker('meeting',[{date:mDate,time:mTime,booked:mBooked,notes:mNotes}]);
     if(mDate){
-      const mtgTitle='📅 Team Meeting — '+mDate+(mTime?' at '+mTime:'');
-      const mtgBody=(mNotes||'')+(mBooked==='Yes'?'\n✅ Boardroom confirmed':'');
-      // Post notice so it shows on everyone's hub (localStorage)
+      // Post notice so it shows on everyone's hub
       const notices=getNotices();
       const existNi=notices.findIndex(n=>n.id&&n.id.startsWith('mtg_notice_')&&n.meetingDate===mDate);
       if(existNi>-1)notices.splice(existNi,1);
-      notices.unshift({id:'mtg_notice_'+mDate,type:'reminder',title:mtgTitle,body:mtgBody,recipient:'ALL',active:true,postedAt:new Date().toISOString(),meetingDate:mDate});
+      notices.unshift({id:'mtg_notice_'+mDate,type:'reminder',title:'📅 Team Meeting — '+mDate+(mTime?' at '+mTime:''),body:(mNotes||'')+(mBooked==='Yes'?' · Boardroom booked':''),recipient:'ALL',active:true,postedAt:new Date().toISOString(),meetingDate:mDate});
       saveNotices(notices);
       if(typeof renderNoticeBoard==='function')renderNoticeBoard();
       // Add to Herd Strategy calendar for all — stored with advisorCode='ALL'
       const diaryEvs=diaryGetEvents().filter(e=>!(e.id&&e.id.startsWith('mtg_diary_')&&e.date===mDate));
       diaryEvs.push({id:'mtg_diary_'+mDate,date:mDate,title:'Team Meeting',startTime:mTime||'',notes:mNotes||''+(mBooked==='Yes'?' (Boardroom booked)':''),type:'meeting',advisorCode:'ALL',system:true});
       diarySaveEvents(diaryEvs);
-      // Push to Firebase — notice board + inbox for every advisor
-      if(window.FB_READY){
-        window.FB.saveMeeting({date:mDate,time:mTime,booked:mBooked,notes:mNotes}).catch(()=>{});
-        window.FB.setNotice('mtg_notice_'+mDate,{type:'reminder',title:mtgTitle,body:mtgBody,postedBy:currentUser?.name||'Manager',active:true,meetingDate:mDate}).catch(()=>{});
-        const inboxBody='Our monthly team meeting has been scheduled'+(mDate?' for '+mDate:'')+(mTime?' at '+mTime:'')+'.'+(mNotes?'\n\n'+mNotes:'')+(mBooked==='Yes'?'\n✅ Boardroom is confirmed.':'');
-        ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{
-          window.FB.sendInbox({to:a.code,from:currentUser?.code||'MANAGER',fromName:currentUser?.name||'Manager',title:mtgTitle,body:inboxBody,type:'meeting'}).catch(()=>{});
-        });
-      }
     }
     closeModal();renderMeetingCard();
   }
@@ -6824,11 +6775,7 @@ let _prExtracted=[];
 
 const PR_LOA_PROMPT=`Read this Letter of Authority document and extract the client's personal details. Return ONLY valid JSON — no markdown, no explanation.
 
-Extract:
-- FULL name: include both first name AND surname exactly as written — do not truncate or omit any part of the name
-- South African 13-digit ID number (digits only, no spaces)
-- Cellphone or telephone number
-- Email address — look in ALL sections of the document: contact details block, header, bottom of form, any pre-printed fields. Include any @-sign address you find.
+Look for: full name, South African 13-digit ID number, cellphone or telephone number, email address.
 
 Return exactly: {"name":"","id_number":"","phone":"","email":""}
 
@@ -6836,30 +6783,14 @@ Use empty string for any field not found.`;
 
 const PR_EXTRACT_PROMPT=`You are reading a South African life insurance policy document (schedule or full contract). Extract all details and return ONLY valid JSON — no explanation, no markdown.
 
-CRITICAL — POLICY NUMBER ACCURACY: Read every digit of the policy/member number with extreme care. Similar-looking characters that are commonly confused — read each one precisely:
-- 6 vs 8 vs 0: look at the shape carefully — 6 is open at bottom, 8 is closed both loops, 0 is a plain oval
-- 1 vs 7 vs l (lowercase L): 1 is straight, 7 has a crossbar or angle at top, l is narrow
-- 5 vs S: 5 has a horizontal top bar, S is curved
-- Do NOT guess or approximate digits. If uncertain about one digit in a policy number, prefer the digit that makes a more natural sequence.
-
-IMPORTANT — DOCUMENT ACCURACY: Extract ONLY what is explicitly stated in the uploaded document. Do NOT add, assume, or infer benefits, terms, or conditions from your general knowledge of the insurer or product. Only mark a benefit as true if the document explicitly states it. The review must reflect the actual policy terms for THIS specific document.
-
 IDENTIFY POLICY TYPE — use one of these exact values or combinations:
 - "Funeral" — funeral cover, burial policy, final expenses plan
 - "Life" — life cover/assurance, death benefit only
 - "Disability" — disability cover, income protection, temporary/permanent disability
 - "Dread Disease" — critical illness, severe illness, dread disease cover
 - "Accidental Death" — personal accident, accidental death only policy
-- "Impairment" — severe impairment benefit, functional impairment, permanent impairment cover (lump sum for specific permanent impairments)
-- "Retirement Annuity" — RA, retirement annuity, living annuity, preservation fund, retirement fund
 - For combined cover use plus sign: "Life + Funeral", "Life + Disability", "Life + Disability + Dread Disease" etc.
 - Default to "Life" only if truly unclear.
-
-RETIREMENT ANNUITY — special rules (only when policy_type is "Retirement Annuity"):
-- Set ALL benefits fields to false — cashback, payment_holiday, no_more_premiums, accident_double, burial, paid_up do not apply to an RA
-- In the extra field, record: "Balance: R[fund value]; Termination value: R[surrender/termination value]" — extract the figures from the document if shown; omit whichever value is not shown
-- List any named beneficiaries in lives[] with is_beneficiary_only: true and cover: 0
-- Do NOT assign a cover amount to any life on an RA — the death benefit is the fund value at death (variable) not a fixed sum assured
 
 NORMALISE terminology:
 - "Sum assured" / "benefit amount" / "cover amount" / "insured amount" / "total benefit" / "death benefit" → cover per life
@@ -6882,14 +6813,13 @@ Also:
 - Account in arrears, overdue premiums, lapsed → in_arrears: true AND add to red_flags
 - Any exclusions, waiting periods, high-risk notes → add to red_flags
 - Any beneficiary with NO cover (no sum assured) → include in lives with cover: 0 and is_beneficiary_only: true
-- extra: ONLY include here benefits that are EXPLICITLY listed in the document as optional, add-on, rider, or a separately chosen benefit — do NOT include standard plan features or benefits that are simply part of the base plan. If a benefit is a standard inclusion of the plan with no indication it was optionally added, leave it out of extra. Semicolon-separated; empty string if none
+- extra: remaining benefits not captured above, semicolon-separated; empty string if none
 - IMPORTANT: Do NOT list the main policyholder twice under different relationship labels. If "Extended" or any non-Main life has the same name and date of birth as the Main life, omit that duplicate entry entirely.
 
 Return this exact structure:
 {"insurer":"","policy_number":null,"start_date":null,"plan_name":"","policy_type":"Funeral","premium":0,"benefits":{"cashback":false,"payment_holiday":false,"no_more_premiums":false,"accident_double":false,"burial":false,"paid_up":false,"extra":""},"in_arrears":false,"lives":[{"name":null,"relationship":"Main","dob":null,"gender":null,"cover":0,"is_beneficiary_only":false}],"red_flags":[]}
 
-Use null for unknown strings, 0 for unknown numbers, false for unknown booleans.
-Cover amounts apply to: Funeral, Life, Dread Disease, Accidental Death, Impairment policies only. For Disability and Retirement Annuity, set cover: 0 for all lives.`;
+Use null for unknown strings, 0 for unknown numbers, false for unknown booleans.`;
 
 function handlePRLOAUpload(input){
   const file=input.files[0];
@@ -7052,11 +6982,11 @@ function updatePRButtons(){
     analyseBtn.style.opacity=canAnalyse?'1':'.4';
     analyseBtn.style.cursor=canAnalyse?'pointer':'not-allowed';
   }
-  const saveBtn=document.getElementById('prSaveBtn');
-  if(generateBtn||saveBtn){
+  if(generateBtn){
     const canGen=allDone&&_prExtracted.some(Boolean);
-    if(generateBtn){generateBtn.disabled=!canGen;generateBtn.style.opacity=canGen?'1':'.4';generateBtn.style.cursor=canGen?'pointer':'not-allowed';}
-    if(saveBtn){saveBtn.disabled=!canGen;saveBtn.style.opacity=canGen?'1':'.4';saveBtn.style.cursor=canGen?'pointer':'not-allowed';}
+    generateBtn.disabled=!canGen;
+    generateBtn.style.opacity=canGen?'1':'.4';
+    generateBtn.style.cursor=canGen?'pointer':'not-allowed';
   }
 }
 
@@ -7080,22 +7010,10 @@ async function analysePRDocuments(){
   if(analyseBtn){analyseBtn.disabled=true;analyseBtn.textContent='Analysing…';}
   // Ensure extracted array matches doc array length
   while(_prExtracted.length<_prDocFiles.length)_prExtracted.push(null);
-  const _prTotal=_prDocFiles.filter(f=>f.status!=='done').length;
-  let _prDone=0;
-  const _prTimeStart=Date.now();
-  const _prTimeSt=document.getElementById('prTimeStatus');
-  if(_prTimeSt&&_prTotal>0){_prTimeSt.style.display='block';_prTimeSt.textContent='Starting analysis…';}
   for(let i=0;i<_prDocFiles.length;i++){
     if(_prDocFiles[i].status==='done')continue; // skip already-analysed docs
     await _prExtractOne(i);
-    _prDone++;
-    if(_prTimeSt&&_prDone<_prTotal){
-      const avgMs=(Date.now()-_prTimeStart)/_prDone;
-      const remSec=Math.round(avgMs*(_prTotal-_prDone)/1000);
-      _prTimeSt.textContent=`Doc ${_prDone} of ${_prTotal} read — ~${remSec<60?remSec+'s':Math.ceil(remSec/60)+'m'} remaining`;
-    }
   }
-  if(_prTimeSt){_prTimeSt.style.display='none';}
   if(analyseBtn){analyseBtn.disabled=false;analyseBtn.textContent='Analyse new documents';}
   // Record timestamp for 24-hour rate limit
   localStorage.setItem('prLastAnalysis_'+(currentUser?.code||'default'),Date.now().toString());
@@ -7186,50 +7104,31 @@ function _prAutoFillNotes(){
 }
 
 function _prBuildLivesMap(policies){
-  const entries=[];
-  // Find existing entry by DOB + relationship (handles initials vs full name)
-  const findEntry=(dob,rel)=>{
-    if(!dob)return -1;
-    return entries.findIndex(e=>e.dob===dob&&e.relationship===rel);
-  };
+  const map={};
   policies.forEach((p,pIdx)=>{
-    const isRA=(p.policy_type||'').includes('Retirement Annuity');
+    // Find main life DOB and surname for duplicate detection
     const mainLife=(p.lives||[]).find(l=>l.relationship==='Main');
     const mainDob=mainLife?.dob||'';
     const mainSurname=(mainLife?.name||'').split(' ').pop().toLowerCase();
     (p.lives||[]).forEach(life=>{
-      // Skip non-Main lives that are clearly the same person as the main life (same DOB + same surname)
+      // Skip if this non-Main life appears to be the policyholder listed again
       if(life.relationship!=='Main'&&mainDob&&life.dob===mainDob){
         const lifeSurname=(life.name||'').split(' ').pop().toLowerCase();
         if(mainSurname&&lifeSurname&&lifeSurname===mainSurname)return;
       }
-      // RA policies: beneficiary only, no fixed cover
-      const isBenef=!!life.is_beneficiary_only||isRA;
-      const cover=isBenef?0:(life.cover||0);
-      // Deduplicate by DOB + relationship — same DOB = same person (handles full name vs initials)
-      const existIdx=findEntry(life.dob||'',life.relationship||'Other');
-      if(existIdx>=0){
-        const ex=entries[existIdx];
-        // Keep the more complete (longer) name — full name beats initials
-        if((life.name||'').replace(/\s/g,'').length>(ex.name||'').replace(/\s/g,'').length)ex.name=life.name||'';
-        if(!ex.gender&&life.gender)ex.gender=life.gender;
-        ex.policies[pIdx]=cover;
-        if(!isBenef)ex.totalCover+=cover;
-      } else {
-        const entry={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:isBenef,totalCover:0};
-        entry.policies[pIdx]=cover;
-        if(!isBenef)entry.totalCover+=cover;
-        entries.push(entry);
-      }
+      const key=(life.name||'')+'|'+(life.relationship||'')+'|'+(life.dob||'');
+      if(!map[key])map[key]={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:!!life.is_beneficiary_only,totalCover:0};
+      map[key].policies[pIdx]=life.cover||0;
+      if(!life.is_beneficiary_only)map[key].totalCover+=(life.cover||0);
     });
   });
   const relOrder=['Main','Spouse','Child','Parent','Sibling','Uncle','Aunt','Cousin','Nephew','Niece','In-Law','Extended','Other'];
-  return entries.sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+  return Object.values(map).sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
 }
 
 function _prTypeBadge(type,forPdf){
   if(!type)return'—';
-  const colors={'Retirement Annuity':'#0369a1','Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626','Accidental':'#dc2626','Impairment':'#9333ea'};
+  const colors={'Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626'};
   let bg='#6b7280';
   for(const[k,c]of Object.entries(colors)){if(type.includes(k)){bg=c;break;}}
   if(forPdf)return`<span style="background:${bg};color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;">${type}</span>`;
@@ -7272,121 +7171,28 @@ function _prCheckMissing(){
   </div>`;
 }
 
-function _prKeyFeatures(b){
-  if(!b)return'—';
-  const f=[];
-  if(b.no_more_premiums)f.push('Premium waiver');
-  if(b.cashback)f.push('Cashback');
-  if(b.payment_holiday)f.push('Payment holiday');
-  if(b.accident_double)f.push('Accidental ×2');
-  if(b.burial)f.push('Burial benefit');
-  if(b.paid_up)f.push('Paid-up option');
-  if(b.extra)f.push(b.extra);
-  return f.length?f.join(' · '):'—';
-}
-
-function _prCoverageSummary(policies, allLives){
-  const main=allLives.find(l=>l.relationship==='Main');
-  const t={funeral:0,life:0,dread:0,accidental:0,impairment:0};
-  const has={disability:false,ra:false,dread:false,accidental:false,impairment:false};
-  policies.forEach((p,pIdx)=>{
-    const type=(p.policy_type||'').toLowerCase();
-    if(type.includes('disability'))has.disability=true;
-    if(type.includes('retirement'))has.ra=true;
-    if(type.includes('dread'))has.dread=true;
-    if(type.includes('accidental')||type.includes('accident'))has.accidental=true;
-    if(type.includes('impairment'))has.impairment=true;
-    if(!main)return;
-    const c=main.policies[pIdx]||0;
-    if(type.includes('funeral'))t.funeral+=c;
-    else if(type.includes('life'))t.life+=c;
-    else if(type.includes('dread'))t.dread+=c;
-    else if(type.includes('accidental')||type.includes('accident'))t.accidental+=c;
-    else if(type.includes('impairment'))t.impairment+=c;
-  });
-  return{covers:t,has};
-}
-
-function _prBuildTalkingPoints(policies, allLives){
-  const pts=[];
-  const main=allLives.find(l=>l.relationship==='Main');
-  const mainName=main?.name||'the client';
-  // No premium waiver with covered dependants
-  policies.forEach(p=>{
-    if((p.policy_type||'').includes('Retirement'))return;
-    if(!p.benefits?.no_more_premiums){
-      const dep=(p.lives||[]).filter(l=>l.relationship!=='Main'&&!l.is_beneficiary_only&&(l.cover||0)>0);
-      if(dep.length){
-        const pol=(p.insurer||'This policy')+(p.policy_number?' ('+p.policy_number+')':'');
-        pts.push(`${pol} has no premium waiver. If ${mainName} passes away, premiums will still be owed — ${dep.map(l=>l.name||l.relationship).join(', ')} will lose their cover once the policy lapses.`);
-      }
-    }
-  });
-  // No disability cover
-  if(!policies.some(p=>(p.policy_type||'').includes('Disability'))){
-    pts.push(`No disability or income protection cover found. If ${mainName} cannot work due to illness or injury, there is no income replacement — all policies could lapse from non-payment.`);
-  }
-  // No dread disease
-  if(!policies.some(p=>(p.policy_type||'').includes('Dread'))){
-    pts.push(`No dread disease / critical illness cover found. A serious diagnosis such as cancer, a heart attack, or stroke would not trigger any lump-sum benefit to help cover costs or lost income.`);
-  }
-  // No spouse
-  if(!allLives.some(l=>l.relationship==='Spouse'&&!l.isBeneficiaryOnly)){
-    pts.push(`No spouse or life partner is listed as an insured life on any policy. Confirm relationship status — if ${mainName} has a partner, discuss whether they should be covered.`);
-  }
-  // Arrears
-  const arr=policies.filter(p=>p.in_arrears);
-  if(arr.length)pts.push(`${arr.map(p=>p.insurer||'A policy').join(' and ')} ${arr.length===1?'is':'are'} in arrears and at immediate risk of lapsing. Confirm payment and resolve urgently.`);
-  // Low child cover
-  const lowKids=allLives.filter(l=>l.relationship==='Child'&&!l.isBeneficiaryOnly&&l.totalCover>0&&l.totalCover<20000);
-  if(lowKids.length)pts.push(`${lowKids.map(l=>l.name||'A child').join(', ')} ${lowKids.length===1?'has':'have'} low funeral cover (under R20,000). Confirm whether this is sufficient.`);
-  // No RA
-  if(!policies.some(p=>(p.policy_type||'').includes('Retirement Annuity'))){
-    pts.push(`No retirement annuity found in the portfolio. Discuss retirement planning — a PERSAL pension alone may not be sufficient for a comfortable retirement.`);
-  }
-  return pts;
-}
-
 function renderPRSummary(){
   const policies=_prExtracted.filter(Boolean);
   const previewEl=document.getElementById('prSummaryPreview');
   if(!previewEl)return;
   if(!policies.length){previewEl.innerHTML='';return;}
+  const tick=v=>v?'✓':'';
   const totalPremium=policies.reduce((s,p)=>s+(p.premium||0),0);
   const allLives=_prBuildLivesMap(policies);
   const noteGroups=_prPolicyNotesGroups(policies);
-  const {covers,has}=_prCoverageSummary(policies,allLives);
-  const talkingPts=_prBuildTalkingPoints(policies,allLives);
 
   const th='padding:6px 8px;background:#0d1f3c;color:#fff;text-align:left;white-space:nowrap;border:1px solid #1b3460;font-size:11px;';
   const thC='padding:6px 8px;background:#0d1f3c;color:#fff;text-align:center;white-space:nowrap;border:1px solid #1b3460;font-size:11px;';
+  const thBenef='padding:4px 8px;background:#1b3460;color:#f5d98b;text-align:center;border:1px solid #0d1f3c;font-size:10px;font-weight:700;letter-spacing:.5px;';
 
-  // Policy rows — single Key Features column
+  // Policy rows
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
     const arr=p.in_arrears?` <span style="color:#dc2626;font-size:9px;font-weight:800;"> ⚠ ARREARS</span>`:'';
     const bg=i%2===0?'':'background:#f9f9f9;';
     const tdS=`padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;vertical-align:middle;${bg}`;
-    const isRA=(p.policy_type||'').includes('Retirement Annuity');
-    const feat=isRA?`<td style="${tdS}font-size:10px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
-      :`<td style="${tdS}font-size:10px;color:#374151;">${_prKeyFeatures(b)}</td>`;
-    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${feat}</tr>`;
+    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td><td style="${tdS}text-align:center;">${tick(b.cashback)}</td><td style="${tdS}text-align:center;">${tick(b.payment_holiday)}</td><td style="${tdS}text-align:center;">${tick(b.no_more_premiums)}</td><td style="${tdS}text-align:center;">${b.accident_double?'✓':''}</td><td style="${tdS}text-align:center;">${tick(b.burial)}</td><td style="${tdS}text-align:center;">${tick(b.paid_up)}</td><td style="${tdS}font-size:10px;">${b.extra||'—'}</td></tr>`;
   }).join('');
-
-  // Coverage gap pills
-  const pill=(label,val,gap)=>{
-    if(gap)return`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;">⚠ No ${label}</div></div>`;
-    return`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#1e40af;text-transform:uppercase;letter-spacing:.5px;">${label}</div><div style="font-size:14px;font-weight:800;color:#0d1f3c;">${val}</div></div>`;
-  };
-  const pillGreen=(label)=>`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:6px 12px;min-width:90px;"><div style="font-size:9px;font-weight:700;color:#065f46;text-transform:uppercase;letter-spacing:.5px;">✓ ${label}</div></div>`;
-  const coverPills=[
-    covers.funeral>0?pill('Funeral Cover',_prFmtR(covers.funeral),false):pill('Funeral Cover','',true),
-    covers.life>0?pill('Life Cover',_prFmtR(covers.life),false):pill('Life Cover','',true),
-    has.disability?pillGreen('Disability'):pill('Disability Cover','',true),
-    has.dread?pill('Dread Disease',_prFmtR(covers.dread),false):pill('Dread Disease','',true),
-    has.ra?pillGreen('RA / Retirement'):'',
-  ].join('');
-  const gapBar=`<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;">${coverPills}</div>`;
 
   // Lives rows
   const phCols=policies.map((p,i)=>`<th style="${thC}min-width:80px;">${p.policy_number||'P'+(i+1)}</th>`).join('');
@@ -7395,8 +7201,6 @@ function renderPRSummary(){
     const bgStyle=rowBg?`background:${rowBg};`:'';
     const cells=policies.map((p,pIdx)=>{
       const c=life.policies[pIdx];
-      const isRA=(p.policy_type||'').includes('Retirement Annuity');
-      if(isRA)return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;color:#9ca3af;${bgStyle}">—</td>`;
       return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
     }).join('');
     const badge=rowLabel?` <span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;">${rowLabel}</span>`:'';
@@ -7406,18 +7210,17 @@ function renderPRSummary(){
   // Notes section
   const notesHtml=noteGroups.length?`<div style="margin-top:16px;"><div style="font-size:12px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;border-bottom:2px solid #0d1f3c;padding-bottom:4px;">Notes &amp; Red Flags</div>${noteGroups.map(g=>`<div style="margin-bottom:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;"><div style="font-size:12px;font-weight:800;color:#991b1b;margin-bottom:4px;">⚠ ${g.label}</div>${g.notes.map(n=>`<div style="font-size:11px;color:#7f1d1d;padding:2px 0 2px 8px;">• ${n}</div>`).join('')}</div>`).join('')}</div>`:'';
 
-  // Talking points section
-  const tpHtml=talkingPts.length?`<div style="margin-top:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px 16px;"><div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:10px;">💬 Advisor Talking Points</div>${talkingPts.map(pt=>`<div style="font-size:11px;color:#0d1f3c;padding:3px 0 3px 8px;border-left:3px solid #4ade80;margin-bottom:6px;">• ${pt}</div>`).join('')}</div>`:'';
-
   previewEl.innerHTML=`
     <div style="overflow-x:auto;margin-bottom:16px;">
       <table style="width:100%;border-collapse:collapse;">
-        <thead><tr><th style="${th}min-width:110px;">Policy</th><th style="${th}min-width:90px;">Policy #</th><th style="${th}min-width:80px;">Start date</th><th style="${th}min-width:130px;">Plan name</th><th style="${th}min-width:90px;">Type</th><th style="${th}min-width:75px;text-align:right;">Premium</th><th style="${th}min-width:180px;">Key Features</th></tr></thead>
+        <thead>
+          <tr><th style="${th}min-width:110px;" rowspan="2">Policy</th><th style="${th}min-width:90px;" rowspan="2">Policy #</th><th style="${th}min-width:80px;" rowspan="2">Start date</th><th style="${th}min-width:130px;" rowspan="2">Plan name</th><th style="${th}min-width:90px;" rowspan="2">Type</th><th style="${th}min-width:75px;text-align:right;" rowspan="2">Premium</th><th colspan="7" style="${thBenef}">BENEFITS</th></tr>
+          <tr><th style="${thC}min-width:70px;">Cashback</th><th style="${thC}min-width:70px;">Payment holiday</th><th style="${thC}min-width:70px;">No more premiums</th><th style="${thC}min-width:70px;">Accident cover</th><th style="${thC}min-width:55px;">Burial</th><th style="${thC}min-width:55px;">Paid up</th><th style="${th}min-width:100px;">Extra</th></tr>
+        </thead>
         <tbody>${policyRows}</tbody>
-        <tfoot><tr><td colspan="5" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
+        <tfoot><tr><td colspan="5" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
       </table>
     </div>
-    ${gapBar}
     <div style="overflow-x:auto;margin-bottom:4px;">
       <table style="width:100%;border-collapse:collapse;">
         <thead><tr><th style="${th}min-width:100px;">Relationship</th><th style="${th}min-width:140px;">Name</th><th style="${th}min-width:110px;">DOB (Gender)</th>${phCols}</tr></thead>
@@ -7425,10 +7228,12 @@ function renderPRSummary(){
       </table>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;font-size:10px;font-weight:600;">
+      <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:6px;padding:3px 10px;">Yellow = no cover</span>
       <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;">Red = under R20 000</span>
-      <span style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:3px 10px;">Green = R80 000+</span>
+      <span style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:3px 10px;">Green = R80 000 – R100 000</span>
+      <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:6px;padding:3px 10px;">Amber = over R100 000</span>
     </div>
-    ${notesHtml}${tpHtml}`;
+    ${notesHtml}`;
   _prCheckMissing();
 }
 
@@ -7451,54 +7256,28 @@ function generatePRPdf(){
   const pageHdr=(pg,ttl)=>`<div class="hdr"><div><div class="pg-label">Page ${pg}</div><h1>Team Buffalos — Policy Review Summary</h1><div class="sub">Generated ${today} &nbsp;|&nbsp; LOA on file &nbsp;|&nbsp; ${clientName} (${clientId})</div></div><div style="font-size:11px;font-weight:700;color:#0d1f3c;background:#f4f2ed;padding:6px 12px;border-radius:8px;">${ttl}</div></div>`;
   const footer=`<div class="footer"><span>Team Buffalos &mdash; Policy Review &middot; ${today}</span><span>For internal use only. All figures must be verified against original policy documents.</span></div>`;
 
-  const talkingPts=_prBuildTalkingPoints(policies,allLives);
-  const {covers,has}=_prCoverageSummary(policies,allLives);
-
-  // Page 1 — Policy summary (single Key Features column)
+  // Page 1 — Policy summary
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
     const arr=p.in_arrears?' <span style="color:#dc2626;font-weight:800;">&#9888; ARREARS</span>':'';
     const bg=i%2===0?'':'background:#f9f9f9;';
-    const isRA=(p.policy_type||'').includes('Retirement Annuity');
-    const feat=isRA
-      ?`<td style="${bg}font-size:8px;color:#0369a1;font-style:italic;">${b.extra||'—'}</td>`
-      :`<td style="${bg}font-size:8px;">${_prKeyFeatures(b)}</td>`;
-    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td>${feat}</tr>`;
+    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td><td class="ctr" style="${bg}">${tick(b.cashback)}</td><td class="ctr" style="${bg}">${tick(b.payment_holiday)}</td><td class="ctr" style="${bg}">${tick(b.no_more_premiums)}</td><td class="ctr" style="${bg}">${b.accident_double?'&#10003;':''}</td><td class="ctr" style="${bg}">${tick(b.burial)}</td><td class="ctr" style="${bg}">${tick(b.paid_up)}</td><td style="${bg}font-size:8px;">${b.extra||'—'}</td></tr>`;
   }).join('');
-
-  // Coverage gap summary bar (for Page 2)
-  const gapItem=(label,val,ok)=>ok
-    ?`<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#1e40af;text-transform:uppercase;">${label}</div><div style="font-size:10px;font-weight:800;color:#0d1f3c;">${val}</div></div>`
-    :`<div style="background:#fee2e2;border:1px solid #fca5a5;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#991b1b;">&#9888; NO ${label.toUpperCase()}</div></div>`;
-  const gapItemGreen=(label)=>`<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:5px;padding:4px 10px;"><div style="font-size:7px;font-weight:700;color:#065f46;text-transform:uppercase;">&#10003; ${label}</div></div>`;
-  const gapBar=`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">
-    ${covers.funeral>0?gapItem('Funeral Cover',_prFmtR(covers.funeral),true):gapItem('Funeral Cover','',false)}
-    ${covers.life>0?gapItem('Life Cover',_prFmtR(covers.life),true):gapItem('Life Cover','',false)}
-    ${has.disability?gapItemGreen('Disability Cover'):gapItem('Disability Cover','',false)}
-    ${has.dread?(covers.dread>0?gapItem('Dread Disease',_prFmtR(covers.dread),true):gapItemGreen('Dread Disease')):gapItem('Dread Disease','',false)}
-    ${has.ra?gapItemGreen('RA / Retirement'):''}
-  </div>`;
 
   // Page 2 — Lives
   const phCols=policies.map((p,i)=>`<th class="ctr">${p.policy_number||'P'+(i+1)}</th>`).join('');
   const livesRows=allLives.map(life=>{
     const {bg:rowBg,label:rowLabel}=_prLiveBg(life);
     const bgStyle=rowBg?`background:${rowBg};`:'';
-    const cells=policies.map((p,pIdx)=>{
-      const c=life.policies[pIdx];
-      const isRA=(p.policy_type||'').includes('Retirement Annuity');
-      if(isRA)return`<td class="ctr" style="${bgStyle}color:#9ca3af;">&#8212;</td>`;
-      return`<td class="ctr" style="${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
-    }).join('');
+    const cells=policies.map((p,pIdx)=>{const c=life.policies[pIdx];return`<td class="ctr" style="${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;}).join('');
     const tag=rowLabel?` <span class="no-cover-badge">${rowLabel}</span>`:'';
     return`<tr><td style="${bgStyle}">${life.relationship}${tag}</td><td style="${bgStyle}">${life.name||''}</td><td style="${bgStyle}">${life.dob||''} ${life.gender?'('+life.gender+')':''}</td>${cells}</tr>`;
   }).join('');
 
-  // Page 3 — Notes + talking points
+  // Page 3 — Notes
   const notesPage3=noteGroups.map(g=>`<div class="note-group"><div class="note-group-title">&#9888; ${g.label}</div>${g.notes.map(n=>`<div class="note-item">&#8226; ${n}</div>`).join('')}</div>`).join('');
   const advisorBlock=advisorNotes?`<div class="notes-box"><div class="notes-title">Advisor Notes</div><div class="notes-body">${advisorNotes.replace(/\n/g,'<br>')}</div></div>`:'';
-  const tpBlock=talkingPts.length?`<div class="notes-box" style="background:#f0fdf4;border-color:#86efac;"><div class="notes-title" style="color:#065f46;">&#128172; Advisor Talking Points</div><div class="notes-body">${talkingPts.map(pt=>`<div style="padding:2px 0 2px 8px;border-left:2px solid #4ade80;margin-bottom:5px;">&#8226; ${pt}</div>`).join('')}</div></div>`:'';
-  const hasNotes=noteGroups.length||advisorNotes||talkingPts.length;
+  const hasNotes=noteGroups.length||advisorNotes;
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Policy Review — ${clientName}</title>
 <style>
@@ -7537,9 +7316,12 @@ ${pageHdr(1,'Policy Summary')}
 ${clientHdr}
 <div class="sec">Policy Summary</div>
 <table>
-  <thead><tr><th>Policy</th><th>Policy #</th><th>Start date</th><th>Plan name</th><th class="ctr">Type</th><th class="num">Premium</th><th>Key Features</th></tr></thead>
+  <thead>
+    <tr><th rowspan="2">Policy</th><th rowspan="2">Policy #</th><th rowspan="2">Start date</th><th rowspan="2">Plan name</th><th rowspan="2" class="ctr">Type</th><th rowspan="2" class="num">Premium</th><th colspan="7" class="th-benef">BENEFITS</th></tr>
+    <tr><th class="ctr">Cashback</th><th class="ctr">Payment holiday</th><th class="ctr">No more premiums</th><th class="ctr">Accident cover</th><th class="ctr">Burial</th><th class="ctr">Paid up</th><th>Extra</th></tr>
+  </thead>
   <tbody>${policyRows}</tbody>
-  <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td class="num gold" style="background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td style="background:#f4f2ed;"></td></tr></tfoot>
+  <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td class="num gold" style="background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="background:#f4f2ed;"></td></tr></tfoot>
 </table>
 ${footer}
 
@@ -7547,24 +7329,24 @@ ${footer}
 <div class="page-break">
 ${pageHdr(2,'Lives &amp; Cover')}
 ${clientHdr}
-${gapBar}
 <div class="sec">Lives Assured &amp; Cover per Policy</div>
 <table>
   <thead><tr><th>Relationship</th><th>Name</th><th>DOB (Gender)</th>${phCols}</tr></thead>
   <tbody>${livesRows}</tbody>
 </table>
 <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:8px;font-weight:700;">
+  <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;">Yellow = no cover</span>
   <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;">Red = under R20 000</span>
-  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;">Green = R80 000+</span>
+  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;">Green = R80 000&ndash;R100 000</span>
+  <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:2px 8px;">Amber = over R100 000</span>
 </div>
 ${footer}
 </div>
 
-<!-- PAGE 3: NOTES + TALKING POINTS -->
+<!-- PAGE 3: NOTES (only if there are notes) -->
 ${hasNotes?`<div class="page-break">
-${pageHdr(3,'Notes &amp; Advisor Talking Points')}
+${pageHdr(3,'Notes &amp; Advisor Comments')}
 ${clientHdr}
-${talkingPts.length?`<div class="sec">Advisor Talking Points</div>${tpBlock}`:''}
 ${noteGroups.length?`<div class="sec">Red Flags &amp; System Notes</div>${notesPage3}`:''}
 ${advisorNotes?`<div class="sec">Advisor Notes</div>${advisorBlock}`:''}
 ${footer}
@@ -7589,73 +7371,6 @@ function clearPolicyReview(){
   const warn=document.getElementById('prMissingWarning');if(warn)warn.style.display='none';
   const notes=document.getElementById('prAdvisorNotes');if(notes)notes.value='';
   updatePRButtons();
-}
-async function savePRReview(){
-  const policies=_prExtracted.filter(Boolean);
-  if(!policies.length)return alert('No policy data to save.');
-  const clientName=document.getElementById('prClientName').value.trim();
-  const clientId=document.getElementById('prClientId').value.trim();
-  if(!clientName&&!clientId)return alert('Please fill in the client name or ID before saving.');
-  const btn=document.getElementById('prSaveBtn');
-  if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    await window.FB.savePolicyReview({
-      clientName,clientId,
-      clientPhone:document.getElementById('prClientPhone').value.trim(),
-      clientEmail:document.getElementById('prClientEmail').value.trim(),
-      advisorCode:currentUser?.code||'',
-      advisorName:currentUser?.name||'',
-      policies,
-      advisorNotes:document.getElementById('prAdvisorNotes').value.trim(),
-    });
-    if(btn){btn.textContent='✓ Saved';setTimeout(()=>{btn.disabled=false;btn.textContent='💾 Save Review';},2000);}
-    loadPRSavedReviews();
-  }catch(e){
-    alert('Save failed: '+e.message);
-    if(btn){btn.disabled=false;btn.textContent='💾 Save Review';}
-  }
-}
-
-async function loadPRSavedReviews(){
-  const el=document.getElementById('prSavedList');
-  if(!el)return;
-  if(!window.FB_READY){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">Not connected.</div>';return;}
-  el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">Loading…</div>';
-  try{
-    const reviews=await window.FB.getPolicyReviews();
-    if(!reviews.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;padding:8px;">No saved reviews yet.</div>';return;}
-    el.innerHTML=reviews.map(r=>{
-      const dt=r.savedAt?.toDate?r.savedAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):(r.savedAt||'');
-      return`<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-bottom:1px solid #f3f4f6;gap:8px;">
-        <div>
-          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${r.clientName||'—'} <span style="font-weight:400;color:#6b7280;">${r.clientId?'('+r.clientId+')':''}</span></div>
-          <div style="font-size:10px;color:#9ca3af;">${dt} · ${r.policies?.length||0} polic${r.policies?.length===1?'y':'ies'} · ${r.advisorName||r.advisorCode||''}</div>
-        </div>
-        <button onclick="restorePRReview('${r.id}')" style="background:#0d1f3c;color:#fff;border:none;border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;">Load</button>
-      </div>`;
-    }).join('');
-  }catch(e){el.innerHTML='<div style="font-size:12px;color:#dc2626;padding:8px;">Could not load reviews.</div>';}
-}
-
-async function restorePRReview(id){
-  if(!confirm('Load this saved review? Your current data will be replaced.'))return;
-  try{
-    const r=await window.FB.getPolicyReviewById(id);
-    if(!r)return alert('Review not found.');
-    const set=(elId,val)=>{const el=document.getElementById(elId);if(el)el.value=val||'';};
-    set('prClientName',r.clientName);set('prClientId',r.clientId);
-    set('prClientPhone',r.clientPhone);set('prClientEmail',r.clientEmail);
-    set('prAdvisorNotes',r.advisorNotes);
-    _prExtracted=r.policies||[];
-    _prDocFiles=(r.policies||[]).map((p,i)=>({files:[],label:p.plan_name||p.insurer||'Policy '+(i+1),status:'done',data:p,error:null}));
-    _prLoaFile={b64:'',mediaType:'',name:'(restored)'};
-    renderPRDocList();
-    renderPRSummary();
-    const sec=document.getElementById('prSummarySection');if(sec)sec.style.display='block';
-    updatePRButtons();
-    const loaStatus=document.getElementById('prLoaStatus');
-    if(loaStatus)loaStatus.innerHTML=`<span style="color:#16a34a;font-weight:700;">✓ Review loaded: ${r.clientName||''} — ${r.policies?.length||0} policies</span>`;
-  }catch(e){alert('Could not load review: '+e.message);}
 }
 // ── END POLICY REVIEW ──────────────────────────────────────────────────────
 
@@ -7727,6 +7442,7 @@ function renderReferrals(){
 
 // ── MERGE DOCS & SIGNATURE ───────────────────────────────────────────────────
 let _mdFiles=[];
+let _mdCropState=null;
 
 /* ── APP CHECKS ── */
 const AC_STATUSES={
@@ -8590,181 +8306,6 @@ function loadPdfLib(){
   });
 }
 
-/* ── UNLOCK PDF ── */
-let _updfBytes=null;       // raw bytes of uploaded file
-let _updfUnlocked=null;    // unlocked bytes ready to download
-let _updfName='unlocked.pdf';
-
-function updfHandleDrop(e){
-  e.preventDefault();
-  document.getElementById('updfDropZone').style.borderColor='#e5e7eb';
-  const f=e.dataTransfer.files[0];
-  if(f)updfHandleFile(f);
-}
-function updfHandleFile(f){
-  if(!f||f.type!=='application/pdf'&&!f.name.endsWith('.pdf'))return showAlert('Please choose a PDF file.','error');
-  _updfBytes=null;_updfUnlocked=null;
-  _updfName=f.name.replace(/\.pdf$/i,'')+'_unlocked.pdf';
-  document.getElementById('updfFileName').textContent=f.name;
-  document.getElementById('updfFileSize').textContent=(f.size/1024).toFixed(0)+' KB';
-  document.getElementById('updfFileRow').style.display='block';
-  document.getElementById('updfPwdRow').style.display='none';
-  document.getElementById('updfResult').style.display='none';
-  document.getElementById('updfBtn').style.display='block';
-  updfSetStatus('');
-  const reader=new FileReader();
-  reader.onload=e=>{_updfBytes=new Uint8Array(e.target.result);};
-  reader.readAsArrayBuffer(f);
-}
-function updfSetStatus(msg,type){
-  const el=document.getElementById('updfStatus');
-  if(!msg){el.style.display='none';return;}
-  el.style.display='block';
-  el.style.background=type==='error'?'#fef2f2':type==='ok'?'#f0fdf4':'#f0f9ff';
-  el.style.color=type==='error'?'#991b1b':type==='ok'?'#065f46':'#075985';
-  el.style.border=`1px solid ${type==='error'?'#fca5a5':type==='ok'?'#86efac':'#bae6fd'}`;
-  el.textContent=msg;
-}
-async function updfUnlock(){
-  if(!_updfBytes)return showAlert('Please select a PDF first.','error');
-  const pwd=document.getElementById('updfPwd').value||'';
-  document.getElementById('updfBtn').disabled=true;
-  document.getElementById('updfBtn').textContent='Working…';
-  updfSetStatus('Reading PDF…','info');
-  try{
-    await loadPdfLib();
-    const {PDFDocument}=window.PDFLib;
-
-    /* — try loading: ignoreEncryption works for owner/permissions restricted — */
-    let pdfDoc;
-    let usedPassword=false;
-    try{
-      pdfDoc=await PDFDocument.load(_updfBytes,{ignoreEncryption:true});
-    }catch(e){
-      updfSetStatus('Could not read the PDF. It may be severely corrupted.','error');
-      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
-      return;
-    }
-
-    /* Check if pdf-lib sees it as encrypted */
-    const isEncrypted=pdfDoc.context.lookup(pdfDoc.context.trailerInfo.Encrypt)!=null;
-
-    if(isEncrypted&&!pwd){
-      /* Might be truly user-encrypted — show password field */
-      updfSetStatus('This PDF requires an open password to unlock. Enter it above.','info');
-      document.getElementById('updfPwdRow').style.display='block';
-      document.getElementById('updfPwd').focus();
-      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
-      return;
-    }
-
-    if(isEncrypted&&pwd){
-      /* Use PDF.js to render with password then rebuild as image PDF */
-      updfSetStatus('Decrypting with password…','info');
-      await updfDecryptWithPdfJs(pwd);
-      return;
-    }
-
-    /* Not encrypted (or only owner-restricted) — save cleanly */
-    updfSetStatus('Saving unlocked copy…','info');
-    _updfUnlocked=await pdfDoc.save();
-    updfShowResult('Permissions restrictions removed. The PDF is fully unlocked.');
-  }catch(err){
-    console.error(err);
-    updfSetStatus('Something went wrong: '+err.message,'error');
-    document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
-  }
-}
-
-function loadPdfJs(){
-  return new Promise((resolve,reject)=>{
-    if(window.pdfjsLib){resolve();return;}
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload=()=>{window.pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';resolve();};
-    s.onerror=reject;
-    document.head.appendChild(s);
-  });
-}
-
-async function updfDecryptWithPdfJs(password){
-  try{
-    await loadPdfJs();
-    await loadPdfLib();
-    const {PDFDocument,rgb}=window.PDFLib;
-    const loadingTask=window.pdfjsLib.getDocument({data:_updfBytes,password});
-    let pdfSource;
-    try{pdfSource=await loadingTask.promise;}
-    catch(e){
-      if(e.name==='PasswordException'){
-        updfSetStatus('Incorrect password — please try again.','error');
-      }else{
-        updfSetStatus('Could not open PDF: '+e.message,'error');
-      }
-      document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
-      return;
-    }
-
-    const numPages=pdfSource.numPages;
-    updfSetStatus(`Rendering ${numPages} page${numPages!==1?'s':''}…`,'info');
-
-    const outDoc=await PDFDocument.create();
-    const canvas=document.createElement('canvas');
-    const ctx=canvas.getContext('2d');
-    const _updfPageStart=Date.now();
-
-    for(let p=1;p<=numPages;p++){
-      const _updfEl=Date.now()-_updfPageStart;
-      const _updfAvg=p>1?_updfEl/(p-1):0;
-      const _updfRem=p>1?Math.round(_updfAvg*(numPages-p+1)/1000):null;
-      const _updfTimeStr=_updfRem&&_updfRem>1?` — ~${_updfRem<60?_updfRem+'s':Math.ceil(_updfRem/60)+'m'} left`:'';
-      updfSetStatus(`Rendering page ${p} of ${numPages}${_updfTimeStr}…`,'info');
-      const page=await pdfSource.getPage(p);
-      const vp=page.getViewport({scale:2});
-      canvas.width=vp.width;canvas.height=vp.height;
-      await page.render({canvasContext:ctx,viewport:vp}).promise;
-      const imgData=canvas.toDataURL('image/jpeg',0.92);
-      const jpgBytes=Uint8Array.from(atob(imgData.split(',')[1]),c=>c.charCodeAt(0));
-      const img=await outDoc.embedJpg(jpgBytes);
-      const pg=outDoc.addPage([vp.width/2,vp.height/2]);
-      pg.drawImage(img,{x:0,y:0,width:vp.width/2,height:vp.height/2});
-    }
-
-    _updfUnlocked=await outDoc.save();
-    updfShowResult(`Password removed. Note: the output is an image-based PDF (${numPages} page${numPages!==1?'s':''}). Text may not be selectable.`);
-  }catch(err){
-    console.error(err);
-    updfSetStatus('Error during decryption: '+err.message,'error');
-    document.getElementById('updfBtn').disabled=false;document.getElementById('updfBtn').textContent='🔓 Remove Password';
-  }
-}
-
-function updfShowResult(note){
-  document.getElementById('updfBtn').style.display='none';
-  updfSetStatus('');
-  document.getElementById('updfResultNote').textContent=note;
-  document.getElementById('updfResult').style.display='block';
-}
-function updfDownload(){
-  if(!_updfUnlocked)return;
-  const blob=new Blob([_updfUnlocked],{type:'application/pdf'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=_updfName;a.click();
-  setTimeout(()=>URL.revokeObjectURL(url),5000);
-}
-function updfReset(){
-  _updfBytes=null;_updfUnlocked=null;
-  document.getElementById('updfInput').value='';
-  document.getElementById('updfFileRow').style.display='none';
-  document.getElementById('updfPwdRow').style.display='none';
-  document.getElementById('updfResult').style.display='none';
-  document.getElementById('updfBtn').disabled=false;
-  document.getElementById('updfBtn').textContent='🔓 Remove Password';
-  document.getElementById('updfBtn').style.display='block';
-  document.getElementById('updfPwd').value='';
-  updfSetStatus('');
-}
-
 /* ── PROSPECT MAP ── */
 const PM_TYPES={
   school:{label:'School/College',icon:'🏫',color:'#1b3460',
@@ -8989,92 +8530,6 @@ function pmRenderPipeline(){
   }).join('');
 }
 
-// ── CANCELLATION PACK BUILDER ──
-const _CP_SLOTS=[
-  {label:'Client ID / Driver\'s licence',icon:'🪪',hint:'Clear, legible copy',required:true},
-  {label:'Letter of Authority (LOA)',icon:'✍️',hint:'Signed by client authorising cancellation',required:true},
-  {label:'Cancellation instruction / form',icon:'📝',hint:'Signed cancellation form or instruction letter',required:true},
-  {label:'Bank statement or proof of banking',icon:'🏦',hint:'1 month sufficient',required:true},
-  {label:'Additional document (e.g. AL9 / company form)',icon:'📎',hint:'e.g. AVBOB AL9 form, Workerslife form',required:false},
-  {label:'Additional document (e.g. surrender form)',icon:'📎',hint:'e.g. AVBOB surrender form if surrender value exists',required:false},
-];
-let _cpFiles=new Array(_CP_SLOTS.length).fill(null);
-
-function cpInit(){_cpFiles=new Array(_CP_SLOTS.length).fill(null);cpRender();}
-
-function cpRender(){
-  const el=document.getElementById('cpSlotList');
-  if(!el)return;
-  el.innerHTML=_CP_SLOTS.map((slot,i)=>{
-    const f=_cpFiles[i];
-    const done=!!f;
-    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border:1.5px solid ${done?'#86efac':'#e5e7eb'};border-radius:10px;background:${done?'#f0fdf4':'#fff'};transition:border-color .2s,background .2s;">
-      <span style="font-size:20px;flex-shrink:0;">${done?'✅':slot.icon}</span>
-      <div style="flex:1;min-width:0;">
-        <div style="font-size:12px;font-weight:700;color:#374151;">${slot.label}${slot.required?'':' <span style="font-size:10px;color:#9ca3af;font-weight:400;">(optional)</span>'}</div>
-        <div style="font-size:11px;color:${done?'#16a34a':'#9ca3af'};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${done?'✓ '+f.name:slot.hint}</div>
-      </div>
-      <label style="background:${done?'#dcfce7':'#0d1f3c'};color:${done?'#166534':'#fff'};border:none;border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;flex-shrink:0;white-space:nowrap;">
-        ${done?'↺ Replace':'Upload'}
-        <input type="file" accept=".jpg,.jpeg,.png,.pdf" style="display:none;" onchange="cpSlotUpload(${i},this)"/>
-      </label>
-    </div>`;
-  }).join('');
-  cpUpdateBtn();
-}
-
-function cpSlotUpload(idx,input){
-  if(!input.files.length)return;
-  _cpFiles[idx]=input.files[0];
-  cpRender();
-}
-
-function cpUpdateBtn(){
-  const btn=document.getElementById('cpBuildBtn');
-  if(!btn)return;
-  const ready=_CP_SLOTS.every((s,i)=>!s.required||_cpFiles[i]);
-  btn.style.opacity=ready?'1':'0.45';
-  btn.style.pointerEvents=ready?'auto':'none';
-}
-
-async function cpBuild(){
-  const files=_cpFiles.filter(Boolean);
-  if(!files.length)return;
-  const btn=document.getElementById('cpBuildBtn');
-  const status=document.getElementById('cpStatus');
-  if(btn){btn.disabled=true;btn.textContent='Building pack…';}
-  const saved=_mdFiles.splice(0);
-  files.forEach(f=>_mdFiles.push(f));
-  const cpStart=Date.now();
-  const onProg=(pct,msg)=>{
-    if(!status)return;
-    const el=Date.now()-cpStart;
-    let t='';if(pct>5&&pct<97){const r=Math.round((el/pct)*(100-pct)/1000);if(r>1)t=` — ~${r<60?r+'s':Math.ceil(r/60)+'m'} left`;}
-    status.innerHTML=`<div style="padding:4px 0;"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;"><span style="font-size:11px;color:#6b7280;">${msg}${t}</span><span style="font-size:11px;font-weight:700;color:#374151;">${Math.round(pct)}%</span></div><div style="background:#e5e7eb;border-radius:999px;height:7px;overflow:hidden;"><div style="background:linear-gradient(90deg,#dc2626,#c9922a);height:100%;width:${pct}%;border-radius:999px;transition:width 0.25s ease;"></div></div></div>`;
-  };
-  try{
-    const fnEl=document.getElementById('cpFileName');
-    const rawName=(fnEl&&fnEl.value.trim())||'cancellation-pack';
-    const fname=rawName.toLowerCase().endsWith('.pdf')?rawName:rawName+'.pdf';
-    let out=await mdBuild(false,onProg);
-    const mb=(out.byteLength/(1024*1024)).toFixed(2);
-    if(parseFloat(mb)>4.0){
-      if(status)status.innerHTML=`<div style="padding:8px 12px;font-size:12px;color:#6b7280;">📦 ${mb}MB — compressing…</div>`;
-      out=await mdBuild(true,onProg);
-    }
-    const mb2=(out.byteLength/(1024*1024)).toFixed(2);
-    const blob=new Blob([out],{type:'application/pdf'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');a.href=url;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url),2000);
-    if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Pack downloaded — ${mb2}MB · ${files.length} document${files.length!==1?'s':''} merged · saved as ${fname}</div>`;
-  }catch(err){
-    if(status)status.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;font-size:12px;color:#991b1b;font-weight:600;">Error: ${err.message}</div>`;
-  }
-  _mdFiles.length=0;saved.forEach(f=>_mdFiles.push(f));
-  if(btn){btn.disabled=false;btn.textContent='Build Cancellation Pack';}
-}
-
 function mdInit(){
   _mdFiles=[];
   mdRenderList();
@@ -9082,7 +8537,7 @@ function mdInit(){
 
 function mdHandleDrop(e){
   e.preventDefault();
-  const _dz=_mdEl('mdDropZone');if(_dz)_dz.style.borderColor='#e5e7eb';
+  document.getElementById('mdDropZone').style.borderColor='#e5e7eb';
   const files=Array.from(e.dataTransfer.files);
   mdPushFiles(files);
 }
@@ -9202,9 +8657,9 @@ function mdMoveFile(i,dir){
 }
 
 function mdRenderList(){
-  const el=_mdEl('mdFileList');
-  const btn=_mdEl('mdMergeBtn');
-  const fnWrap=_mdEl('mdFilenameWrap');
+  const el=document.getElementById('mdFileList');
+  const btn=document.getElementById('mdMergeBtn');
+  const fnWrap=document.getElementById('mdFilenameWrap');
   if(!el)return;
   if(!_mdFiles.length){
     el.innerHTML='';
@@ -9233,9 +8688,121 @@ function mdRenderList(){
         <div style="font-size:12px;font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${f.name}</div>
         <div style="font-size:10px;color:#9ca3af;">${tag} · ${sz} KB</div>
       </div>
+      ${isImg?`<button onclick="mdCropFile(${i})" title="Crop image" style="background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;color:#374151;cursor:pointer;font-size:13px;padding:4px 7px;flex-shrink:0;">✂️</button>`:''}
       <button onclick="mdRemoveFile(${i})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:16px;line-height:1;flex-shrink:0;">✕</button>
     </div>`;
   }).join('')+`</div><div style="font-size:10px;color:#9ca3af;padding:0 2px;">${n}/8 files · ${n<8?'Tap above to add more':'Maximum reached'}</div>`;
+}
+
+function mdCropFile(i){
+  const f=_mdFiles[i];
+  if(!f||!(f.type.startsWith('image/')||f.name.match(/\.(jpg|jpeg|png)$/i)))return;
+  let modal=document.getElementById('mdCropModal');
+  if(!modal){
+    modal=document.createElement('div');
+    modal.id='mdCropModal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;';
+    modal.innerHTML=`<div style="width:100%;max-width:460px;">
+      <div style="color:#fff;font-size:15px;font-weight:700;margin-bottom:6px;text-align:center;">✂️ Crop Image</div>
+      <div style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:10px;">Drag on the image to select the area to keep</div>
+      <div style="position:relative;line-height:0;border-radius:8px;overflow:hidden;background:#000;">
+        <canvas id="mdCropCanvas" style="display:block;max-width:100%;cursor:crosshair;touch-action:none;"></canvas>
+      </div>
+      <div id="mdCropDims" style="font-size:10px;color:#9ca3af;text-align:center;margin-top:8px;min-height:14px;"></div>
+      <div style="display:flex;gap:10px;margin-top:12px;">
+        <button onclick="mdCancelCrop()" style="flex:1;padding:12px;background:#374151;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Cancel</button>
+        <button onclick="mdApplyCrop()" style="flex:1;padding:12px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Apply Crop</button>
+      </div>
+    </div>`;
+    document.body.appendChild(modal);
+  } else {
+    modal.style.display='flex';
+  }
+  const url=URL.createObjectURL(f);
+  const img=new Image();
+  img.onload=()=>{
+    URL.revokeObjectURL(url);
+    const canvas=document.getElementById('mdCropCanvas');
+    const maxW=Math.min(window.innerWidth-48,428);
+    const maxH=window.innerHeight*0.55;
+    const scale=Math.min(maxW/img.width,maxH/img.height,1);
+    const dw=Math.round(img.width*scale);
+    const dh=Math.round(img.height*scale);
+    canvas.width=dw;canvas.height=dh;
+    _mdCropState={idx:i,img,scale,dispW:dw,dispH:dh,sel:{x:0,y:0,w:dw,h:dh},drag:null};
+    mdCropAttach(canvas);
+    mdCropDraw();
+  };
+  img.src=url;
+}
+
+function mdCropDraw(){
+  const s=_mdCropState;if(!s)return;
+  const canvas=document.getElementById('mdCropCanvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.drawImage(s.img,0,0,s.dispW,s.dispH);
+  ctx.fillStyle='rgba(0,0,0,0.52)';
+  ctx.fillRect(0,0,s.dispW,s.dispH);
+  const {x,y,w,h}=s.sel;
+  if(w>1&&h>1){
+    ctx.drawImage(s.img,x/s.scale,y/s.scale,w/s.scale,h/s.scale,x,y,w,h);
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.setLineDash([5,3]);
+    ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);ctx.setLineDash([]);
+    const hs=7;ctx.fillStyle='#fff';
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([hx,hy])=>ctx.fillRect(hx-hs/2,hy-hs/2,hs,hs));
+  }
+  const d=document.getElementById('mdCropDims');
+  if(d)d.textContent=(w>1&&h>1)?`${Math.round(w/s.scale)} × ${Math.round(h/s.scale)} px`:'';
+}
+
+function mdCropPos(canvas,e){
+  const r=canvas.getBoundingClientRect();
+  const cx=e.touches?e.touches[0].clientX:e.clientX;
+  const cy=e.touches?e.touches[0].clientY:e.clientY;
+  const sx=canvas.width/r.width,sy=canvas.height/r.height;
+  return{x:Math.max(0,Math.min(canvas.width,(cx-r.left)*sx)),y:Math.max(0,Math.min(canvas.height,(cy-r.top)*sy))};
+}
+
+function mdCropAttach(canvas){
+  const c=canvas;
+  const down=e=>{e.preventDefault();const p=mdCropPos(c,e);_mdCropState.drag={sx:p.x,sy:p.y};};
+  const move=e=>{
+    e.preventDefault();if(!_mdCropState||!_mdCropState.drag)return;
+    const p=mdCropPos(c,e);const{sx,sy}=_mdCropState.drag;
+    _mdCropState.sel={x:Math.min(sx,p.x),y:Math.min(sy,p.y),w:Math.abs(p.x-sx),h:Math.abs(p.y-sy)};
+    mdCropDraw();
+  };
+  const up=e=>{
+    e.preventDefault();
+    if(_mdCropState&&_mdCropState.sel.w<5){
+      _mdCropState.sel={x:0,y:0,w:_mdCropState.dispW,h:_mdCropState.dispH};
+      mdCropDraw();
+    }
+    if(_mdCropState)_mdCropState.drag=null;
+  };
+  c.addEventListener('mousedown',down);c.addEventListener('mousemove',move);c.addEventListener('mouseup',up);
+  c.addEventListener('touchstart',down,{passive:false});c.addEventListener('touchmove',move,{passive:false});c.addEventListener('touchend',up,{passive:false});
+}
+
+function mdCancelCrop(){
+  _mdCropState=null;
+  const m=document.getElementById('mdCropModal');if(m)m.style.display='none';
+}
+
+async function mdApplyCrop(){
+  const s=_mdCropState;
+  if(!s||s.sel.w<2||s.sel.h<2)return;
+  const cx=Math.round(s.sel.x/s.scale),cy=Math.round(s.sel.y/s.scale);
+  const cw=Math.round(s.sel.w/s.scale),ch=Math.round(s.sel.h/s.scale);
+  const out=document.createElement('canvas');
+  out.width=cw;out.height=ch;
+  out.getContext('2d').drawImage(s.img,cx,cy,cw,ch,0,0,cw,ch);
+  const blob=await new Promise(res=>out.toBlob(res,'image/jpeg',0.92));
+  const name=_mdFiles[s.idx].name.replace(/\.[^.]+$/,'')+'_cropped.jpg';
+  _mdFiles[s.idx]=new File([blob],name,{type:'image/jpeg'});
+  mdCancelCrop();
+  mdRenderList();
 }
 
 function mdSetProgress(status,pct,msg){
@@ -9253,18 +8820,12 @@ function mdSetProgress(status,pct,msg){
 
 async function mdMerge(){
   if(!_mdFiles.length)return;
-  const btn=_mdEl('mdMergeBtn');
-  const status=_mdEl('mdStatus');
+  const btn=document.getElementById('mdMergeBtn');
+  const status=document.getElementById('mdStatus');
   btn.disabled=true;btn.textContent='Merging…';
   mdSetProgress(status,2,'Loading PDF engine…');
-  const _mdStart=Date.now();
-  const _mdTimedProgress=(pct,msg)=>{
-    let timeStr='';
-    if(pct>5&&pct<97){const el=Date.now()-_mdStart;const remSec=Math.round((el/pct)*(100-pct)/1000);if(remSec>1)timeStr=` — ~${remSec<60?remSec+'s':Math.ceil(remSec/60)+'m'} left`;}
-    mdSetProgress(status,pct,msg+timeStr);
-  };
   const dl=(out,mb,label)=>{
-    const fnInput=_mdEl('mdFileName');
+    const fnInput=document.getElementById('mdFileName');
     const rawName=(fnInput&&fnInput.value.trim())||'merged-document';
     const fname=rawName.toLowerCase().endsWith('.pdf')?rawName:rawName+'.pdf';
     const blob=new Blob([out],{type:'application/pdf'});
@@ -9275,13 +8836,13 @@ async function mdMerge(){
     if(status)status.innerHTML=`<div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:10px 12px;font-size:12px;color:#166534;font-weight:600;">✓ Downloaded${label?' ('+label+')':''} — ${mb}MB · ${_mdFiles.length} file${_mdFiles.length!==1?'s':''} merged · saved as ${fname}</div>`;
   };
   try{
-    const out=await mdBuild(false,_mdTimedProgress);
+    const out=await mdBuild(false,(pct,msg)=>mdSetProgress(status,pct,msg));
     mdSetProgress(status,98,'Finalising…');
     const mb=(out.byteLength/(1024*1024)).toFixed(2);
     if(parseFloat(mb)>4.0){
       mdSetProgress(status,2,`📦 ${mb}MB — auto-compressing to fit 4MB IMP limit…`);
       btn.textContent='Compressing…';
-      const outC=await mdBuild(true,_mdTimedProgress);
+      const outC=await mdBuild(true,(pct,msg)=>mdSetProgress(status,pct,msg));
       mdSetProgress(status,98,'Finalising compressed PDF…');
       const mbC=(outC.byteLength/(1024*1024)).toFixed(2);
       if(parseFloat(mbC)>4.0){
@@ -9432,43 +8993,16 @@ function diaryIsWorkingDay(date){
   const dow=date.getDay();
   return dow>0&&dow<6&&!tcPubHol(date);
 }
-
-// ── MINI CUTOFF AUTO-REMINDER ──
-function _todayIsMiniCutoffReminderDay(){
-  const today=new Date();today.setHours(0,0,0,0);
-  const dow=today.getDay();
-  if(dow===5){return diaryIsMiniCutoff(today)&&!tcPubHol(today);}
-  if(dow===4){const tom=new Date(today);tom.setDate(today.getDate()+1);return diaryIsMiniCutoff(tom)&&!!tcPubHol(tom);}
-  return false;
-}
-async function checkMiniCutoffReminder(){
-  if(!currentUser?.isOps&&!currentUser?.isManager)return;
-  if(!window.FB_READY)return;
-  if(!_todayIsMiniCutoffReminderDay())return;
-  const now=new Date();
-  if(now.getHours()<16||(now.getHours()===16&&now.getMinutes()<30))return;
-  const todayKey=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0')+'-'+(''+now.getDate()).padStart(2,'0');
-  try{
-    const flag=await window.FB.getFlag('miniCutoffReminder');
-    if(flag.lastSentDate===todayKey)return;
-    await window.FB.postNotice({type:'reminder',title:'⏰ Mini cut-off today — submit before 16:30',body:'Today is a mini cut-off day. Please ensure all applications and policy requests are submitted before 16:30.',postedBy:'System',active:true});
-    ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).forEach(a=>{
-      window.FB.sendInbox({to:a.code,from:'SYSTEM',fromName:'Team Buffalos',title:'⏰ Mini cut-off today — submit before 16:30',body:'Reminder: Today is a mini cut-off day. Please submit all applications and policy changes before 16:30.',type:'reminder'}).catch(()=>{});
-    });
-    await window.FB.setFlag('miniCutoffReminder',{lastSentDate:todayKey});
-  }catch(e){console.warn('Mini cutoff reminder error:',e);}
-}
 function diaryIsQlinkDay(date){
   const dk=diaryDateKey(date);
   return typeof QLINK_DATES!=='undefined'&&Object.values(QLINK_DATES).some(runs=>runs.some(r=>r.d===dk));
 }
 function diaryGetSystemChips(date,isCutoff){
   const chips=[];
-  if(!isCutoff&&diaryIsQlinkDay(date))chips.push({cls:'qlink-lbl',label:'⚡ Qlink 13:00',title:'Qlink run — submit before 13:00',nav:null});
-  if(diaryIsWorkingDay(date))chips.push({cls:'precan-lbl',label:'⚠️ Precan 08:00',title:'Pre-cancellation list at 08:00',url:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk'});
+  if(!isCutoff&&diaryIsQlinkDay(date))chips.push({cls:'qlink-lbl',label:'⚡ Qlink 13:00',title:'Qlink run — submit before 13:00'});
+  if(diaryIsWorkingDay(date))chips.push({cls:'precan-lbl',label:'⚠️ Precan 08:00',title:'Pre-cancellation list at 08:00'});
   return chips;
 }
-function diaryChipNav(e,page){e.stopImmediatePropagation();e.preventDefault();showPage(page);}
 
 
 function diaryVisibleEvents(){
@@ -9534,11 +9068,11 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     const dk=diaryDateKey(date);
     const evs=diaryEventsForKey(dk);const phol=tcPubHol(date);
     let cls=`diary-cell ${dc}${isToday?' today':''}${isMini?' minicutoff':''}`;
-    h+=`<div class="${cls}" onclick="if(!event.target.closest('[data-chipnav]'))diaryOpenAdd('${dk}')">`;
+    h+=`<div class="${cls}" onclick="diaryOpenAdd('${dk}')">`;
     h+=`<div class="diary-cell-num">${d}</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div class="diary-chip ${s.cls}" title="${s.title}"${act?` data-chipnav="1" onclick="${act}" style="cursor:pointer;"`:''} ontouchend="${act?`event.preventDefault();${act}`:''}">${s.label}</div>`;});
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="event.stopPropagation();showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
     evs.slice(0,1).forEach(ev=>{h+=`<div class="diary-chip ${ev.type||'other'}" onclick="event.stopPropagation();diaryViewEvent('${ev.id}')" title="${ev.title}">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     if(evs.length>1)h+=`<div class="diary-chip more" onclick="event.stopPropagation();diaryShowDayPanel('${dk}')">+${evs.length-1}</div>`;
     if(phol&&!isCutoff)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;margin-top:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
@@ -9577,7 +9111,7 @@ function _renderDiaryWeek(el,ws,DAYS3,DAYS1,MONTHS){
     if(isCutoff)h+=`<div style="font-size:8px;font-weight:700;color:#f5d98b;text-align:center;margin-bottom:3px;">CUT-OFF</div>`;
     else if(isMini)h+=`<div style="font-size:8px;font-weight:700;color:#92400e;text-align:center;margin-bottom:3px;">Mini ↓</div>`;
     if(phol)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;text-align:center;margin-bottom:3px;line-height:1.2;">${phol}</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}"${act?` data-chipnav="1" onclick="${act}" style="cursor:pointer;"`:''} ontouchend="${act?`event.preventDefault();${act}`:''}">${s.label}</div>`;});
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
     evs.forEach(ev=>{h+=`<div class="diary-week-ev diary-chip ${ev.type||'other'}" onclick="diaryViewEvent('${ev.id}')">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     h+=`<div onclick="diaryOpenAdd('${dk}')" style="text-align:center;font-size:16px;color:#d1d5db;cursor:pointer;margin-top:4px;">+</div>`;
     h+='</div>';
@@ -9596,7 +9130,7 @@ function _renderDiaryDay(el,MONTHS){
   const isCutoffDay=diaryIsCutoff(_diaryDate);
   const sysChips=diaryGetSystemChips(_diaryDate,isCutoffDay);
   if(sysChips.length){
-    sysChips.forEach(s=>{const act=s.url?`window.open('${s.url}','_blank')`:(s.nav?`showPage('${s.nav}')`:null);h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${act?'cursor:pointer;':''}"${act?` onclick="${act}" ontouchend="event.preventDefault();${act}"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
+    sysChips.forEach(s=>{h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
   }
   if(!evs.length){
     h+=`<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">No appointments for this day.<br><span style="font-size:11px;">Tap <b>+ Add</b> to schedule one.</span></div>`;

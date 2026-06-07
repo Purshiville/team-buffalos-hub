@@ -67,7 +67,7 @@ body::before {
 /* Inbox */
 .inbox-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f4f2ed;cursor:pointer;transition:background .12s;}
 .inbox-item:hover{background:#fafaf8;}
-.inbox-item.unread{background:#fdf6ed;border-left:3px solid #c9922a;}
+.inbox-item.unread{background:#fdf6ed;}
 .inbox-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .inbox-icon.notice{background:#e0f2fe;}
 .inbox-icon.stats{background:#d1fae5;}
@@ -97,10 +97,10 @@ body::before {
 .chat-back{background:none;border:none;font-size:18px;cursor:pointer;color:#0d1f3c;padding:0;line-height:1;}
 .chat-thread-name{font-size:13px;font-weight:700;color:#0d1f3c;}
 .chat-messages{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
-.chat-bubble-wrap{display:flex;flex-direction:row;align-items:flex-end;margin-bottom:6px;}
-.chat-bubble-wrap.mine{justify-content:flex-end;}
-.chat-bubble-wrap.theirs{justify-content:flex-start;}
-.chat-bubble{padding:8px 12px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;display:inline-block;min-width:32px;}
+.chat-bubble-wrap{display:flex;flex-direction:column;}
+.chat-bubble-wrap.mine{align-items:flex-end;}
+.chat-bubble-wrap.theirs{align-items:flex-start;}
+.chat-bubble{max-width:80%;padding:8px 12px;border-radius:14px;font-size:12px;line-height:1.45;word-break:break-word;}
 .chat-bubble.mine{background:#0d1f3c;color:#fff;border-bottom-right-radius:4px;}
 .chat-bubble.theirs{background:#f3f4f6;color:#1a1a2e;border-bottom-left-radius:4px;}
 .chat-bubble-time{font-size:10px;color:#9ca3af;margin-top:2px;padding:0 2px;}
@@ -321,9 +321,9 @@ body::before {
 .notice-emoji-wrap{position:relative;display:inline-block;}
 .notice-emoji-toggle{font-size:15px;cursor:pointer;padding:5px 9px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;line-height:1;vertical-align:middle;}
 .notice-emoji-toggle:hover{background:#f3f4f6;}
-.notice-emoji-picker{position:absolute;bottom:calc(100% + 6px);right:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px;box-shadow:0 4px 24px rgba(0,0,0,0.14);display:none;gap:3px;width:272px;z-index:200;}
-.notice-emoji-picker.open{display:grid;grid-template-columns:repeat(8,1fr);}
-.ne-btn{font-size:20px;cursor:pointer;padding:4px 2px;border-radius:6px;line-height:1;border:none;background:none;text-align:center;width:100%;}
+.notice-emoji-picker{position:absolute;bottom:calc(100% + 6px);right:0;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:8px;box-shadow:0 4px 24px rgba(0,0,0,0.14);display:none;flex-wrap:wrap;gap:2px;width:228px;z-index:200;}
+.notice-emoji-picker.open{display:flex;}
+.ne-btn{font-size:19px;cursor:pointer;padding:3px 4px;border-radius:6px;line-height:1;border:none;background:none;}
 .ne-btn:hover{background:#f3f4f6;}
 .tracker-table{width:100%;border-collapse:collapse;font-size:12px;}
 .tracker-table th{text-align:left;font-size:10px;font-weight:700;color:#9ca3af;padding:0 8px 8px;text-transform:uppercase;letter-spacing:0.5px;}
@@ -593,10 +593,10 @@ body::before {
 .sched-table tbody tr{border-bottom:1px solid #e8e4db;}
 .sched-table tbody tr:nth-child(even){background:#fafaf9;}
 .sched-table tbody tr:hover td{background:#f0f4ff;}
-.sched-table tbody td{padding:10px 12px;vertical-align:top;border-right:1px solid #e8e4db;color:#1a1a2e;}
+.sched-table tbody td{padding:5px 8px;vertical-align:top;border-right:1px solid #e8e4db;color:#1a1a2e;}
 .sched-table tbody td:last-child{border-right:none;}
-.sched-companies{display:flex;flex-direction:column;gap:5px;}
-.sched-company-row{display:grid;grid-template-columns:110px 90px 120px auto;align-items:center;gap:6px;font-size:11px;padding:5px 0;border-bottom:1px solid #f4f2ed;}
+.sched-companies{display:flex;flex-direction:column;gap:2px;}
+.sched-company-row{display:grid;grid-template-columns:110px 90px 120px auto;align-items:center;gap:4px;font-size:11px;padding:2px 0;border-bottom:1px solid #f4f2ed;}
 .sched-company-row:last-child{border-bottom:none;}
 .sched-company-name{font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .sched-email-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:700;text-align:center;}
@@ -607,12 +607,12 @@ body::before {
 .sched-received-no{background:#fee2e2;color:#991b1b;}
 .sched-received-partial{background:#fef3c7;color:#92400e;}
 .sched-date{font-size:10px;color:#9ca3af;white-space:nowrap;}
-.sched-note-box{width:100%;min-height:52px;font-size:11px;line-height:1.5;padding:6px 9px;border:1px solid #e5e7eb;border-radius:8px;background:#fffbeb;color:#1a1a2e;resize:vertical;font-family:inherit;transition:border-color .15s;}
+.sched-note-box{width:100%;min-height:34px;font-size:11px;line-height:1.4;padding:4px 7px;border:1px solid #e5e7eb;border-radius:8px;background:#fffbeb;color:#1a1a2e;resize:vertical;font-family:inherit;transition:border-color .15s;}
 .sched-note-box:focus{outline:none;border-color:#c9922a;background:#fff;}
 .sched-note-box::placeholder{color:#d1a855;font-style:italic;}
 .sched-note-box.sched-note-done{background:#f0fdf4;border-color:#86efac;color:#9ca3af;cursor:default;}
 .sched-note-box.sched-note-done::placeholder{color:#86efac;}
-.sched-inline-select{font-size:11px;font-weight:600;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;cursor:pointer;background:#fff;transition:border-color .15s;}
+.sched-inline-select{font-size:11px;font-weight:600;border:1px solid #e5e7eb;border-radius:6px;padding:2px 4px;cursor:pointer;background:#fff;transition:border-color .15s;}
 .sched-inline-select:focus{outline:none;border-color:#c9922a;}
 .sched-inline-select.email-yes{background:#dcfce7;color:#166534;border-color:#86efac;}
 .sched-inline-select.email-no{background:#fee2e2;color:#991b1b;border-color:#fca5a5;}
@@ -962,13 +962,3 @@ body::before {
 .nav-more-item:hover { background: rgba(255,255,255,0.08); color: #c9922a; }
 .nav-more-item.active { color: #c9922a; font-weight: 700; }
 .nav-more-item-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-
-/* ── FSP Forms print support ─────────────────── */
-@media print {
-  body > *:not(#formViewerOverlay) { display: none !important; }
-  #formViewerOverlay { display: block !important; position: static !important; overflow: visible !important; height: auto !important; }
-  #fvBar { display: none !important; }
-  #fvContent { overflow: visible !important; padding: 0 !important; }
-  .no-print { display: none !important; }
-  .fd { box-shadow: none !important; border-radius: 0 !important; }
-}
