@@ -629,7 +629,6 @@ function enterHub(user){
   renderProdCountdownStandalone();
   renderDailyBrief();
   renderTop3();
-  renderYTDStats();
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
 }
@@ -962,7 +961,7 @@ function getYTDStats(){
 }
 function renderYTDStats(){
   if(!currentUser)return;
-  const els=['stdYTD','hubYTD'].map(id=>document.getElementById(id)).filter(Boolean);
+  const els=['stdYTD'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
   els.forEach(el=>_renderYTDStatsInner(el)); // render from localStorage immediately
   if(window.FB_READY&&window.FB.getYearStats){
@@ -1019,7 +1018,7 @@ function _renderYTDStatsInner(el){
   renderYTDTop3();
 }
 function renderYTDTop3(){
-  const els=['stdYTDTop3','hubYTDTop3','opsYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
+  const els=['stdYTDTop3','opsYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
   // Sync user photos from Firebase then render
   if(window.FB_READY&&window.FB.getAllUsers){
@@ -2115,7 +2114,7 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderYTDStats();renderTop3();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();}
   if(p==='commcases'){renderCommCases();renderCommQueries();}
   if(p==='referrals')renderReferrals();
   if(p==='canpack'){mdInit();}
