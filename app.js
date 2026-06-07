@@ -311,6 +311,7 @@ window.addEventListener('load',()=>{
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
 const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
+const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — show "New" badge in rankings ──
 const NEW_ADVISOR_CODES = new Set(['SKA315568']); // Stefan Barnard
@@ -344,6 +345,7 @@ const ADVISOR_LIST = [
   {code:'SKA313936', name:'Brian Steve Boucher'},
   {code:'SKA315109', name:'Roger Pretorius'},
   {code:'SKA315568', name:'Stefan Barnard'},
+  {code:'SKA313383', name:'Kevin Kruger'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
 const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
 
@@ -858,16 +860,16 @@ function renderProdStats(data,period){
   const teamEl=document.getElementById('hubTeamStats');
   if(!personalEl||!teamEl||!currentUser)return;
   // Fall back to previous month if current month has no data yet
-  if(!Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)).length){
+  if(!Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name)).length){
     const [yr,mo]=period.split('-').map(Number);
     const prevMo=mo===1?12:mo-1;const prevYr=mo===1?yr-1:yr;
     const prevPeriod=prevYr+'-'+String(prevMo).padStart(2,'0');
     let fb=null;try{fb=JSON.parse(localStorage.getItem('tl_prod_stats_'+prevPeriod)||'null');}catch(e){}
-    if(!Object.values(fb?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)).length){personalEl.style.display='none';teamEl.style.display='none';return;}
+    if(!Object.values(fb?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name)).length){personalEl.style.display='none';teamEl.style.display='none';return;}
     data=fb;period=prevPeriod;
   }
   const periodLabel=formatPeriodLabel(period);
-  const advisors=Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code));
+  const advisors=Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name));
 
   // ── Personal mini card ──
   const my=data?.advisors?.[currentUser.code];
@@ -940,7 +942,7 @@ function renderStatsManagerPreview(data){
 function getYTDStats(){
   const ytd={};
   // Seed all known advisors so everyone appears even with 0
-  ADVISOR_LIST.forEach(a=>{if(!REVOKED_CODES.has(a.code))ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0};});
+  ADVISOR_LIST.forEach(a=>{if(!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name))ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0};});
   const now=new Date();
   const year=now.getFullYear();
   for(let m=1;m<=now.getMonth()+1;m++){
