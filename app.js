@@ -961,9 +961,10 @@ function getYTDStats(){
   return Object.values(ytd);
 }
 function renderYTDStats(){
-  const el=document.getElementById('stdYTD');
-  if(!el||!currentUser)return;
-  _renderYTDStatsInner(el); // render from localStorage immediately
+  if(!currentUser)return;
+  const els=['stdYTD','hubYTD'].map(id=>document.getElementById(id)).filter(Boolean);
+  if(!els.length)return;
+  els.forEach(el=>_renderYTDStatsInner(el)); // render from localStorage immediately
   if(window.FB_READY&&window.FB.getYearStats){
     const yr=String(new Date().getFullYear());
     window.FB.getYearStats(yr).then(fbMonths=>{
@@ -976,7 +977,7 @@ function renderYTDStats(){
           localStorage.setItem(k,JSON.stringify({...data,...local}));
         }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
-      _renderYTDStatsInner(el);
+      els.forEach(el=>_renderYTDStatsInner(el));
     }).catch(()=>{});
   }
 }
@@ -1018,8 +1019,7 @@ function _renderYTDStatsInner(el){
   renderYTDTop3();
 }
 function renderYTDTop3(){
-  const hubEl=document.getElementById('stdYTDTop3');
-  const els=[hubEl].filter(Boolean);
+  const els=['stdYTDTop3','hubYTDTop3','opsYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
   // Sync user photos from Firebase then render
   if(window.FB_READY&&window.FB.getAllUsers){
