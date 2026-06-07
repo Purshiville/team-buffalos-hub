@@ -2135,6 +2135,7 @@ function showPage(p){
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
+  if(p==='cancellations'){cpInit();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -10755,3 +10756,93 @@ function _form_repl_disclosure(u,today){
     </div>
   </div>`;
 }
+
+// ── CANCELLATION PACK BUILDER ─────────────────────────────────────────────────
+let _cpFiles={};
+const _cpSlots=[
+  {id:'cpID',   label:'Client ID / Driver\'s licence',       icon:'🪪', note:'Clear, legible copy'},
+  {id:'cpLOA',  label:'Letter of Authority (LOA)',            icon:'✍️', note:'Signed by the client'},
+  {id:'cpCancel',label:'Signed cancellation instruction',    icon:'📝', note:'Completed cancellation form or letter'},
+  {id:'cpBank', label:'Bank statement (1 month)',             icon:'🏦', note:'1 month is sufficient'},
+];
+function cpInit(){
+  const container=document.getElementById('cpSlotList');
+  if(!container)return;
+  _cpFiles={};
+  container.innerHTML=_cpSlots.map(s=>`
+    <div id="cpslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+        <div id="cpst_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+      </div>
+      <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        Upload
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="cpFileAdded('${s.id}',this)">
+      </label>
+    </div>`).join('');
+  const btn=document.getElementById('cpBuildBtn');
+  if(btn){btn.textContent='Build Cancellation Pack';btn.style.opacity='0.45';btn.style.pointerEvents='none';}
+  const st=document.getElementById('cpStatus');if(st)st.innerHTML='';
+  cpCheckReady();
+}
+function cpFileAdded(slotId,input){
+  const file=input.files[0];if(!file)return;
+  _cpFiles[slotId]=file;
+  const stEl=document.getElementById('cpst_'+slotId);
+  const slotEl=document.getElementById('cpslot_'+slotId);
+  if(stEl){stEl.textContent='✅ '+file.name;stEl.style.color='#16a34a';}
+  if(slotEl)slotEl.style.borderColor='#86efac';
+  cpCheckReady();
+}
+function cpCheckReady(){
+  const allReady=_cpSlots.every(s=>_cpFiles[s.id]);
+  const btn=document.getElementById('cpBuildBtn');
+  if(btn){btn.style.opacity=allReady?'1':'0.45';btn.style.pointerEvents=allReady?'auto':'none';}
+}
+async function cpBuild(){
+  const PL=window.PDFLib;
+  const statusEl=document.getElementById('cpStatus');
+  const btn=document.getElementById('cpBuildBtn');
+  if(!PL||!PL.PDFDocument){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;font-weight:700;">⚠️ PDF library not loaded — check your internet connection and try again.</div>';
+    return;
+  }
+  btn.textContent='Building…';btn.style.opacity='0.7';btn.style.pointerEvents='none';
+  if(statusEl)statusEl.innerHTML='';
+  try{
+    const merged=await PL.PDFDocument.create();
+    for(const s of _cpSlots){
+      const file=_cpFiles[s.id];if(!file)continue;
+      const buf=await file.arrayBuffer();
+      if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
+        const pages=await merged.copyPages(src,src.getPageIndices());
+        pages.forEach(p=>merged.addPage(p));
+      } else {
+        const pg=merged.addPage([595,842]);
+        let img;
+        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){
+          img=await merged.embedPng(buf);
+        } else {
+          img=await merged.embedJpg(buf);
+        }
+        const scaled=img.scaleToFit(555,802);
+        pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
+      }
+    }
+    const bytes=await merged.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const name=(document.getElementById('cpFileName')?.value||'cancellation-pack').replace(/\.pdf$/i,'');
+    a.href=url;a.download=name+'.pdf';a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+    if(statusEl)statusEl.innerHTML='<div style="color:#16a34a;font-size:12px;font-weight:700;margin-top:4px;">✅ Pack saved to your Downloads folder.</div>';
+    btn.textContent='✅ Pack Downloaded';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;">Error: '+e.message+'</div>';
+    btn.textContent='Build Cancellation Pack';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }
+}
+// ── END CANCELLATION PACK BUILDER ─────────────────────────────────────────────
