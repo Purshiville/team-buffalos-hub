@@ -585,6 +585,8 @@ function enterHub(user){
   if(bday&&bday.isToday)greeting=`🎂 Happy Birthday ${fn}! Wishing you a wonderful day from the whole Team Buffalos family! I'm also here for any business questions.`;
   document.getElementById('chatMessages').innerHTML=`<div class="msg bot"><div class="msg-av bot">AI</div><div class="msg-bubble">${greeting} Ask me anything about products, commission, NTU, persistency, Qlink, pre-cancellations, fit &amp; proper, or compliance — I'm here 24/7.</div></div>`;
   renderFpPage();renderHubBirthdays();
+  // Start stats listener immediately — no need to wait for other syncs
+  initStatsListener();
   // Sync from Firebase then render
   if(window.FB_READY){
     Promise.all([
@@ -594,7 +596,6 @@ function enterHub(user){
     ]).then(()=>{
       renderNoticeBoard();
       if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();}
-      initStatsListener();
     }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();});
     window.startNoticeListener();
     if(window.startTop3Listener)window.startTop3Listener();
@@ -758,7 +759,7 @@ function refreshStatsPeriod(){
   if(loading)loading.style.display='inline';
   if(window.FB_READY){
     if(window.startStatsListener)window.startStatsListener(period);
-    setTimeout(()=>{if(loading)loading.style.display='none';},800);
+    if(loading)loading.style.display='none';
   } else {
     try{window._currentPeriodStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+period)||'{}');}catch(e){}
     renderProdStats(window._currentPeriodStats||{advisors:{}},period);
@@ -960,7 +961,7 @@ function getYTDStats(){
 function renderYTDStats(){
   const el=document.getElementById('stdYTD');
   if(!el||!currentUser)return;
-  // Sync all months from Firebase then re-render
+  _renderYTDStatsInner(el); // render from localStorage immediately
   if(window.FB_READY&&window.FB.getYearStats){
     const yr=String(new Date().getFullYear());
     window.FB.getYearStats(yr).then(fbMonths=>{
@@ -974,9 +975,7 @@ function renderYTDStats(){
         }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
       _renderYTDStatsInner(el);
-    }).catch(()=>_renderYTDStatsInner(el));
-  } else {
-    _renderYTDStatsInner(el);
+    }).catch(()=>{});
   }
 }
 function _renderYTDStatsInner(el){
@@ -6384,7 +6383,13 @@ function showTeam(){
 }
 
 function renderTeamPage(){
-  _renderManagerDashInner();
+  _renderManagerDashInner(); // instant render from localStorage
+  if(window.FB_READY&&window.FB.getAllUsers){
+    window.FB.getAllUsers().then(fbUsers=>{
+      if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);}
+      _renderManagerDashInner();
+    }).catch(()=>{});
+  }
 }
 
 function renderManagerDash(){renderNoticeManage();
