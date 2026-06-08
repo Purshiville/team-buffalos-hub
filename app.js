@@ -2926,8 +2926,8 @@ const NOTICE_TEMPLATES=[
   // Team & Operations additions
   {group:'👥 Team & Operations',type:'info',title:'Monthly Team Meeting — Team Buffalos',body:'Reminder: The monthly Team Buffalos meeting is scheduled. Venue: Izulu Boardroom. Attendance is compulsory unless otherwise communicated. Please ensure you are on time and prepared. Bring your current production figures, pipeline updates, and any client queries you would like to discuss.'},
   // Documents & Statements
-  {group:'📄 Documents & Statements',type:'info',title:'Commission Statements Available on Connect Me',body:'Your commission statements are now available on Connect Me. Please log in and review your statement. Statements will expire and be removed from the portal after 7 days — download or save your copy before then.',expiryDays:7},
-  {group:'📄 Documents & Statements',type:'info',title:'Payslips Available on Connect Me',body:'Your payslips are now available on Connect Me. Please log in and download your payslip. Payslips will expire and be removed from the portal after 7 days — download or save your copy before then.',expiryDays:7},
+  {group:'📄 Documents & Statements',type:'info',title:'Commission Statements Available on Connect Me',body:'Your commission statements are now available on Connect Me. Please log in and review your statement. Statements will expire and be removed from the portal after 7 days — download or save your copy before then.',link:'https://connect-me-cz7b.bolt.host/#/tools?tab=commission-split',expiryDays:7},
+  {group:'📄 Documents & Statements',type:'info',title:'Payslips Available on Connect Me',body:'Your payslips are now available on Connect Me. Please log in and download your payslip. Payslips will expire and be removed from the portal after 7 days — download or save your copy before then.',link:'https://connect-me-cz7b.bolt.host/#/tools?tab=payslips',expiryDays:7},
 ];
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
@@ -2935,10 +2935,12 @@ function noticeApplyTemplate(sel){
   const titleEl=_noticeEl('noticeTitle');
   const bodyEl=_noticeEl('noticeBody');
   const typeEl=_noticeEl('noticeType');
+  const linkEl=_noticeEl('noticeLinkField');
+  const expEl=_noticeEl('noticeExpiryDays');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
-  const expEl=_noticeEl('noticeExpiryDays');
+  if(linkEl)linkEl.value=t.link||'';
   if(expEl)expEl.value=t.expiryDays||30;
   if(titleEl)titleEl.focus();
   sel.value='';
@@ -2949,10 +2951,12 @@ function hubNoticeApplyTemplate(sel){
   const titleEl=document.getElementById('hubNoticeTitle');
   const bodyEl=document.getElementById('hubNoticeBody');
   const typeEl=document.getElementById('hubNoticeType');
+  const linkEl=document.getElementById('hubNoticeLink');
+  const expEl=_noticeEl('noticeExpiryDays');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
-  const expEl=_noticeEl('noticeExpiryDays');
+  if(linkEl)linkEl.value=t.link||'';
   if(expEl)expEl.value=t.expiryDays||30;
   if(titleEl)titleEl.focus();
   sel.value='';
