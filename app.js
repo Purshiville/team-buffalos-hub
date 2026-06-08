@@ -950,9 +950,7 @@ function getYTDStats(){
       const d=JSON.parse(localStorage.getItem(key)||'null');
       if(!d?.advisors)continue;
       Object.entries(d.advisors).forEach(([code,a])=>{
-        if(REVOKED_CODES.has(code))return;
-        if(EXCLUDED_NAMES.has(_advisorNameMap[code]||a.name))return;
-        if(!ytd[code])ytd[code]={code,name:_advisorNameMap[code]||a.name||code,cases:0,premium:0};
+        if(!ytd[code])return; // skip revoked/excluded/unknown codes — only accumulate for current team
         ytd[code].cases+=(a.actualCases||0);
         ytd[code].premium+=(a.actualPremium||0);
       });
