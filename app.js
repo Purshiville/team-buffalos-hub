@@ -2542,7 +2542,21 @@ function renderScheduleTracker(){
     }
   }
 
+  // Populate month filter dropdown (all users)
+  const monthSel=document.getElementById('schedMonthFilter');
+  if(monthSel){
+    const months=[...new Set(getSchedules().map(r=>r.addedMonth||r.updatedAt?.slice(0,7)||'').filter(Boolean))].sort().reverse();
+    const curM=monthSel.value;
+    monthSel.innerHTML='<option value="">All months</option>'+months.map(m=>{
+      const [yr,mo]=m.split('-');
+      const label=['January','February','March','April','May','June','July','August','September','October','November','December'][parseInt(mo)-1]+' '+yr;
+      return`<option value="${m}" ${m===curM?'selected':''}>${label}</option>`;
+    }).join('');
+  }
+
   // Filter
+  const mf=(document.getElementById('schedMonthFilter')||{}).value||'';
+  if(mf)rows=rows.filter(r=>(r.addedMonth||r.updatedAt?.slice(0,7)||'')===mf);
   if(!isOps){
     rows=rows.filter(r=>r.advisorCode===currentUser.code);
     const q=(document.getElementById('schedSearchAdv')||{}).value||'';
@@ -2619,6 +2633,13 @@ function renderScheduleTracker(){
       <td style="vertical-align:middle;">
         <span class="sched-received-badge ${allReceived?'sched-received-yes':anyPending?'sched-received-no':'sched-received-partial'}">${allReceived?'✓ All received':anyPending?'Pending':'—'}</span>
       </td>
+      <td style="vertical-align:middle;text-align:center;">
+        <select onchange="updateSchedDealStatus('${r.id}',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;background:#fff;">
+          <option value="open" ${(!r.dealStatus||r.dealStatus==='open')?'selected':''}>🔵 Open</option>
+          <option value="won" ${r.dealStatus==='won'?'selected':''}>✅ Won</option>
+          <option value="carryover" ${r.dealStatus==='carryover'?'selected':''}>🔄 Carry over</option>
+        </select>
+      </td>
       <td style="vertical-align:top;min-width:160px;">
         <textarea
           class="sched-note-box ${allReceived?'sched-note-done':''}"
@@ -2692,6 +2713,13 @@ function openSchedModal(editIdx){
       <div style="font-size:11px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Companies insured with</div>
       <div id="compRowsContainer">${compRows}</div>
       <button onclick="addCompRow()" style="font-size:12px;font-weight:600;color:#0d1f3c;background:#f4f2ed;border:1px dashed #c9922a;border-radius:8px;padding:7px 14px;cursor:pointer;width:100%;margin-top:4px;">+ Add another company</button>
+    </div>
+    <div class="field" style="margin-top:12px;"><label>Deal Status</label>
+      <select id="sc_dealStatus" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;">
+        <option value="open" ${(!r.dealStatus||r.dealStatus==='open')?'selected':''}>🔵 Open</option>
+        <option value="won" ${r.dealStatus==='won'?'selected':''}>✅ Closed / Won</option>
+        <option value="carryover" ${r.dealStatus==='carryover'?'selected':''}>🔄 Carry over to next month</option>
+      </select>
     </div>
     <div class="field" style="margin-top:12px;"><label>Comments</label><textarea id="sc_comments" placeholder="e.g. Waiting for Assupol schedule, sent follow-up on 12 Apr" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;resize:vertical;min-height:60px;font-family:inherit;">${r.comments||''}</textarea></div>
     <div class="modal-btns">
@@ -2781,6 +2809,12 @@ function saveSchedClient(editIdx){
     cellphone:v('sc_cellphone'),
     companies,
     comments:v('sc_comments'),
+    dealStatus: editIdx!==undefined&&editIdx!=='undefined'
+      ? (document.getElementById('sc_dealStatus')?.value || rows[editIdx].dealStatus || 'open')
+      : (document.getElementById('sc_dealStatus')?.value || 'open'),
+    addedMonth: editIdx!==undefined&&editIdx!=='undefined'
+      ? (rows[editIdx].addedMonth || new Date().toISOString().slice(0,7))
+      : new Date().toISOString().slice(0,7),
     updatedAt:new Date().toISOString(),
   };
   if(editIdx!==undefined&&editIdx!=='undefined'){rows[editIdx]=entry;}
@@ -2800,6 +2834,26 @@ function saveSchedClient(editIdx){
   renderScheduleTracker();
 }
 
+
+function updateSchedDealStatus(id, val){
+  const rows=getSchedules();
+  const r=rows.find(x=>x.id===id);
+  if(!r)return;
+  if(val==='carryover'){
+    // Duplicate entry for next month
+    const nextMonth=new Date();nextMonth.setMonth(nextMonth.getMonth()+1);
+    const nm=nextMonth.toISOString().slice(0,7);
+    const copy={...r,id:Date.now()+'_'+Math.random().toString(36).slice(2),addedMonth:nm,dealStatus:'open',updatedAt:new Date().toISOString(),comments:'Carried over from '+r.addedMonth};
+    rows.push(copy);
+    r.dealStatus='carryover';
+  } else {
+    r.dealStatus=val;
+  }
+  r.updatedAt=new Date().toISOString();
+  saveSchedules(rows);
+  if(window.FB_READY)pushScheduleToFirebase(r).catch(()=>{});
+  renderScheduleTracker();
+}
 
 function updateSchedCompanyField(rowId, compIdx, field, value, selectEl){
   const rows = getSchedules();
@@ -2829,6 +2883,9 @@ function updateSchedCompanyField(rowId, compIdx, field, value, selectEl){
 
 
 // ── NOTICE BOARD ──
+function _noticeEl(id){
+  return document.querySelector('.page.active [id="'+id+'"]')||document.getElementById(id);
+}
 function getNotices(){
   // Use Firebase cache if available, fall back to localStorage
   if(window._fbNotices)return window._fbNotices;
@@ -2866,16 +2923,23 @@ const NOTICE_TEMPLATES=[
   {group:'🔔 Alerts & Announcements',type:'info',title:'Office Closure Notice',body:'Please be advised that the office will be closed. Any urgent matters should be communicated before the closure date. Normal operations will resume thereafter.'},
   {group:'🔔 Alerts & Announcements',type:'reminder',title:'Compliance Reminder',body:'All advisors are reminded to adhere to FAIS, TCF, and POPIA compliance requirements. Ensure all client interactions, documentation, and disclosures are completed in full and on record.'},
   {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
+  // Team & Operations additions
+  {group:'👥 Team & Operations',type:'info',title:'Monthly Team Meeting — Team Buffalos',body:'Reminder: The monthly Team Buffalos meeting is scheduled. Venue: Izulu Boardroom. Attendance is compulsory unless otherwise communicated. Please ensure you are on time and prepared. Bring your current production figures, pipeline updates, and any client queries you would like to discuss.'},
+  // Documents & Statements
+  {group:'📄 Documents & Statements',type:'info',title:'Commission Statements Available on Connect Me',body:'Your commission statements are now available on Connect Me. Please log in and review your statement. Statements will expire and be removed from the portal after 7 days — download or save your copy before then.',expiryDays:7},
+  {group:'📄 Documents & Statements',type:'info',title:'Payslips Available on Connect Me',body:'Your payslips are now available on Connect Me. Please log in and download your payslip. Payslips will expire and be removed from the portal after 7 days — download or save your copy before then.',expiryDays:7},
 ];
 function noticeApplyTemplate(sel){
   const idx=parseInt(sel.value);if(isNaN(idx))return;
   const t=NOTICE_TEMPLATES[idx];if(!t)return;
-  const titleEl=document.getElementById('noticeTitle');
-  const bodyEl=document.getElementById('noticeBody');
-  const typeEl=document.getElementById('noticeType');
+  const titleEl=_noticeEl('noticeTitle');
+  const bodyEl=_noticeEl('noticeBody');
+  const typeEl=_noticeEl('noticeType');
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
+  const expEl=_noticeEl('noticeExpiryDays');
+  if(expEl)expEl.value=t.expiryDays||30;
   if(titleEl)titleEl.focus();
   sel.value='';
 }
@@ -2888,6 +2952,8 @@ function hubNoticeApplyTemplate(sel){
   if(titleEl)titleEl.value=t.title;
   if(bodyEl)bodyEl.value=t.body;
   if(typeEl)typeEl.value=t.type;
+  const expEl=_noticeEl('noticeExpiryDays');
+  if(expEl)expEl.value=t.expiryDays||30;
   if(titleEl)titleEl.focus();
   sel.value='';
 }
@@ -2924,13 +2990,22 @@ function insertNoticeEmoji(em,pickerId){
   document.getElementById(pickerId||'noticeEmojiPicker').classList.remove('open');
 }
 async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
-  const title=(titleArg!==undefined?titleArg:(document.getElementById('noticeTitle')?.value||'')).trim();
-  const body=(bodyArg!==undefined?bodyArg:(document.getElementById('noticeBody')?.value||'')).trim();
-  const type=typeArg||document.getElementById('noticeType')?.value||'info';
-  const recipient=recipientArg||document.getElementById('noticeRecipient')?.value||'ALL';
-  const link=(linkArg!==undefined?linkArg:(document.getElementById('noticeLinkField')?.value||'')).trim();
+  const title=(titleArg!==undefined?titleArg:(_noticeEl('noticeTitle')?.value||'')).trim();
+  let body=(bodyArg!==undefined?bodyArg:(_noticeEl('noticeBody')?.value||'')).trim();
+  const type=typeArg||_noticeEl('noticeType')?.value||'info';
+  const recipient=recipientArg||_noticeEl('noticeRecipient')?.value||'ALL';
+  const link=(linkArg!==undefined?linkArg:(_noticeEl('noticeLinkField')?.value||'')).trim();
+  const expiryDays=parseInt(_noticeEl('noticeExpiryDays')?.value||'30')||30;
+  // Append date received if set
+  if(titleArg===undefined){
+    const dateVal=_noticeEl('noticeDateField')?.value;
+    if(dateVal){
+      const dp=dateVal.split('-');const dateFormatted=dp[2]+'/'+dp[1]+'/'+dp[0];
+      body=body+(body?'\n\n':'')+'Date received: '+dateFormatted;
+    }
+  }
   if(!title)return alert('Please add a title for the notice.');
-  const noticeData={type,title,body,postedBy:currentUser.name,active:true};
+  const noticeData={type,title,body,postedBy:currentUser.name,active:true,expiryDays};
   if(recipient&&recipient!=='ALL')noticeData.recipientCode=recipient;
   if(link)noticeData.link=link;
   if(window.FB_READY){
@@ -2946,10 +3021,12 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
     const notices=getNotices();notices.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),...noticeData,postedAt:new Date().toISOString()});saveNotices(notices);
   }
   if(titleArg===undefined){
-    const nt=document.getElementById('noticeTitle');if(nt)nt.value='';
-    const nb=document.getElementById('noticeBody');if(nb)nb.value='';
-    const nr=document.getElementById('noticeRecipient');if(nr)nr.value='ALL';
-    const nl=document.getElementById('noticeLinkField');if(nl)nl.value='';
+    const nt=_noticeEl('noticeTitle');if(nt)nt.value='';
+    const nb=_noticeEl('noticeBody');if(nb)nb.value='';
+    const nr=_noticeEl('noticeRecipient');if(nr)nr.value='ALL';
+    const nl=_noticeEl('noticeLinkField');if(nl)nl.value='';
+    const nd=_noticeEl('noticeDateField');if(nd)nd.value='';
+    const nexp=_noticeEl('noticeExpiryDays');if(nexp)nexp.value='30';
     const npb=document.getElementById('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
     const fb=document.getElementById('noticePostFeedback');
     if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2500);}
@@ -2997,7 +3074,7 @@ function _buildNoticeCard(n,isOps,allComments,isArchived){
     <div class="notice-card-hdr">
       <span class="notice-type-icon">${NOTICE_ICONS[n.type]||'📌'}</span>
       <div class="notice-title">${n.title}</div>
-      ${!isArchived?`<button class="notice-dismiss" onclick="dismissNotice('${n.id}')" title="Dismiss">✕</button>`:''}
+      ${!isArchived?`<button class="notice-dismiss" onclick="dismissNotice('${n.id}')" title="Mark as read" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #d1d5db;background:#f9f9f9;color:#6b7280;cursor:pointer;font-weight:600;white-space:nowrap;">✓ Read</button>`:''}
     </div>
     ${n.body?`<div class="notice-body-text">${n.body}</div>`:''}
     ${n.link?`<a class="notice-link-btn" href="${n.link}" target="_blank" rel="noopener noreferrer">🔗 Open link</a>`:''}
@@ -3019,13 +3096,13 @@ function renderNoticeBoard(){
   let dismissed=[];
   try{dismissed=JSON.parse(localStorage.getItem('tl_dismissed_notices')||'[]');}catch(e){}
   const isOps=currentUser&&(currentUser.isOps||currentUser.isManager);
-  const MS_30=30*24*60*60*1000;
   const now=Date.now();
   const getAge=n=>{const d=n.postedAt?.toDate?n.postedAt.toDate():new Date(n.postedAt);return now-d.getTime();};
+  const getExpiry=n=>(n.expiryDays||30)*24*60*60*1000;
   const matchesRecipient=n=>(!n.recipientCode||n.recipientCode==='ALL')||isOps||(n.recipientCode===currentUser?.code);
 
-  const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=MS_30&&matchesRecipient(n));
-  const archived=allNotices.filter(n=>getAge(n)>MS_30&&matchesRecipient(n));
+  const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=getExpiry(n)&&matchesRecipient(n));
+  const archived=allNotices.filter(n=>getAge(n)>getExpiry(n)&&matchesRecipient(n));
 
   let allComments={};
   try{allComments=JSON.parse(localStorage.getItem('tl_notice_comments')||'{}');}catch(e){}
@@ -4118,6 +4195,16 @@ function renderDailyBrief(){
   } else {
     items.push({icon:'🗓️',text:`No appointments for today. <span onclick="showPage('termcal')" style="color:#c9922a;font-weight:600;cursor:pointer;text-decoration:underline;">📅 Add an appointment</span>`});
   }
+  // Tomorrow's diary appointments
+  const tomorrow=new Date(today);tomorrow.setDate(d+1);
+  const tomorrowKey=tomorrow.getFullYear()+'-'+(''+(tomorrow.getMonth()+1)).padStart(2,'0')+'-'+(''+tomorrow.getDate()).padStart(2,'0');
+  const tmrwEvs=diaryGetEvents().filter(e=>e.date===tomorrowKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
+  const tmrwSlice=tmrwEvs.slice(0,3);
+  if(tmrwSlice.length){
+    items.push({icon:'🔮',text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
+  } else {
+    items.push({icon:'🔮',text:`<b>Nothing scheduled for tomorrow</b>`});
+  }
 
   // Day of week motivation
   const dow=today.getDay();
@@ -4697,7 +4784,9 @@ function roaAddLife(planIdx,listType){
   const usedRoles = listType==='plan' ? _roaPlans[planIdx].lives.map(l=>l.role) : _roaNewPolicies[planIdx].lives.map(l=>l.role);
   const nextRole = ROA_LIFE_ROLES.find(r=>!usedRoles.includes(r))||'Extended family member';
   if(listType==='plan'){
-    _roaPlans[planIdx].lives.push({role:nextRole,name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''});
+    const _planName=(_roaPlans[planIdx].plan||'').toLowerCase();
+    const _defCover=(_planName.includes('ilc')||_planName.includes('immediate life'))?'Life cover':'Funeral cover';
+    _roaPlans[planIdx].lives.push({role:nextRole,name:'',coverType:_defCover,cover:'',coverTypeOther:''});
     roaRenderPlans();
   } else {
     _roaNewPolicies[planIdx].lives.push({role:nextRole,name:'',coverType:'Funeral cover',cover:'',coverTypeOther:''});
@@ -4824,9 +4913,10 @@ function roaGenerate(){
         if(l.cover) line += ` — ${l.cover} ${ct}`;
         return line;
       }).join('\n');
+      const _isLifePlan=(p.plan||'').toLowerCase().includes('ilc')||(p.plan||'').toLowerCase().includes('immediate life');
       const lines = [`Plan selected: ${p.plan}`];
       if(p.premium) lines.push(`Monthly premium: ${p.premium}`);
-      if(livesList) lines.push(`Lives assured and funeral cover:\n${livesList}`);
+      if(livesList) lines.push(`Lives assured and ${_isLifePlan?'life':'funeral'} cover:\n${livesList}`);
       return lines.join('\n');
     }).join('\n\n');
 
@@ -4835,12 +4925,13 @@ function roaGenerate(){
       : `All waiting periods were discussed with ${client}. The client understands that a 6-month waiting period applies to natural death claims on this policy. No waiting period applies to accidental death claims.`;
 
     const planNames = _roaPlans.map(p=>p.plan).join(' and ');
-    const benefitsText = `The advisor explained all relevant benefits of the ${planNames||'selected plan'} to ${client}, including the funeral cover amounts per life assured, paid-up benefit, repatriation cover, and cashback options where applicable. The client indicated understanding of the benefits and had the opportunity to ask questions.`;
+    const _anyILC=_roaPlans.some(p=>(p.plan||'').toLowerCase().includes('ilc')||(p.plan||'').toLowerCase().includes('immediate life'));
+    const benefitsText = `The advisor explained all relevant benefits of the ${planNames||'selected plan'} to ${client}, including the ${_anyILC?'life':'funeral'} cover amounts per life assured, paid-up benefit, repatriation cover, and cashback options where applicable. The client indicated understanding of the benefits and had the opportunity to ask questions.`;
 
     const premiumSummary = _roaPlans.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
-    const agreementText = `${client} confirmed agreement to${premiumSummary ? ' the monthly premium ('+premiumSummary+') and' : ''} the funeral cover amounts listed above. The client agreed that the cover meets their needs and that the advice given is understood and accepted.`;
+    const agreementText = `${client} confirmed agreement to${premiumSummary ? ' the monthly premium ('+premiumSummary+') and' : ''} the ${_anyILC?'life':'funeral'} cover amounts listed above. The client agreed that the cover meets their needs and that the advice given is understood and accepted.`;
 
-    const parts = [`A Record of Advice was completed for ${client} for new Sanlam Sky funeral cover.\n`];
+    const parts = [`A Record of Advice was completed for ${client} for new Sanlam Sky ${_anyILC?'life':'funeral'} cover.\n`];
     if(planBlocks) parts.push(planBlocks);
     parts.push(waitText, benefitsText, agreementText);
     if(notes) parts.push(`Additional notes: ${notes}`);
