@@ -2124,7 +2124,8 @@ function showPage(p){
   if(p==='appchecks')renderAppChecks();
   if(p==='recruit')renderRecruits();
   if(p==='budget'){if(!window._bgtInit){window._bgtInit=true;initBudget();}else{bgtRenderAll();}}
-  if(p==='schedules')renderScheduleTracker();
+  if(p==='schedules'){renderScheduleTracker();startScheduleListener();}
+  else{stopScheduleListener();}
   if(p==='documents')renderDocs();
   if(p==='manager')renderManagerDash();
   if(p==='team')renderTeamPage();
@@ -2509,6 +2510,16 @@ async function syncSchedulesFromFirebase(){
     if(rows.length){localStorage.setItem('tl_schedules',JSON.stringify(rows));}
   }catch(e){console.warn('Schedule sync failed',e);}
 }
+let _schedUnsub=null;
+function startScheduleListener(){
+  if(!window.FB_READY||!window.FB.onSchedules)return;
+  if(_schedUnsub){_schedUnsub();_schedUnsub=null;}
+  _schedUnsub=window.FB.onSchedules(rows=>{
+    saveSchedules(rows);
+    renderScheduleTracker();
+  });
+}
+function stopScheduleListener(){if(_schedUnsub){_schedUnsub();_schedUnsub=null;}}
 async function pushScheduleToFirebase(entry){
   if(!window.FB_READY)return;
   try{const newId=await window.FB.saveSchedule(entry);return newId;}catch(e){console.warn('Schedule push failed',e);}
