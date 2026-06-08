@@ -2114,7 +2114,8 @@ function showPage(p){
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
   if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();}
-  if(p==='commcases'){renderCommCases();renderCommQueries();}
+  if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
+  else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
   if(p==='canpack'){mdInit();}
   if(p==='termcal')renderTermCal();
@@ -5602,6 +5603,16 @@ function renderSpotCheck(){
 // ── COMMISSION QUERIES ──
 function getCQueries(){try{return JSON.parse(localStorage.getItem('tl_cqueries')||'[]');}catch(e){return[];}}
 function saveCQueries(d){try{localStorage.setItem('tl_cqueries',JSON.stringify(d));}catch(e){}}
+let _cqUnsub=null;
+function startCommQueryListener(){
+  if(!window.FB_READY)return;
+  if(_cqUnsub){_cqUnsub();_cqUnsub=null;}
+  _cqUnsub=window.FB.onCommQueries(queries=>{
+    saveCQueries(queries);
+    renderCommQueries();
+  });
+}
+function stopCommQueryListener(){if(_cqUnsub){_cqUnsub();_cqUnsub=null;}}
 
 const CQ_LABELS={
   not_paid:'💰 Not paid for this case',
@@ -5618,8 +5629,7 @@ function submitCommQuery(){
   const type=document.getElementById('cq-type').value;
   const notes=document.getElementById('cq-notes').value.trim();
   if(!client||!policy)return alert('Please enter client name and policy number.');
-  const queries=getCQueries();
-  queries.unshift({
+  const entry={
     id:Date.now()+'_'+Math.random().toString(36).slice(2),
     advisorCode:currentUser.code,
     advisorName:currentUser.name,
@@ -5627,8 +5637,11 @@ function submitCommQuery(){
     status:'pending',
     submittedAt:new Date().toISOString(),
     feedback:''
-  });
+  };
+  const queries=getCQueries();
+  queries.unshift(entry);
   saveCQueries(queries);
+  if(window.FB_READY)window.FB.saveCommQuery(entry.id,entry).catch(()=>{});
   document.getElementById('cq-client').value='';
   document.getElementById('cq-policy').value='';
   document.getElementById('cq-premium').value='';
@@ -5639,10 +5652,12 @@ function submitCommQuery(){
 
 function cqSetStatus(id,val){
   const q=getCQueries();const c=q.find(x=>x.id===id);if(c){c.status=val;saveCQueries(q);renderCommQueries();}
+  if(window.FB_READY)window.FB.updateCommQuery(id,{status:val}).catch(()=>{});
 }
 
 function cqSetFeedback(id,val){
   const q=getCQueries();const c=q.find(x=>x.id===id);if(c){c.feedback=val;saveCQueries(q);}
+  if(window.FB_READY)window.FB.updateCommQuery(id,{feedback:val}).catch(()=>{});
 }
 
 function renderCommQueries(){
