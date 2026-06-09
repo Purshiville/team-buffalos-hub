@@ -502,7 +502,8 @@ function todayStr(){return new Date().toISOString().slice(0,10);}
 function daysUntil(s){const d=new Date(s),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
 function daysFrom(s){return Math.abs(daysUntil(s));}
 function fmtDate(iso){if(!iso)return'Never';const d=new Date(iso),diff=Math.floor((Date.now()-d)/60000);if(diff<2)return'Just now';if(diff<60)return diff+'m ago';if(diff<1440)return Math.floor(diff/60)+'h ago';return Math.floor(diff/1440)+'d ago';}
-function fmtLastSeen(ts){if(!ts)return'';try{const d=ts?.toDate?ts.toDate():new Date(ts);const diff=Date.now()-d;if(isNaN(diff)||diff<0)return'';if(diff<90000)return'Active just now';if(diff<3600000)return`Active ${Math.floor(diff/60000)}m ago`;if(diff<86400000)return`Last seen today ${d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})}`;return`Last seen ${d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}`;}catch(e){return'';} }
+function _isOnline(ts){if(!ts)return false;try{const d=ts?.toDate?ts.toDate():new Date(ts);return(Date.now()-d)<180000;}catch(e){return false;}}
+function fmtLastSeen(ts){if(!ts)return'';try{const d=ts?.toDate?ts.toDate():new Date(ts);const diff=Date.now()-d;if(isNaN(diff)||diff<0)return'';if(diff<180000)return'Online';if(diff<3600000)return`Active ${Math.floor(diff/60000)}m ago`;if(diff<86400000)return`Last seen today ${d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})}`;return`Last seen ${d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}`;}catch(e){return'';} }
 function fmtLastActive(ts){
   if(!ts)return'Never logged in';
   const d=new Date(ts);
@@ -1368,7 +1369,7 @@ function updateChatBadge(){
   let unread=0;
   chats.forEach(c=>{if((c.unread||{})[currentUser.code]>0)unread++;});
   const msgs=window._inboxMsgs||[];
-  unread+=msgs.filter(m=>!(m.readBy||[]).includes(currentUser.code)&&(m.type==='message'||m.type==='chat')).length;
+  unread+=msgs.filter(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type==='message').length;
   const badge=document.getElementById('chatBadge');
   if(!badge)return;
   if(unread>0){badge.style.display='flex';badge.textContent=unread>99?'99+':unread;}
@@ -1571,9 +1572,11 @@ function renderChatContacts(){
     const lastAt=chatData?.lastAt?.toDate?chatData.lastAt.toDate():chatData?.lastAt?new Date(chatData.lastAt):null;
     const lastAtStr=lastAt?fmtDate(lastAt.toISOString()):'';
     const contactPhoto=_chatUsers[c.code]?.photo||null;
-    const contactAvatar=contactPhoto
+    const online=_isOnline(_chatUsers[c.code]?.lastSeen);
+    const contactAvatarInner=contactPhoto
       ?`<img src="${contactPhoto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
       :`<div class="chat-av" style="background:${chatColor(c.code)};">${c.name.charAt(0)}</div>`;
+    const contactAvatar=`<div style="position:relative;flex-shrink:0;">${contactAvatarInner}${online?`<div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #fff;"></div>`:''}</div>`;
     return`<div class="chat-contact${unread?' chat-contact-unread':''}" style="${unread?'background:#e8eeff;':''};" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
       ${contactAvatar}
       <div style="flex:1;min-width:0;">
@@ -1600,13 +1603,14 @@ function openChatThread(partnerCode,partnerName){
     ?`<img src="${_partnerPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
     :`<div class="chat-av" style="background:${chatColor(partnerCode)};width:36px;height:36px;font-size:14px;">${partnerName.charAt(0)}</div>`;
   const _lastSeenStr=fmtLastSeen(_partnerUser.lastSeen);
+  const _online=_isOnline(_partnerUser.lastSeen);
   el.innerHTML=`<div class="chat-thread">
     <div class="chat-thread-hd">
       <button class="chat-back" onclick="backToChatContacts()" title="Back to chats">‹</button>
-      ${_partnerAvatar}
+      <div style="position:relative;flex-shrink:0;">${_partnerAvatar}${_online?`<div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #f9f8f6;"></div>`:''}</div>
       <div style="min-width:0;">
         <div class="chat-thread-name">${partnerName}</div>
-        ${_lastSeenStr?`<div id="chatLastSeen" style="font-size:10px;color:#6b7280;margin-top:1px;">${_lastSeenStr}</div>`:'<div id="chatLastSeen" style="font-size:10px;color:#6b7280;margin-top:1px;"></div>'}
+        <div id="chatLastSeen" style="font-size:10px;display:flex;align-items:center;gap:4px;margin-top:1px;">${_lastSeenStr?`<span style="width:7px;height:7px;border-radius:50%;background:${_online?'#22c55e':'#9ca3af'};flex-shrink:0;display:inline-block;"></span><span style="color:${_online?'#16a34a':'#6b7280'};">${_lastSeenStr}</span>`:'&nbsp;'}</div>
       </div>
     </div>
     <div class="chat-messages" id="chatThreadMessages"></div>
@@ -1631,7 +1635,11 @@ function openChatThread(partnerCode,partnerName){
       if(!fbUsers)return;
       const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);
       const lsEl=document.getElementById('chatLastSeen');
-      if(lsEl&&_currentChatPartner){const s=fmtLastSeen(local[_currentChatPartner.code]?.lastSeen);lsEl.textContent=s;}
+      if(lsEl&&_currentChatPartner){
+        const lsTs=local[_currentChatPartner.code]?.lastSeen;
+        const s=fmtLastSeen(lsTs);const on=_isOnline(lsTs);
+        lsEl.innerHTML=s?`<span style="width:7px;height:7px;border-radius:50%;background:${on?'#22c55e':'#9ca3af'};flex-shrink:0;display:inline-block;"></span><span style="color:${on?'#16a34a':'#6b7280'};">${s}</span>`:'&nbsp;';
+      }
     }).catch(()=>{});
   }
 }
