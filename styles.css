@@ -43,7 +43,7 @@ body::before {
   z-index: 1;
 }
 
-.topbar{background:#0d1f3c;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+.topbar{background:#0d1f3c;padding:0 1.5rem;height:54px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;position:sticky;top:0;z-index:200;}
 .topbar-logo{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;color:#fff;letter-spacing:-0.2px;}
 .topbar-logo .gold{color:#c9922a;}
 .topbar-right{display:flex;align-items:center;gap:10px;}
@@ -114,7 +114,7 @@ body::before {
 .inbox-compose textarea{resize:vertical;min-height:50px;}
 .inbox-compose-btn{width:100%;padding:8px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;}
 
-.nav-tabs{background:#0d1f3c;border-bottom:1px solid rgba(255,255,255,0.1);padding:0 1.5rem;display:flex;overflow-x:auto;}
+.nav-tabs{background:#0d1f3c;border-bottom:1px solid rgba(255,255,255,0.1);padding:0 1.5rem;display:flex;overflow-x:auto;position:sticky;top:54px;z-index:199;}
 .nav-tab{padding:10px 14px;font-size:13px;color:rgba(255,255,255,0.55);cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;white-space:nowrap;transition:all 0.15s;}
 .nav-tab:hover{color:rgba(255,255,255,0.85);}
 .nav-tab.active{color:#c9922a;border-bottom-color:#c9922a;font-weight:600;}
