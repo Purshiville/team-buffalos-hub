@@ -7594,17 +7594,75 @@ async function renderPRSavedList(){
     el.innerHTML='<div style="padding:10px 12px;color:#dc2626;font-size:13px;">Could not load saved reviews.</div>';
     return;
   }
+  const isManager=currentUser&&(currentUser.isManager||currentUser.isOps);
+  if(!isManager)reviews=reviews.filter(r=>r.advisorCode===currentUser?.code);
+  window._prSavedReviews=reviews;
   if(!reviews.length){el.innerHTML='<div style="padding:10px 12px;color:#6b7280;font-size:13px;">No saved reviews yet.</div>';return;}
   el.innerHTML=reviews.map(r=>{
     const date=r.savedAt?.toDate?(r.savedAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})):(r.savedAt?new Date(r.savedAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'Unknown date');
     const total=r.totalPremium?'R '+r.totalPremium.toLocaleString('en-ZA'):'—';
-    return`<div style="padding:10px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    return`<div style="padding:10px 14px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <div style="flex:1;min-width:0;">
         <div style="font-weight:700;font-size:13px;color:#0d1f3c;">${r.clientName||'[Unknown]'}</div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${date} &nbsp;·&nbsp; ${r.policyCount||0} polic${r.policyCount===1?'y':'ies'} &nbsp;·&nbsp; ${total}/month${r.advisorName?' &nbsp;·&nbsp; '+r.advisorName:''}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${date} &nbsp;·&nbsp; ${r.policyCount||0} polic${r.policyCount===1?'y':'ies'} &nbsp;·&nbsp; ${total}/month${isManager&&r.advisorName?' &nbsp;·&nbsp; '+r.advisorName:''}</div>
       </div>
+      <button onclick="_openSavedPRReview('${r.id}')" style="flex-shrink:0;padding:6px 14px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Open</button>
     </div>`;
   }).join('');
+}
+
+function _openSavedPRReview(id){
+  const r=(window._prSavedReviews||[]).find(x=>x.id===id);
+  if(!r)return;
+  const date=r.savedAt?.toDate?(r.savedAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'})):(r.savedAt?new Date(r.savedAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'}):'Unknown date');
+  const policies=(r.policies||[]).filter(Boolean);
+  const policyRows=policies.map((p,i)=>{
+    const bg=i%2===0?'#fff':'#f9f9f9';
+    return`<tr style="background:${bg}"><td style="padding:6px 8px;border:1px solid #e5e7eb;">${p.insurer||'—'}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${p.policy_number||'—'}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;">${p.plan_name||'—'}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;">${p.premium?'R '+p.premium.toLocaleString('en-ZA'):'—'}</td></tr>`;
+  }).join('');
+  const total=r.totalPremium?'R '+r.totalPremium.toLocaleString('en-ZA'):'—';
+
+  let ov=document.getElementById('_prOpenModalOverlay');
+  if(!ov){ov=document.createElement('div');ov.id='_prOpenModalOverlay';document.body.appendChild(ov);}
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:20px 12px;overflow-y:auto;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;width:100%;max-width:540px;box-shadow:0 8px 40px rgba(0,0,0,.25);overflow:hidden;">
+    <div style="background:#0d1f3c;color:#fff;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;">
+      <div><div style="font-weight:800;font-size:15px;">${r.clientName||'[Client]'}</div><div style="font-size:11px;opacity:.7;margin-top:2px;">Saved ${date}${r.advisorName?' &nbsp;·&nbsp; '+r.advisorName:''}</div></div>
+      <button onclick="document.getElementById('_prOpenModalOverlay').style.display='none'" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    <div style="padding:14px 16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;font-size:12px;margin-bottom:14px;">
+        ${r.clientId?`<div><div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">ID Number</div><div style="font-weight:700;color:#0d1f3c;">${r.clientId}</div></div>`:''}
+        ${r.clientPhone?`<div><div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Phone</div><div style="font-weight:700;">${r.clientPhone}</div></div>`:''}
+        ${r.clientEmail?`<div><div style="color:#9ca3af;font-size:10px;font-weight:700;text-transform:uppercase;">Email</div><div style="font-weight:700;">${r.clientEmail}</div></div>`:''}
+      </div>
+      ${policies.length?`<div style="font-size:11px;font-weight:800;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Policies (${policies.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px;">
+        <thead><tr style="background:#0d1f3c;color:#fff;"><th style="padding:6px 8px;text-align:left;font-weight:700;">Insurer</th><th style="padding:6px 8px;text-align:left;font-weight:700;">Policy #</th><th style="padding:6px 8px;text-align:left;font-weight:700;">Plan</th><th style="padding:6px 8px;text-align:right;font-weight:700;">Premium</th></tr></thead>
+        <tbody>${policyRows}</tbody>
+        <tfoot><tr style="background:#f4f2ed;"><td colspan="3" style="padding:6px 8px;font-weight:700;text-align:right;border:1px solid #e5e7eb;">Total</td><td style="padding:6px 8px;font-weight:800;color:#c9922a;text-align:right;border:1px solid #e5e7eb;">${total}/month</td></tr></tfoot>
+      </table>`:'<div style="color:#9ca3af;font-size:13px;margin-bottom:12px;">No policy data stored.</div>'}
+      ${r.advisorNotes?`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;margin-bottom:12px;"><div style="font-size:10px;font-weight:800;color:#075985;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Advisor Notes</div><div style="font-size:12px;color:#0d1f3c;line-height:1.6;">${r.advisorNotes.replace(/\n/g,'<br>')}</div></div>`:''}
+      <div style="display:flex;gap:10px;">
+        <button onclick="_generatePdfFromSaved('${id}')" style="flex:1;padding:10px;background:#c9922a;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Generate PDF</button>
+        <button onclick="document.getElementById('_prOpenModalOverlay').style.display='none'" style="flex:1;padding:10px;background:#f4f2ed;color:#374151;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">Close</button>
+      </div>
+    </div>
+  </div>`;
+  ov.onclick=e=>{if(e.target===ov)ov.style.display='none';};
+}
+
+function _generatePdfFromSaved(id){
+  const r=(window._prSavedReviews||[]).find(x=>x.id===id);
+  if(!r)return;
+  // Temporarily restore state so generatePRPdf can run
+  _prExtracted=(r.policies||[]).filter(Boolean);
+  _prLoaFile={name:'LOA on file (saved)'};
+  const fill=(eid,v)=>{const el=document.getElementById(eid);if(el)el.value=v||'';};
+  fill('prClientName',r.clientName);fill('prClientId',r.clientId);
+  fill('prClientPhone',r.clientPhone);fill('prClientEmail',r.clientEmail);
+  fill('prAdvisorNotes',r.advisorNotes);
+  generatePRPdf();
 }
 // ── END POLICY REVIEW ──────────────────────────────────────────────────────
 
