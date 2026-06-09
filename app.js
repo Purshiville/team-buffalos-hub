@@ -631,6 +631,10 @@ function enterHub(user){
   renderTop3();
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
+  // Request browser notification permission
+  if('Notification' in window&&Notification.permission==='default'){
+    setTimeout(()=>Notification.requestPermission(),3000);
+  }
 }
 
 // ── INACTIVITY TIMER ──
@@ -3069,9 +3073,11 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
     }
   }
   if(!title)return alert('Please add a title for the notice.');
+  const scheduledFrom=(_noticeEl('noticeScheduledFrom')?.value||'').trim();
   const noticeData={type,title,body,postedBy:currentUser.name,active:true,expiryDays};
   if(recipient&&recipient!=='ALL')noticeData.recipientCode=recipient;
   if(link)noticeData.link=link;
+  if(scheduledFrom)noticeData.scheduledFrom=new Date(scheduledFrom).toISOString();
   if(window.FB_READY){
     try{
       await window.FB.postNotice(noticeData);
@@ -3091,6 +3097,7 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
     const nl=_noticeEl('noticeLinkField');if(nl)nl.value='';
     const nd=_noticeEl('noticeDateField');if(nd)nd.value='';
     const nexp=_noticeEl('noticeExpiryDays');if(nexp)nexp.value='30';
+    const nsf=_noticeEl('noticeScheduledFrom');if(nsf)nsf.value='';
     const npb=document.getElementById('noticePostBtn');if(npb)npb.textContent='📌 Post to dashboard';
     const fb=document.getElementById('noticePostFeedback');
     if(fb){fb.style.display='inline';setTimeout(()=>fb.style.display='none',2500);}
@@ -3172,8 +3179,9 @@ function renderNoticeBoard(){
   const getExpiry=n=>(n.expiryDays||30)*24*60*60*1000;
   const matchesRecipient=n=>(!n.recipientCode||n.recipientCode==='ALL')||isOps||(n.recipientCode===currentUser?.code);
 
-  const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=getExpiry(n)&&matchesRecipient(n));
-  const archived=allNotices.filter(n=>(dismissed.includes(n.id)||getAge(n)>getExpiry(n))&&matchesRecipient(n));
+  const isLive=n=>!n.scheduledFrom||new Date(n.scheduledFrom).getTime()<=now;
+  const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=getExpiry(n)&&matchesRecipient(n)&&isLive(n));
+  const archived=allNotices.filter(n=>(dismissed.includes(n.id)||getAge(n)>getExpiry(n))&&matchesRecipient(n)&&isLive(n));
 
   let allComments={};
   try{allComments=JSON.parse(localStorage.getItem('tl_notice_comments')||'{}');}catch(e){}
@@ -5803,7 +5811,10 @@ function submitCommQuery(){
   const queries=getCQueries();
   queries.unshift(entry);
   saveCQueries(queries);
-  if(window.FB_READY)window.FB.saveCommQuery(entry.id,entry).catch(()=>{});
+  if(window.FB_READY){
+    window.FB.saveCommQuery(entry.id,entry).catch(()=>{});
+    window.FB.sendInbox({to:'PURSHIVILLE',from:currentUser.code,fromName:currentUser.name,title:'📋 New commission query from '+currentUser.name,body:`Client: ${client} · Policy: ${policy}${type?' · '+type:''}${notes?' — '+notes:''}`,type:'notice'}).catch(()=>{});
+  }
   document.getElementById('cq-client').value='';
   document.getElementById('cq-policy').value='';
   document.getElementById('cq-premium').value='';
@@ -7145,12 +7156,12 @@ function updatePRButtons(){
   const hasLoa=!!_prLoaFile;
   const hasDocs=_prDocFiles.length>0;
   const allDone=_prDocFiles.length>0&&_prDocFiles.every(f=>f.status==='done'||f.status==='error');
-  // Check 24-hour rate limit
+  // Check 24-hour rate limit (bypassed for manager/ops)
   const rlKey='prLastAnalysis_'+(currentUser?.code||'default');
   const lastRun=parseInt(localStorage.getItem(rlKey)||'0',10);
   const elapsed=Date.now()-lastRun;
   const limit24h=24*60*60*1000;
-  const isRateLimited=lastRun>0&&elapsed<limit24h;
+  const isRateLimited=!(currentUser?.isManager||currentUser?.isOps)&&lastRun>0&&elapsed<limit24h;
   if(rlNote){
     if(isRateLimited){
       const rem=limit24h-elapsed;
@@ -7183,12 +7194,12 @@ function updatePRButtons(){
 async function analysePRDocuments(){
   if(!_prLoaFile){alert('Please upload the Letter of Authority first — it is required before generating a policy review.');return;}
   if(!_prDocFiles.length){alert('Please upload at least one policy document.');return;}
-  // 24-hour rate limit per advisor
+  // 24-hour rate limit per advisor (manager/ops exempt)
   const rlKey='prLastAnalysis_'+(currentUser?.code||'default');
   const lastRun=parseInt(localStorage.getItem(rlKey)||'0',10);
   const elapsed=Date.now()-lastRun;
   const limit24h=24*60*60*1000;
-  if(elapsed<limit24h){
+  if(!(currentUser?.isManager||currentUser?.isOps)&&elapsed<limit24h){
     const remaining=limit24h-elapsed;
     const hrs=Math.floor(remaining/3600000);
     const mins=Math.floor((remaining%3600000)/60000);
@@ -9483,7 +9494,10 @@ function diaryOpenAdd(dateStr){
   document.getElementById('da_loc').value='';
   document.getElementById('da_notes').value='';
   document.getElementById('da_status').value='confirmed';
+  const daRep=document.getElementById('da_repeat');if(daRep){daRep.value='';daRep.disabled=false;}
+  const daRepWrap=document.getElementById('da_repeat_wrap');if(daRepWrap)daRepWrap.style.display='block';
   document.getElementById('diaryDeleteBtn').style.display='none';
+  const dsBtnN=document.getElementById('diaryDeleteSeriesBtn');if(dsBtnN)dsBtnN.style.display='none';
   document.getElementById('diaryAddOverlay').style.display='flex';
 }
 function diaryCloseAdd(){document.getElementById('diaryAddOverlay').style.display='none';_diaryEditId=null;}
@@ -9502,7 +9516,11 @@ function diaryViewEvent(id){
   document.getElementById('da_loc').value=ev.location||'';
   document.getElementById('da_notes').value=ev.notes||'';
   document.getElementById('da_status').value=ev.status||'confirmed';
+  const daRepE=document.getElementById('da_repeat');if(daRepE){daRepE.value='';daRepE.disabled=true;}
+  const daRepWrapE=document.getElementById('da_repeat_wrap');if(daRepWrapE)daRepWrapE.style.display='none';
   document.getElementById('diaryDeleteBtn').style.display='inline-block';
+  const dsBtnE=document.getElementById('diaryDeleteSeriesBtn');
+  if(dsBtnE)dsBtnE.style.display=ev.recurringGroupId?'inline-block':'none';
   document.getElementById('diaryAddOverlay').style.display='flex';
 }
 
@@ -9511,23 +9529,41 @@ function diarySaveAdd(){
   const title=v('da_title'),date=v('da_date');
   if(!title)return showAlert('Please enter a title.','error');
   if(!date)return showAlert('Please enter a date.','error');
+  const repeat=v('da_repeat');
   const events=diaryGetEvents();
   if(_diaryEditId){
     const idx=events.findIndex(e=>e.id===_diaryEditId);
     if(idx>=0)events[idx]={...events[idx],title,date,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status')};
     if(window.FB_READY)window.FB.saveCalEvent(_diaryEditId,events[idx]).catch(()=>{});
   } else {
-    const id=Date.now()+'_'+Math.random().toString(36).slice(2);
-    const newEv={id,advisorCode:currentUser.code,advisorName:currentUser.name,title,date,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status'),reminderSent:[]};
-    events.push(newEv);
-    if(window.FB_READY)window.FB.saveCalEvent(id,newEv).catch(()=>{});
+    const groupId=Date.now()+'_'+Math.random().toString(36).slice(2);
+    const base={advisorCode:currentUser.code,advisorName:currentUser.name,title,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status'),reminderSent:[]};
+    const datesToCreate=[date];
+    if(repeat){
+      const parts=date.split('-').map(Number);
+      const startDt=new Date(parts[0],parts[1]-1,parts[2]);
+      const count=repeat==='weekly'?12:6;
+      for(let i=1;i<=count;i++){
+        const d2=new Date(startDt);
+        if(repeat==='weekly')d2.setDate(d2.getDate()+i*7);
+        else d2.setMonth(d2.getMonth()+i);
+        datesToCreate.push(d2.getFullYear()+'-'+(''+(d2.getMonth()+1)).padStart(2,'0')+'-'+(''+d2.getDate()).padStart(2,'0'));
+      }
+    }
+    datesToCreate.forEach(dt=>{
+      const id=Date.now()+'_'+Math.random().toString(36).slice(2);
+      const newEv={...base,id,date:dt,...(repeat?{recurringGroupId:groupId}:{})};
+      events.push(newEv);
+      if(window.FB_READY)window.FB.saveCalEvent(id,newEv).catch(()=>{});
+    });
   }
   diarySaveEvents(events);
   diaryCloseAdd();
   const parts=date.split('-').map(Number);
   _diaryDate=new Date(parts[0],parts[1]-1,parts[2]);
   renderDiary();
-  showAlert('Appointment saved.','success');
+  const savedMsg=repeat?(repeat==='weekly'?'Recurring appointment created for 12 weeks.':'Recurring appointment created for 6 months.'):'Appointment saved.';
+  showAlert(savedMsg,'success');
 }
 
 function diaryDeleteFromModal(){
@@ -9537,6 +9573,19 @@ function diaryDeleteFromModal(){
   if(window.FB_READY)window.FB.deleteCalEvent(_diaryEditId).catch(()=>{});
   diaryCloseAdd();renderDiary();
   showAlert('Appointment deleted.','success');
+}
+
+function diaryDeleteSeries(){
+  if(!_diaryEditId)return;
+  const ev=diaryGetEvents().find(e=>e.id===_diaryEditId);
+  if(!ev?.recurringGroupId)return;
+  if(!confirm('Delete ALL appointments in this recurring series? This cannot be undone.'))return;
+  const toDelete=diaryGetEvents().filter(e=>e.recurringGroupId===ev.recurringGroupId);
+  const remaining=diaryGetEvents().filter(e=>e.recurringGroupId!==ev.recurringGroupId);
+  diarySaveEvents(remaining);
+  if(window.FB_READY)toDelete.forEach(e=>window.FB.deleteCalEvent(e.id).catch(()=>{}));
+  diaryCloseAdd();renderDiary();
+  showAlert('Recurring series deleted ('+toDelete.length+' appointments).','success');
 }
 
 function diaryCheckReminders(){
