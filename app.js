@@ -3100,10 +3100,17 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
 }
 
 function dismissNotice(id){
-  // Advisors can dismiss for themselves using localStorage key
   let dismissed=[];
   try{dismissed=JSON.parse(localStorage.getItem('tl_dismissed_notices')||'[]');}catch(e){}
   if(!dismissed.includes(id))dismissed.push(id);
+  localStorage.setItem('tl_dismissed_notices',JSON.stringify(dismissed));
+  renderNoticeBoard();
+}
+
+function unreadNotice(id){
+  let dismissed=[];
+  try{dismissed=JSON.parse(localStorage.getItem('tl_dismissed_notices')||'[]');}catch(e){}
+  dismissed=dismissed.filter(x=>x!==id);
   localStorage.setItem('tl_dismissed_notices',JSON.stringify(dismissed));
   renderNoticeBoard();
 }
@@ -3138,7 +3145,7 @@ function _buildNoticeCard(n,isOps,allComments,isArchived){
     <div class="notice-card-hdr">
       <span class="notice-type-icon">${NOTICE_ICONS[n.type]||'📌'}</span>
       <div class="notice-title">${n.title}</div>
-      ${!isArchived?`<button class="notice-dismiss" onclick="dismissNotice('${n.id}')" title="Mark as read" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #d1d5db;background:#f9f9f9;color:#6b7280;cursor:pointer;font-weight:600;white-space:nowrap;">✓ Read</button>`:''}
+      ${!isArchived?`<button class="notice-dismiss" onclick="dismissNotice('${n.id}')" title="Mark as read" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #d1d5db;background:#f9f9f9;color:#6b7280;cursor:pointer;font-weight:600;white-space:nowrap;">✓ Read</button>`:`<button onclick="unreadNotice('${n.id}')" title="Mark as unread" style="font-size:10px;padding:3px 8px;border-radius:8px;border:1px solid #bae6fd;background:#f0f9ff;color:#0369a1;cursor:pointer;font-weight:600;white-space:nowrap;">↩ Unread</button>`}
     </div>
     ${n.body?`<div class="notice-body-text">${n.body}</div>`:''}
     ${n.link?`<a class="notice-link-btn" href="${n.link}" target="_blank" rel="noopener noreferrer">🔗 Open link</a>`:''}
