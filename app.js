@@ -4376,6 +4376,67 @@ function prefillTop3Form(){
 }
 
 // ── DAILY BRIEF ───────────────────────────────────────────────────────────────
+function showBriefBlowup(type){
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DAYS_SHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const todayStr=new Date().toISOString().slice(0,10);
+  let title='',rows='';
+
+  if(type==='qlink'){
+    title='⚡ Qlink Run Dates 2026';
+    const salaryMonthLabel=k=>{const yr=k.slice(0,4),mo=parseInt(k.slice(4))-1;return MONTHS[mo]+' '+yr;};
+    const entries=Object.entries(QLINK_DATES).sort((a,b)=>a[0].localeCompare(b[0]));
+    rows=entries.map(([salMo,runs])=>{
+      const runsHtml=runs.map(r=>{
+        const isPast=r.d<todayStr,isToday=r.d===todayStr;
+        const dt=new Date(r.d+'T00:00:00');
+        const label=DAYS_SHORT[dt.getDay()]+', '+dt.getDate()+' '+MONTHS[dt.getMonth()];
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 5px 8px;${isPast?'opacity:.38;':''}">
+          <span style="font-size:13px;font-weight:${isToday?700:500};color:${isToday?'#dc2626':'#374151'};">${label}${isToday?' <span style="font-size:10px;font-weight:700;color:#dc2626;">TODAY</span>':''}</span>
+          <span style="font-size:11px;color:#9ca3af;">before 13:00</span>
+        </div>`;
+      }).join('');
+      const allPast=runs.every(r=>r.d<todayStr);
+      return `<div style="margin-bottom:10px;${allPast?'opacity:.45;':''}">
+        <div style="font-size:10px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:.5px;padding-bottom:4px;border-bottom:1px solid #f3f4f6;">Salary Month: ${salaryMonthLabel(salMo)}</div>
+        ${runsHtml}
+      </div>`;
+    }).join('');
+    rows+=`<div style="margin-top:6px;padding:10px;background:#fef9c3;border-radius:8px;font-size:11px;color:#92400e;line-height:1.5;">Submit the Qlink on Connect Me before 13:00 on each run date to guarantee the deduction reflects on that salary month's payslip.</div>`;
+  } else if(type==='prod'){
+    title='📋 Production Cut-off Dates 2026';
+    rows=PROD_CUTOFFS.map(p=>{
+      const isPast=p.cutoff<todayStr;
+      const isActive=todayStr>=p.opens&&todayStr<=p.cutoff;
+      const cutDt=new Date(p.cutoff+'T00:00:00'),openDt=new Date(p.opens+'T00:00:00');
+      const weeks=Math.round((cutDt-openDt)/(7*86400000));
+      const cutLabel=cutDt.getDate()+' '+MONTHS[cutDt.getMonth()];
+      const openLabel=openDt.getDate()+' '+MONTHS[openDt.getMonth()];
+      return `<div style="padding:10px 12px;border-radius:10px;margin-bottom:6px;${isActive?'background:#fef3c7;border:1.5px solid #f59e0b;':isPast?'background:#f9fafb;opacity:.4;':'background:#f8f7f4;border:1px solid #e8e4db;'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:13px;font-weight:700;color:${isActive?'#92400e':'#0d1f3c'};">Cut-off: ${cutLabel} at 20:00${isActive?'  <span style="font-size:10px;color:#c9922a;">← current</span>':''}</span>
+          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;margin-left:6px;">${weeks} wk${weeks!==1?'s':''}</span>
+        </div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Opens ${openLabel}</div>
+      </div>`;
+    }).join('');
+    rows+=`<div style="margin-top:4px;padding:10px;background:#fee2e2;border-radius:8px;font-size:11px;color:#991b1b;line-height:1.5;">⚠️ December cut-off is the shortest of the year (2 weeks) — plan your pipeline well in advance.</div>`;
+  }
+
+  const ov=document.createElement('div');
+  ov.id='briefBlowupOv';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:84vh;overflow-y:auto;padding:20px 18px 36px;" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;color:#0d1f3c;">${title}</div>
+      <button onclick="document.getElementById('briefBlowupOv')?.remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;line-height:1;">✕</button>
+    </div>
+    ${rows}
+  </div>`;
+  ov.onclick=()=>ov.remove();
+  document.body.appendChild(ov);
+}
+
 function renderDailyBrief(){
   const el=document.getElementById('hubDailyBrief');if(!el)return;
   if(!currentUser)return;
@@ -4387,14 +4448,15 @@ function renderDailyBrief(){
   const items=[];
   const isOps=currentUser.isManager||currentUser.isOps;
 
-  // Production cut-off countdown (from PROD_CUTOFFS)
+  // Production cut-off countdown (from PROD_CUTOFFS) — clickable to show all dates
   const todayStr=y+'-'+(''+(m+1)).padStart(2,'0')+'-'+(''+d).padStart(2,'0');
   let cutoffEntry=PROD_CUTOFFS.find(p=>p.cutoff>=todayStr);
   if(!cutoffEntry)cutoffEntry=PROD_CUTOFFS[PROD_CUTOFFS.length-1];
   const cutoffParts=cutoffEntry.cutoff.split('-');
   const cutoff=new Date(+cutoffParts[0],+cutoffParts[1]-1,+cutoffParts[2],20,0,0);
   const daysLeft=Math.ceil((cutoff-today)/(86400000));
-  items.push({icon:'📋',text:daysLeft<=0?'<b>Production cut-off TODAY at 20:00</b> — all cases must be on Connect Me':daysLeft===1?'<b>Production cut-off TOMORROW at 20:00</b> — final cases must be submitted today':`<b>Production cut-off in ${daysLeft} days</b> — ${cutoff.getDate()} ${MONTHS[cutoff.getMonth()]}`});
+  const prodText=daysLeft<=0?'<b>Production cut-off TODAY at 20:00</b> — all cases must be on Connect Me':daysLeft===1?'<b>Production cut-off TOMORROW at 20:00</b> — final cases must be submitted today':`<b>Production cut-off in ${daysLeft} days</b> — ${cutoff.getDate()} ${MONTHS[cutoff.getMonth()]}`;
+  items.push({icon:'📋',onclick:`showBriefBlowup('prod')`,text:prodText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
 
   // Collection day
   if(d===19)items.push({icon:'💳',text:'<b>Collection day tomorrow (20th)</b> — remind all debit order clients to ensure funds are available. Check Connect Me.'});
@@ -4408,18 +4470,18 @@ function renderDailyBrief(){
   } else {
     items.push({icon:'🗓️',text:`No appointments for today. <span onclick="showPage('termcal')" style="color:#c9922a;font-weight:600;cursor:pointer;text-decoration:underline;">📅 Add an appointment</span>`});
   }
-  // Tomorrow's diary appointments
+  // Tomorrow's diary appointments — clickable to open Herd Calendar
   const tomorrow=new Date(today);tomorrow.setDate(d+1);
   const tomorrowKey=tomorrow.getFullYear()+'-'+(''+(tomorrow.getMonth()+1)).padStart(2,'0')+'-'+(''+tomorrow.getDate()).padStart(2,'0');
   const tmrwEvs=diaryGetEvents().filter(e=>e.date===tomorrowKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
   const tmrwSlice=tmrwEvs.slice(0,3);
   if(tmrwSlice.length){
-    items.push({icon:'🔮',text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
+    items.push({icon:'🔮',onclick:`showPage('termcal')`,text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
   } else {
     items.push({icon:'🔮',text:`<b>Nothing scheduled for tomorrow</b>`});
   }
 
-  // Next Qlink run
+  // Next Qlink run — clickable to show all dates
   if(typeof QLINK_DATES!=='undefined'){
     const allRuns=[];
     Object.entries(QLINK_DATES).forEach(([month,runs])=>{
@@ -4429,7 +4491,8 @@ function renderDailyBrief(){
     if(allRuns.length){
       const next=allRuns[0];
       const isToday=next.date===todayStr;
-      items.push({icon:'⚡',text:isToday?`<b>Qlink run TODAY</b> — submit before 13:00`:`<b>Next Qlink run: ${next.date}</b> (${next.month}) — submit before 13:00`});
+      const qlinkText=isToday?`<b>Qlink run TODAY</b> — submit before 13:00`:`<b>Next Qlink run: ${next.date}</b> (${next.month}) — submit before 13:00`;
+      items.push({icon:'⚡',onclick:`showBriefBlowup('qlink')`,text:qlinkText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
     }
   }
 
