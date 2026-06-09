@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Team Buffalos — Advisor Home</title>
-<link rel="stylesheet" href="styles.css?v=20260609-6">
+<link rel="stylesheet" href="styles.css?v=20260609-7">
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
     import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, deleteDoc, onSnapshot, query, orderBy, where, limit, arrayUnion, arrayRemove, serverTimestamp, increment } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
@@ -2622,47 +2622,7 @@ Please send your Proof of Payment to your advisor once done.</div>
       </div>
     </div>
 
-    <!-- SECTION 1: FSP Providers -->
-    <div class="section-label" style="margin-bottom:8px;margin-top:4px;" id="fspSectionLabel">🏢 FSP providers &amp; cancellation contacts</div>
-    <div id="dirNoResults" style="display:none;text-align:center;color:#374151;font-size:13px;font-weight:600;padding:20px 0;">No results found</div>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <div class="fsp-card" data-search="1life 0860 105 340 clientservices@1life.co.za"><div class="fsp-name">1Life</div><div class="fsp-num">0860 105 340</div><div class="fsp-email">clientservices@1life.co.za</div></div>
-      <div class="fsp-card" data-search="absa life 0860 227 253 polserv@absa.co.za"><div class="fsp-name">Absa Life</div><div class="fsp-num">0860 227 253</div><div class="fsp-email">polserv@absa.co.za</div></div>
-      <div class="fsp-card" data-search="assupol 0861 235 664 clientservice policyservice info"><div class="fsp-name">Assupol</div><div class="fsp-num">0861 235 664</div><div class="fsp-email">clientservice@assupol.co.za · policyservice@assupol.co.za · info@assupol.co.za</div></div>
-      <div class="fsp-card" data-search="assupol prosperity mha nhb 0115 681 457 0861 001 788 groups info"><div class="fsp-name">Assupol Prosperity (MHA / NHB)</div><div class="fsp-num">0115 681 457 · 0861 001 788</div><div class="fsp-email">groups@assupol.co.za · info@nhb.co.za</div></div>
-      <div class="fsp-card" data-search="avbob 0861282621 0861 282 621 clientcare retention intermediaries"><div class="fsp-name">AVBOB</div><div class="fsp-num">0861 282 621</div><div class="fsp-email">clientcare@avbob.co.za · retention@avbob.co.za · intermediaries@avbob.co.za</div></div>
-      <div class="fsp-card" data-search="centriq the unlimited 0861 990 000 customercare"><div class="fsp-name">Centriq / The Unlimited</div><div class="fsp-num">0861 990 000</div><div class="fsp-email">customercare@theunlimited.co.za</div></div>
-      <div class="fsp-card" data-search="channel life sanlam sky 0861 235 433 skyinfo info"><div class="fsp-name">Channel Life (via Sanlam Sky)</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinfo@sanlamsky.co.za · Info@sanlamsky.co.za</div></div>
-      <div class="fsp-card" data-search="clientele 0113 203 000 services@clientele.co.za"><div class="fsp-name">Clientele</div><div class="fsp-num">0113 203 000</div><div class="fsp-email">services@clientele.co.za</div></div>
-      <div class="fsp-card" data-search="discovery funeral phakama 0123 488 310 info@phakama.co.za"><div class="fsp-name">Discovery Funeral (Phakama)</div><div class="fsp-num">0123 488 310</div><div class="fsp-email">info@phakama.co.za</div></div>
-      <div class="fsp-card" data-search="discovery life 0860 005 433 discoverylifeinfo"><div class="fsp-name">Discovery Life</div><div class="fsp-num">0860 005 433</div><div class="fsp-email">discoverylifeinfo@discovery.co.za</div></div>
-      <div class="fsp-card" data-search="emerald life 0116 588 200 0219 100 916 info@emeraldsa.co.za"><div class="fsp-name">Emerald Life</div><div class="fsp-num">0116 588 200 · 0219 100 916</div><div class="fsp-email">info@emeraldsa.co.za</div></div>
-      <div class="fsp-card" data-search="fnb life 0877 367 772 fnblife@fnb.co.za"><div class="fsp-name">FNB Life</div><div class="fsp-num">0877 367 772</div><div class="fsp-email">fnblife@fnb.co.za</div></div>
-      <div class="fsp-card" data-search="guard risk 0116 691 000 info@guardrisk.co.za"><div class="fsp-name">Guard Risk</div><div class="fsp-num">0116 691 000</div><div class="fsp-email">info@guardrisk.co.za</div></div>
-      <div class="fsp-card" data-search="hollard life 0860 333 118 customerservice"><div class="fsp-name">Hollard Life</div><div class="fsp-num">0860 333 118</div><div class="fsp-email">customerservice@hollard.co.za</div></div>
-      <div class="fsp-card" data-search="hollard mlm 0860 000 789 lifeclientservice"><div class="fsp-name">Hollard MLM</div><div class="fsp-num">0860 000 789</div><div class="fsp-email">lifeclientservice@hollard.co.za</div></div>
-      <div class="fsp-card" data-search="hollard specialist regent 0860 543 346 0861 051 729 hlamendments"><div class="fsp-name">Hollard Specialist (Regent)</div><div class="fsp-num">0860 543 346 · 0861 051 729</div><div class="fsp-email">Hlamendments@hollard.co.za</div></div>
-      <div class="fsp-card" data-search="king price life 0860 505 050"><div class="fsp-name">King Price Life</div><div class="fsp-num">0860 505 050</div><div class="fsp-email">—</div></div>
-      <div class="fsp-card" data-search="liberty 0860 456 789 info@liberty.co.za"><div class="fsp-name">Liberty</div><div class="fsp-num">0860 456 789</div><div class="fsp-email">info@liberty.co.za</div></div>
-      <div class="fsp-card" data-search="lion of africa 0860 663 247 lionlifenb"><div class="fsp-name">Lion of Africa</div><div class="fsp-num">0860 663 247</div><div class="fsp-email">lionlifenb@lionlife.co.za</div></div>
-      <div class="fsp-card" data-search="metropolitan 0860 724 724 info@metropolitan.co.za"><div class="fsp-name">Metropolitan</div><div class="fsp-num">0860 724 724 · WhatsApp: +27860724724</div><div class="fsp-email">info@metropolitan.co.za</div></div>
-      <div class="fsp-card" data-search="momentum 0860 665 432 clientservice@momentum.co.za"><div class="fsp-name">Momentum</div><div class="fsp-num">0860 665 432</div><div class="fsp-email">clientservice@momentum.co.za</div></div>
-      <div class="fsp-card" data-search="nedbank life 0800 555 111 lifeinsurance@nedbank.co.za"><div class="fsp-name">Nedbank Life</div><div class="fsp-num">0800 555 111</div><div class="fsp-email">lifeinsurance@nedbank.co.za</div></div>
-      <div class="fsp-card" data-search="old mutual life 0860 665 463 0860 506 070 customerservice"><div class="fsp-name">Old Mutual Life</div><div class="fsp-num">0860 665 463 · 0860 506 070</div><div class="fsp-email">customerservice@oldmutual.co.za</div></div>
-      <div class="fsp-card" data-search="old mutual group schemes 0860 607 000 gsenquiries"><div class="fsp-name">Old Mutual Group Schemes</div><div class="fsp-num">0860 607 000</div><div class="fsp-email">GSenquiries@oldmutual.co.za</div></div>
-      <div class="fsp-card" data-search="old mutual protect 0860 002 200 0860 222 274 select contactus"><div class="fsp-name">Old Mutual Protect</div><div class="fsp-num">0860 002 200 · 0860 222 274</div><div class="fsp-email">select@oldmutual.com · contactus@oldmutual.com</div></div>
-      <div class="fsp-card" data-search="outsurance 0873 107 867 uwcancel@out.co.za"><div class="fsp-name">Outsurance</div><div class="fsp-num">0873 107 867</div><div class="fsp-email">uwcancel@out.co.za</div></div>
-      <div class="fsp-card" data-search="safrican phakama 0117 788 000 0123 488 310 safmembership info"><div class="fsp-name">Safrican / Phakama</div><div class="fsp-num">0117 788 000 · 0123 488 310</div><div class="fsp-email">safmembership@safrican.co.za · info@phakama.co.za</div></div>
-      <div class="fsp-card" data-search="sanlam life 0860 726 526 life@sanlam.co.za"><div class="fsp-name">Sanlam Life</div><div class="fsp-num">0860 726 526</div><div class="fsp-email">life@sanlam.co.za</div></div>
-      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky general 0861 235 433 skyinfo info"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — General</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinfo@sanlamsky.co.za · Info@sanlamsky.co.za</div></div>
-      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky alterations 0861 235 433 policyservicing policyimages"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — Alterations</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">PolicyServicing@sanlamsky.co.za · PolicyImages@sanlamsky.co.za</div></div>
-      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky refunds surrenders cashback 0861 235 433 skyinvestmentclaims"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — Refunds / Surrenders / Cashback</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinvestmentclaims@sanlamsky.co.za</div></div>
-      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky rfi third party claims 0861 235 433 thirdpartyclaims"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — RFIs (Third Party Claims)</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">thirdpartyclaims@sanlamsky.co.za</div></div>
-      <div class="fsp-card" data-search="standard bank 0860 123 999 service@standardbankinsurance.co.za"><div class="fsp-name">Standard Bank</div><div class="fsp-num">0860 123 999</div><div class="fsp-email">service@standardbankinsurance.co.za</div></div>
-      <div class="fsp-card" data-search="workerslife 0861 520 520 info@workerslife.co.za"><div class="fsp-name">Workerslife</div><div class="fsp-num">0861 520 520</div><div class="fsp-email">info@workerslife.co.za</div></div>
-    </div>
-
-    <!-- SECTION 2: Online Portals -->
+    <!-- SECTION 1: Online Portals -->
     <div class="section-label" style="margin-bottom:8px;" id="portalSectionLabel">🌐 Online client portals</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;margin-bottom:20px;" id="portalList">
       <a href="https://myassupol.datafree.co.za/#/log-in" target="_blank" data-search="assupol portal myassupol" style="display:flex;flex-direction:column;align-items:center;gap:6px;background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:12px 6px;text-decoration:none;cursor:pointer;-webkit-tap-highlight-color:transparent;">
@@ -2756,6 +2716,46 @@ Please send your Proof of Payment to your advisor once done.</div>
         <div style="display:none;width:44px;height:44px;border-radius:8px;background:#1A2A6C;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:#fff;font-family:Arial,sans-serif;flex-shrink:0;">W</div>
         <span style="font-size:10px;font-weight:700;color:#0d1f3c;text-align:center;line-height:1.2;">Workerslife</span>
       </a>
+    </div>
+
+    <!-- SECTION 2: FSP Providers -->
+    <div class="section-label" style="margin-bottom:8px;margin-top:4px;" id="fspSectionLabel">🏢 FSP providers &amp; cancellation contacts</div>
+    <div id="dirNoResults" style="display:none;text-align:center;color:#374151;font-size:13px;font-weight:600;padding:20px 0;">No results found</div>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <div class="fsp-card" data-search="1life 0860 105 340 clientservices@1life.co.za"><div class="fsp-name">1Life</div><div class="fsp-num">0860 105 340</div><div class="fsp-email">clientservices@1life.co.za</div></div>
+      <div class="fsp-card" data-search="absa life 0860 227 253 polserv@absa.co.za"><div class="fsp-name">Absa Life</div><div class="fsp-num">0860 227 253</div><div class="fsp-email">polserv@absa.co.za</div></div>
+      <div class="fsp-card" data-search="assupol 0861 235 664 clientservice policyservice info"><div class="fsp-name">Assupol</div><div class="fsp-num">0861 235 664</div><div class="fsp-email">clientservice@assupol.co.za · policyservice@assupol.co.za · info@assupol.co.za</div></div>
+      <div class="fsp-card" data-search="assupol prosperity mha nhb 0115 681 457 0861 001 788 groups info"><div class="fsp-name">Assupol Prosperity (MHA / NHB)</div><div class="fsp-num">0115 681 457 · 0861 001 788</div><div class="fsp-email">groups@assupol.co.za · info@nhb.co.za</div></div>
+      <div class="fsp-card" data-search="avbob 0861282621 0861 282 621 clientcare retention intermediaries"><div class="fsp-name">AVBOB</div><div class="fsp-num">0861 282 621</div><div class="fsp-email">clientcare@avbob.co.za · retention@avbob.co.za · intermediaries@avbob.co.za</div></div>
+      <div class="fsp-card" data-search="centriq the unlimited 0861 990 000 customercare"><div class="fsp-name">Centriq / The Unlimited</div><div class="fsp-num">0861 990 000</div><div class="fsp-email">customercare@theunlimited.co.za</div></div>
+      <div class="fsp-card" data-search="channel life sanlam sky 0861 235 433 skyinfo info"><div class="fsp-name">Channel Life (via Sanlam Sky)</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinfo@sanlamsky.co.za · Info@sanlamsky.co.za</div></div>
+      <div class="fsp-card" data-search="clientele 0113 203 000 services@clientele.co.za"><div class="fsp-name">Clientele</div><div class="fsp-num">0113 203 000</div><div class="fsp-email">services@clientele.co.za</div></div>
+      <div class="fsp-card" data-search="discovery funeral phakama 0123 488 310 info@phakama.co.za"><div class="fsp-name">Discovery Funeral (Phakama)</div><div class="fsp-num">0123 488 310</div><div class="fsp-email">info@phakama.co.za</div></div>
+      <div class="fsp-card" data-search="discovery life 0860 005 433 discoverylifeinfo"><div class="fsp-name">Discovery Life</div><div class="fsp-num">0860 005 433</div><div class="fsp-email">discoverylifeinfo@discovery.co.za</div></div>
+      <div class="fsp-card" data-search="emerald life 0116 588 200 0219 100 916 info@emeraldsa.co.za"><div class="fsp-name">Emerald Life</div><div class="fsp-num">0116 588 200 · 0219 100 916</div><div class="fsp-email">info@emeraldsa.co.za</div></div>
+      <div class="fsp-card" data-search="fnb life 0877 367 772 fnblife@fnb.co.za"><div class="fsp-name">FNB Life</div><div class="fsp-num">0877 367 772</div><div class="fsp-email">fnblife@fnb.co.za</div></div>
+      <div class="fsp-card" data-search="guard risk 0116 691 000 info@guardrisk.co.za"><div class="fsp-name">Guard Risk</div><div class="fsp-num">0116 691 000</div><div class="fsp-email">info@guardrisk.co.za</div></div>
+      <div class="fsp-card" data-search="hollard life 0860 333 118 customerservice"><div class="fsp-name">Hollard Life</div><div class="fsp-num">0860 333 118</div><div class="fsp-email">customerservice@hollard.co.za</div></div>
+      <div class="fsp-card" data-search="hollard mlm 0860 000 789 lifeclientservice"><div class="fsp-name">Hollard MLM</div><div class="fsp-num">0860 000 789</div><div class="fsp-email">lifeclientservice@hollard.co.za</div></div>
+      <div class="fsp-card" data-search="hollard specialist regent 0860 543 346 0861 051 729 hlamendments"><div class="fsp-name">Hollard Specialist (Regent)</div><div class="fsp-num">0860 543 346 · 0861 051 729</div><div class="fsp-email">Hlamendments@hollard.co.za</div></div>
+      <div class="fsp-card" data-search="king price life 0860 505 050"><div class="fsp-name">King Price Life</div><div class="fsp-num">0860 505 050</div><div class="fsp-email">—</div></div>
+      <div class="fsp-card" data-search="liberty 0860 456 789 info@liberty.co.za"><div class="fsp-name">Liberty</div><div class="fsp-num">0860 456 789</div><div class="fsp-email">info@liberty.co.za</div></div>
+      <div class="fsp-card" data-search="lion of africa 0860 663 247 lionlifenb"><div class="fsp-name">Lion of Africa</div><div class="fsp-num">0860 663 247</div><div class="fsp-email">lionlifenb@lionlife.co.za</div></div>
+      <div class="fsp-card" data-search="metropolitan 0860 724 724 info@metropolitan.co.za"><div class="fsp-name">Metropolitan</div><div class="fsp-num">0860 724 724 · WhatsApp: +27860724724</div><div class="fsp-email">info@metropolitan.co.za</div></div>
+      <div class="fsp-card" data-search="momentum 0860 665 432 clientservice@momentum.co.za"><div class="fsp-name">Momentum</div><div class="fsp-num">0860 665 432</div><div class="fsp-email">clientservice@momentum.co.za</div></div>
+      <div class="fsp-card" data-search="nedbank life 0800 555 111 lifeinsurance@nedbank.co.za"><div class="fsp-name">Nedbank Life</div><div class="fsp-num">0800 555 111</div><div class="fsp-email">lifeinsurance@nedbank.co.za</div></div>
+      <div class="fsp-card" data-search="old mutual life 0860 665 463 0860 506 070 customerservice"><div class="fsp-name">Old Mutual Life</div><div class="fsp-num">0860 665 463 · 0860 506 070</div><div class="fsp-email">customerservice@oldmutual.co.za</div></div>
+      <div class="fsp-card" data-search="old mutual group schemes 0860 607 000 gsenquiries"><div class="fsp-name">Old Mutual Group Schemes</div><div class="fsp-num">0860 607 000</div><div class="fsp-email">GSenquiries@oldmutual.co.za</div></div>
+      <div class="fsp-card" data-search="old mutual protect 0860 002 200 0860 222 274 select contactus"><div class="fsp-name">Old Mutual Protect</div><div class="fsp-num">0860 002 200 · 0860 222 274</div><div class="fsp-email">select@oldmutual.com · contactus@oldmutual.com</div></div>
+      <div class="fsp-card" data-search="outsurance 0873 107 867 uwcancel@out.co.za"><div class="fsp-name">Outsurance</div><div class="fsp-num">0873 107 867</div><div class="fsp-email">uwcancel@out.co.za</div></div>
+      <div class="fsp-card" data-search="safrican phakama 0117 788 000 0123 488 310 safmembership info"><div class="fsp-name">Safrican / Phakama</div><div class="fsp-num">0117 788 000 · 0123 488 310</div><div class="fsp-email">safmembership@safrican.co.za · info@phakama.co.za</div></div>
+      <div class="fsp-card" data-search="sanlam life 0860 726 526 life@sanlam.co.za"><div class="fsp-name">Sanlam Life</div><div class="fsp-num">0860 726 526</div><div class="fsp-email">life@sanlam.co.za</div></div>
+      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky general 0861 235 433 skyinfo info"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — General</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinfo@sanlamsky.co.za · Info@sanlamsky.co.za</div></div>
+      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky alterations 0861 235 433 policyservicing policyimages"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — Alterations</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">PolicyServicing@sanlamsky.co.za · PolicyImages@sanlamsky.co.za</div></div>
+      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky refunds surrenders cashback 0861 235 433 skyinvestmentclaims"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — Refunds / Surrenders / Cashback</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">Skyinvestmentclaims@sanlamsky.co.za</div></div>
+      <div class="fsp-card" style="border-left-color:#c9922a;" data-search="sanlam sky rfi third party claims 0861 235 433 thirdpartyclaims"><div class="fsp-name" style="color:#c9922a;">Sanlam Sky — RFIs (Third Party Claims)</div><div class="fsp-num">0861 235 433</div><div class="fsp-email">thirdpartyclaims@sanlamsky.co.za</div></div>
+      <div class="fsp-card" data-search="standard bank 0860 123 999 service@standardbankinsurance.co.za"><div class="fsp-name">Standard Bank</div><div class="fsp-num">0860 123 999</div><div class="fsp-email">service@standardbankinsurance.co.za</div></div>
+      <div class="fsp-card" data-search="workerslife 0861 520 520 info@workerslife.co.za"><div class="fsp-name">Workerslife</div><div class="fsp-num">0861 520 520</div><div class="fsp-email">info@workerslife.co.za</div></div>
     </div>
 
     <!-- SECTION 3: Internal Directory -->
