@@ -296,6 +296,7 @@ window.addEventListener('load',()=>{
     try{if(typeof updateWelcomeBar==='function')updateWelcomeBar();}catch(e){}
     try{if(typeof renderBibleVerse==='function')renderBibleVerse();}catch(e){}
     try{if(typeof updatePrecanHubAlert==='function')updatePrecanHubAlert();}catch(e){}
+    try{if(currentUser&&typeof renderDailyBrief==='function')renderDailyBrief();}catch(e){}
   },200);
 });
 
@@ -597,8 +598,9 @@ function enterHub(user){
       syncDocsFromFirebase(),
     ]).then(()=>{
       renderNoticeBoard();
+      renderDailyBrief();
       if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();}
-    }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();});
+    }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();renderDailyBrief();});
     window.startNoticeListener();
     if(window.startTop3Listener)window.startTop3Listener();
     startInboxListener();
@@ -4244,7 +4246,7 @@ function prefillTop3Form(){
 // ── DAILY BRIEF ───────────────────────────────────────────────────────────────
 function renderDailyBrief(){
   const el=document.getElementById('hubDailyBrief');if(!el)return;
-  if(!currentUser){el.style.display='none';return;}
+  if(!currentUser)return;
   el.style.display='block';
   const today=new Date();
   const d=today.getDate(),m=today.getMonth(),y=today.getFullYear();
