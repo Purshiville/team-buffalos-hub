@@ -486,7 +486,7 @@ function getUsers(){try{return JSON.parse(localStorage.getItem('tl_v6')||'{}');}
 function saveUsers(u){try{localStorage.setItem('tl_v6',JSON.stringify(u));}catch(e){}}
 async function syncUsersFromFirebase(){
   if(!window.FB_READY||!window.FB.getAllUsers)return;
-  try{const fbUsers=await window.FB.getAllUsers();if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);}}catch(e){}
+  try{const fbUsers=await window.FB.getAllUsers();if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}}catch(e){}
 }
 function getFpChecks(c){try{return JSON.parse(localStorage.getItem('tl_fp_'+c)||'{}');}catch(e){return{};}}
 function saveFpChecks(c,d){
@@ -560,7 +560,7 @@ function doLogin(){
     window.FB.getAllUsers().then(fbUsers=>{
       clearAlert();
       if(!fbUsers||!fbUsers[code])return showAlert('Employee code not found. Please register first.','error');
-      const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);
+      const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);
       if(local[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
       local[code].lastActive=now();saveUsers(local);
       if(window.FB.saveUser)window.FB.saveUser(code,local[code]).catch(()=>{});
@@ -731,6 +731,7 @@ function enterHub(user){
     ]).then(()=>{
       renderNoticeBoard();
       renderDailyBrief();
+      renderTop3();
       if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();}
     }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();renderDailyBrief();});
     window.startNoticeListener();
@@ -1160,7 +1161,7 @@ function renderYTDTop3(){
   // Sync user photos from Firebase then render
   if(window.FB_READY&&window.FB.getAllUsers){
     window.FB.getAllUsers().then(fbUsers=>{
-      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);}
+      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
       _renderYTDTop3Inner(els);
     }).catch(()=>_renderYTDTop3Inner(els));
   } else {
@@ -1379,7 +1380,7 @@ function openInboxPanel(){
   const _hasUnread=(window._inboxMsgs||[]).some(m=>!(m.readBy||[]).includes(currentUser.code));
   switchInboxTab(_hasUnread?'unread':'received');
   // Refresh user photos from Firebase so avatars are up to date
-  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);renderInboxList();}}).catch(()=>{});}
+  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);renderInboxList();}}).catch(()=>{});}
   if(currentUser.isManager||currentUser.isOps){
     document.getElementById('inboxCompose').style.display='block';
     const sel=document.getElementById('inboxComposeTo');
@@ -1525,7 +1526,7 @@ function openChatPanel(){
   _currentChatId=null;_currentChatPartner=null;
   renderChatContacts();
   // Refresh user photos from Firebase so avatars are up to date
-  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);renderChatContacts();}}).catch(()=>{});}
+  if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);renderChatContacts();}}).catch(()=>{});}
 }
 function closeChatPanel(){
   document.getElementById('chatPanel').classList.remove('open');
@@ -4860,7 +4861,7 @@ function renderDirectory(){
   if(window.FB_READY&&window.FB.getAllUsers){
     window.FB.getAllUsers().then(fbUsers=>{
       if(fbUsers&&Object.keys(fbUsers).length>0){
-        const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);
+        const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);
       }
       loadAndRender();
     }).catch(loadAndRender);
@@ -6782,7 +6783,7 @@ function renderTeamPage(){
   _renderManagerDashInner(); // instant render from localStorage
   if(window.FB_READY&&window.FB.getAllUsers){
     window.FB.getAllUsers().then(fbUsers=>{
-      if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.assign(local,fbUsers);saveUsers(local);}
+      if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
       _renderManagerDashInner();
     }).catch(()=>{});
   }
@@ -6795,7 +6796,7 @@ function renderManagerDash(){renderNoticeManage();
       if(fbUsers&&Object.keys(fbUsers).length>0){
         // Merge Firebase users into localStorage so they persist
         const local=getUsers();
-        Object.assign(local,fbUsers);
+        Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});
         saveUsers(local);
       }
       _renderManagerDashInner();
