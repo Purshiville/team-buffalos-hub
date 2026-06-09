@@ -7607,6 +7607,7 @@ async function renderPRSavedList(){
         <div style="font-size:11px;color:#6b7280;margin-top:2px;">${date} &nbsp;·&nbsp; ${r.policyCount||0} polic${r.policyCount===1?'y':'ies'} &nbsp;·&nbsp; ${total}/month${isManager&&r.advisorName?' &nbsp;·&nbsp; '+r.advisorName:''}</div>
       </div>
       <button onclick="_openSavedPRReview('${r.id}')" style="flex-shrink:0;padding:6px 14px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Open</button>
+      <button onclick="_deleteSavedPRReview('${r.id}')" style="flex-shrink:0;padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">🗑</button>
     </div>`;
   }).join('');
 }
@@ -7663,6 +7664,15 @@ function _generatePdfFromSaved(id){
   fill('prClientPhone',r.clientPhone);fill('prClientEmail',r.clientEmail);
   fill('prAdvisorNotes',r.advisorNotes);
   generatePRPdf();
+}
+async function _deleteSavedPRReview(id){
+  if(!confirm('Delete this saved review? This cannot be undone.'))return;
+  try{
+    if(window.FB_READY&&window.FB.deletePolicyReview)await window.FB.deletePolicyReview(id);
+    window._prSavedReviews=(window._prSavedReviews||[]).filter(x=>x.id!==id);
+    showAlert('Review deleted.','success');
+    renderPRSavedList();
+  }catch(e){showAlert('Delete failed: '+(e.message||'Unknown error'),'error');}
 }
 // ── END POLICY REVIEW ──────────────────────────────────────────────────────
 
