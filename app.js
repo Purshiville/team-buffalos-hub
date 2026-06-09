@@ -1605,13 +1605,16 @@ function openChatThread(partnerCode,partnerName){
   const _lastSeenStr=fmtLastSeen(_partnerUser.lastSeen);
   const _online=_isOnline(_partnerUser.lastSeen);
   el.innerHTML=`<div class="chat-thread">
-    <div class="chat-thread-hd">
-      <button class="chat-back" onclick="backToChatContacts()" title="Back to chats">‹</button>
-      <div style="position:relative;flex-shrink:0;">${_partnerAvatar}${_online?`<div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #f9f8f6;"></div>`:''}</div>
-      <div style="min-width:0;">
-        <div class="chat-thread-name">${partnerName}</div>
-        <div id="chatLastSeen" style="font-size:10px;display:flex;align-items:center;gap:4px;margin-top:1px;">${_lastSeenStr?`<span style="width:7px;height:7px;border-radius:50%;background:${_online?'#22c55e':'#9ca3af'};flex-shrink:0;display:inline-block;"></span><span style="color:${_online?'#16a34a':'#6b7280'};">${_lastSeenStr}</span>`:'&nbsp;'}</div>
+    <div class="chat-thread-hd" style="justify-content:space-between;">
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1;">
+        <button class="chat-back" onclick="backToChatContacts()" title="Back to chats">‹</button>
+        <div style="position:relative;flex-shrink:0;">${_partnerAvatar}${_online?`<div style="position:absolute;bottom:1px;right:1px;width:10px;height:10px;background:#22c55e;border-radius:50%;border:2px solid #f9f8f6;"></div>`:''}</div>
+        <div style="min-width:0;">
+          <div class="chat-thread-name">${partnerName}</div>
+          <div id="chatLastSeen" style="font-size:10px;display:flex;align-items:center;gap:4px;margin-top:1px;">${_lastSeenStr?`<span style="width:7px;height:7px;border-radius:50%;background:${_online?'#22c55e':'#9ca3af'};flex-shrink:0;display:inline-block;"></span><span style="color:${_online?'#16a34a':'#6b7280'};">${_lastSeenStr}</span>`:'&nbsp;'}</div>
+        </div>
       </div>
+      <button onclick="markChatAsUnread()" title="Mark as unread" style="background:none;border:none;cursor:pointer;padding:6px 8px;border-radius:8px;font-size:11px;color:#6b7280;font-weight:600;display:flex;flex-direction:column;align-items:center;gap:1px;flex-shrink:0;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='none'"><span style="font-size:14px;">🔴</span><span style="font-size:9px;letter-spacing:.2px;">UNREAD</span></button>
     </div>
     <div class="chat-messages" id="chatThreadMessages"></div>
     <div class="chat-input-row" style="position:relative;">
@@ -1627,8 +1630,14 @@ function openChatThread(partnerCode,partnerName){
   if(window.FB_READY){
     _chatThreadUnsub=window.FB.onMessages(_currentChatId,msgs=>{
       renderChatMessages(msgs);
-      msgs.forEach(m=>{if(m.from!==currentUser.code&&!(m.readBy||[]).includes(currentUser.code)){window.FB.markMessageRead(m.id,currentUser.code).catch(()=>{});}});
-      window.FB.clearChatUnread(_currentChatId,currentUser.code).catch(()=>{});
+      // Mark each unread incoming message as read and decrement badge per message
+      let newlyRead=0;
+      msgs.forEach(m=>{if(m.from!==currentUser.code&&!(m.readBy||[]).includes(currentUser.code)){window.FB.markMessageRead(m.id,currentUser.code).catch(()=>{});newlyRead++;}});
+      if(newlyRead>0){
+        const _lc=(window._myChats||[]).find(c=>c.id===_currentChatId);
+        if(_lc&&_lc.unread&&_lc.unread[currentUser.code]>0){_lc.unread[currentUser.code]=Math.max(0,(_lc.unread[currentUser.code]||0)-newlyRead);updateChatBadge();}
+        window.FB.clearChatUnread(_currentChatId,currentUser.code).catch(()=>{});
+      }
     });
     // Refresh partner's last seen from Firebase
     window.FB.getAllUsers().then(fbUsers=>{
@@ -1647,6 +1656,14 @@ function backToChatContacts(){
   if(_chatThreadUnsub){_chatThreadUnsub();_chatThreadUnsub=null;}
   _currentChatId=null;_currentChatPartner=null;
   renderChatContacts();
+}
+function markChatAsUnread(){
+  if(!_currentChatId||!currentUser)return;
+  const chatId=_currentChatId;
+  if(window.FB_READY&&window.FB.markChatUnread)window.FB.markChatUnread(chatId,currentUser.code).catch(()=>{});
+  const _lc=(window._myChats||[]).find(c=>c.id===chatId);
+  if(_lc){if(!_lc.unread)_lc.unread={};_lc.unread[currentUser.code]=1;updateChatBadge();}
+  backToChatContacts();
 }
 function renderChatMessages(msgs){
   const el=document.getElementById('chatThreadMessages');
