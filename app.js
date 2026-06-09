@@ -1287,7 +1287,7 @@ function switchInboxTab(tab){
 }
 function _updateUnreadTabCount(){
   if(!currentUser)return;
-  const count=(window._inboxMsgs||[]).filter(m=>!(m.readBy||[]).includes(currentUser.code)).length;
+  const count=(window._inboxMsgs||[]).filter(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat').length;
   const badge=document.getElementById('inboxUnreadCount');
   if(!badge)return;
   if(count>0){badge.textContent=count;badge.style.cssText='background:#dc2626;color:#fff;border-radius:20px;padding:1px 6px;font-size:10px;font-weight:700;margin-left:3px;display:inline-block;';}
@@ -1297,7 +1297,7 @@ function renderUnreadList(){
   const el=document.getElementById('unreadList');
   if(!el||!currentUser)return;
   const msgs=[...(window._inboxMsgs||[])]
-    .filter(m=>!(m.readBy||[]).includes(currentUser.code))
+    .filter(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat')
     .sort((a,b)=>{
       const aT=a.sentAt?.toDate?a.sentAt.toDate():a.sentAt?new Date(a.sentAt):0;
       const bT=b.sentAt?.toDate?b.sentAt.toDate():b.sentAt?new Date(b.sentAt):0;
@@ -1377,7 +1377,7 @@ function openInboxPanel(){
   document.getElementById('inboxPanel').classList.add('open');
   document.getElementById('inboxOverlay').style.display='block';
   // Open to Unread tab if there are unread items, otherwise All
-  const _hasUnread=(window._inboxMsgs||[]).some(m=>!(m.readBy||[]).includes(currentUser.code));
+  const _hasUnread=(window._inboxMsgs||[]).some(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat');
   switchInboxTab(_hasUnread?'unread':'received');
   // Refresh user photos from Firebase so avatars are up to date
   if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);renderInboxList();}}).catch(()=>{});}
@@ -1410,7 +1410,7 @@ function closeInboxPanel(){
 function renderInboxList(){
   const el=document.getElementById('inboxList');
   if(!el||!currentUser)return;
-  const msgs=[...(window._inboxMsgs||[])].sort((a,b)=>{
+  const msgs=[...(window._inboxMsgs||[])].filter(m=>m.type!=='chat').sort((a,b)=>{
     const aRead=(a.readBy||[]).includes(currentUser.code);
     const bRead=(b.readBy||[]).includes(currentUser.code);
     if(aRead!==bRead)return aRead?1:-1; // unread first
