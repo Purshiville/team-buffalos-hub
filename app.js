@@ -6989,6 +6989,7 @@ function renderMarkdown(text){
     .replace(/\*(.+?)\*/g,'<em>$1</em>')
     .replace(/^#{1,3} (.+)$/gm,'<strong>$1</strong>')
     .replace(/^- (.+)$/gm,'&bull; $1')
+    .replace(/(https?:\/\/[^\s<>"']+)/g,'<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#c9922a;font-weight:600;word-break:break-all;">$1</a>')
     .replace(/\n/g,'<br>');
 }
 function addMsg(role,text,typing){
