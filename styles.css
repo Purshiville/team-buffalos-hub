@@ -428,6 +428,8 @@ body::before {
 .dir-role{font-size:11px;color:#6b7280;line-height:1.4;margin-top:2px;}
 .dir-wa{font-size:12px;font-weight:700;color:#fff;text-decoration:none;background:#25d366;border-radius:20px;padding:7px 13px;display:inline-flex;align-items:center;gap:5px;white-space:nowrap;flex-shrink:0;}
 .dir-wa:active{background:#1ebe5d;}
+.dir-call{font-size:15px;color:#fff;text-decoration:none;background:#1b4f8a;border-radius:20px;padding:7px 11px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
+.dir-call:active{background:#163d6d;}
 .fsp-card{background:#fff;border:1px solid #e8e4db;border-left:4px solid #0d1f3c;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;}
 .fsp-name{font-size:13px;font-weight:700;color:#0d1f3c;}
 .fsp-num{font-size:12px;font-weight:700;color:#c9922a;font-family:monospace;}
