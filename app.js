@@ -1312,7 +1312,6 @@ function readInboxItem(id,el,chatFrom,chatFromName){
     el.classList.remove('unread');
     el.querySelector('.inbox-unread-dot')?.remove();
     if(window.FB_READY)window.FB.markInboxRead(id,currentUser.code).catch(()=>{});
-    // Immediately mark in local cache so badge drops without Firebase round-trip
     const localMsg=(window._inboxMsgs||[]).find(m=>m.id===id);
     if(localMsg&&!(localMsg.readBy||[]).includes(currentUser.code)){
       localMsg.readBy=[...(localMsg.readBy||[]),currentUser.code];
@@ -1324,7 +1323,34 @@ function readInboxItem(id,el,chatFrom,chatFromName){
     closeInboxPanel();
     openChatPanel();
     openChatThread(chatFrom,chatFromName);
+    return;
   }
+  // For notice/stats/reminder types — show full content in a modal
+  const msg=(window._inboxMsgs||[]).find(m=>m.id===id);
+  if(msg&&msg.type!=='message'&&msg.type!=='chat'){
+    _showNoticeModal(msg);
+  }
+}
+function _showNoticeModal(msg){
+  let overlay=document.getElementById('_noticeModalOverlay');
+  if(!overlay){
+    overlay=document.createElement('div');
+    overlay.id='_noticeModalOverlay';
+    overlay.style.cssText='position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;padding:16px;';
+    overlay.innerHTML='<div id="_noticeModalBox" style="background:#fff;border-radius:18px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;padding:22px 20px;position:relative;box-shadow:0 8px 40px rgba(0,0,0,.22);"></div>';
+    overlay.addEventListener('click',e=>{if(e.target===overlay)overlay.remove();});
+    document.body.appendChild(overlay);
+  }
+  overlay.style.display='flex';
+  const dt=msg.sentAt?.toDate?msg.sentAt.toDate():(msg.sentAt?new Date(msg.sentAt):new Date());
+  const dateStr=dt.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()]+' '+dt.getFullYear();
+  document.getElementById('_noticeModalBox').innerHTML=`
+    <button onclick="document.getElementById('_noticeModalOverlay').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;line-height:1;">✕</button>
+    <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">${msg.fromName||'Management'} · ${dateStr}</div>
+    <div style="font-size:16px;font-weight:700;color:#0d1f3c;margin-bottom:10px;line-height:1.4;">${msg.title||''}</div>
+    ${msg.body?`<div style="font-size:13px;color:#374151;line-height:1.7;white-space:pre-wrap;">${msg.body}</div>`:''}
+    ${msg.link?`<a href="${msg.link}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:#0d1f3c;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">🔗 Open link</a>`:''}
+  `;
 }
 async function sendManagerInboxMessage(){
   const to=document.getElementById('inboxComposeTo').value;
@@ -2082,6 +2108,26 @@ function filterDirectory(q){
   if(noRes)noRes.style.display=(!anyFsp&&!anyDir&&query)?'block':'none';
 }
 
+function _copyPhone(num){
+  navigator.clipboard.writeText(num).catch(()=>{const t=document.createElement('textarea');t.value=num;document.body.appendChild(t);t.select();document.execCommand('copy');document.body.removeChild(t);});
+  showAlert('Copied '+num,'success');
+}
+function wrapFspPhones(){
+  if(window._fspPhonesWrapped)return;
+  window._fspPhonesWrapped=true;
+  document.querySelectorAll('.fsp-num').forEach(div=>{
+    const parts=div.textContent.split('·').map(s=>s.trim());
+    div.innerHTML=parts.map(part=>{
+      const m=part.match(/[\d\s]{8,}/);
+      if(m){
+        const digits=part.replace(/\s+/g,'');
+        const tel='tel:'+digits.replace(/^0/,'+27');
+        return`<span style="display:inline-flex;align-items:center;gap:5px;"><a href="${tel}" style="color:#0d1f3c;font-weight:700;text-decoration:none;">${part}</a><button onclick="_copyPhone('${digits}')" title="Copy number" style="background:none;border:1px solid #d1d5db;border-radius:5px;padding:1px 5px;font-size:10px;color:#6b7280;cursor:pointer;line-height:1.4;">📋</button></span>`;
+      }
+      return part;
+    }).join(' · ');
+  });
+}
 function wrapFspEmails(){
   if(window._fspEmailsWrapped) return;
   window._fspEmailsWrapped=true;
@@ -2132,11 +2178,12 @@ function showPage(p){
   if(p==='ops'||p==='dailyops')renderOpsPage();
   if(p==='opsland')renderOpsLand();
   if(p==='competitor')renderCompetitors('');
-  if(p==='directory'){wrapFspEmails();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
+  if(p==='directory'){wrapFspEmails();wrapFspPhones();const ds=document.getElementById('dirSearch');if(ds&&ds.value){ds.value='';filterDirectory('');}}
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
+  if(p==='policyreview'){renderPRSavedList();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -2936,6 +2983,8 @@ const NOTICE_TEMPLATES=[
   {group:'🔔 Alerts & Announcements',type:'success',title:'Achievement Announcement',body:'We are proud to share a team achievement. Well done to everyone who contributed — your hard work and dedication make a difference every day. Keep it up!'},
   // Team & Operations additions
   {group:'👥 Team & Operations',type:'info',title:'Monthly Team Meeting — Team Buffalos',body:'Reminder: The monthly Team Buffalos meeting is scheduled. Venue: Izulu Boardroom. Attendance is compulsory unless otherwise communicated. Please ensure you are on time and prepared. Bring your current production figures, pipeline updates, and any client queries you would like to discuss.'},
+  {group:'👥 Team & Operations',type:'success',title:'Incentive — Team Buffalos',body:'We are excited to announce the latest team incentive! Details are as follows:\n\n🎯 Target:\n🎁 Reward:\n📅 Period:\n\nPush hard, stay focused, and let\'s make it happen! 🦬💪 Good luck to everyone.'},
+  {group:'👥 Team & Operations',type:'urgent',title:'Pre-Cancellations — Check Pavlov Report',body:'The Pavlov pre-cancellations report has been updated. Please check if your name appears on today\'s list immediately. If you are on the list, contact your client before 12:00 to prevent cancellation. Report feedback to Arlene before 10:30.',link:'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk'},
   // Documents & Statements
   {group:'📄 Documents & Statements',type:'info',title:'Commission Statements Available on Connect Me',body:'Your commission statements are now available on Connect Me. Please log in and review your statement. Statements will expire and be removed from the portal after 7 days — download or save your copy before then.',link:'https://connect-me-cz7b.bolt.host/#/tools?tab=commission-split',expiryDays:7},
   {group:'📄 Documents & Statements',type:'info',title:'Payslips Available on Connect Me',body:'Your payslips are now available on Connect Me. Please log in and download your payslip. Payslips will expire and be removed from the portal after 7 days — download or save your copy before then.',link:'https://connect-me-cz7b.bolt.host/#/tools?tab=payslips',expiryDays:7},
@@ -7115,6 +7164,13 @@ function updatePRButtons(){
     generateBtn.style.opacity=canGen?'1':'.4';
     generateBtn.style.cursor=canGen?'pointer':'not-allowed';
   }
+  const saveBtn=document.getElementById('prSaveBtn');
+  if(saveBtn){
+    const canSave=allDone&&_prExtracted.some(Boolean);
+    saveBtn.disabled=!canSave;
+    saveBtn.style.opacity=canSave?'1':'.4';
+    saveBtn.style.cursor=canSave?'pointer':'not-allowed';
+  }
 }
 
 async function analysePRDocuments(){
@@ -7498,6 +7554,57 @@ function clearPolicyReview(){
   const warn=document.getElementById('prMissingWarning');if(warn)warn.style.display='none';
   const notes=document.getElementById('prAdvisorNotes');if(notes)notes.value='';
   updatePRButtons();
+}
+async function savePRReview(){
+  const policies=_prExtracted.filter(Boolean);
+  if(!policies.length){showAlert('No policy data to save — please analyse documents first.','error');return;}
+  const clientName=document.getElementById('prClientName').value.trim()||'[Client Name]';
+  const clientId=document.getElementById('prClientId').value.trim()||'';
+  const clientPhone=document.getElementById('prClientPhone').value.trim()||'';
+  const clientEmail=document.getElementById('prClientEmail').value.trim()||'';
+  const advisorNotes=document.getElementById('prAdvisorNotes').value.trim()||'';
+  const advisorCode=currentUser?.code||'';
+  const advisorName=currentUser?.name||'';
+  const totalPremium=policies.reduce((s,p)=>s+(p.premium||0),0);
+  const data={clientName,clientId,clientPhone,clientEmail,advisorNotes,advisorCode,advisorName,totalPremium,policyCount:policies.length,policies};
+  const btn=document.getElementById('prSaveBtn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    if(window.FB_READY&&window.FB.savePolicyReview){
+      await window.FB.savePolicyReview(data);
+    }
+    showAlert('Review saved for '+clientName,'success');
+    renderPRSavedList();
+  }catch(e){
+    showAlert('Save failed: '+(e.message||'Unknown error'),'error');
+  }finally{
+    if(btn){btn.textContent='💾 Save Review';updatePRButtons();}
+  }
+}
+
+async function renderPRSavedList(){
+  const el=document.getElementById('prSavedList');
+  if(!el)return;
+  el.style.display='block';
+  el.innerHTML='<div style="padding:10px 12px;color:#6b7280;font-size:13px;">Loading saved reviews…</div>';
+  let reviews=[];
+  try{
+    if(window.FB_READY&&window.FB.getPolicyReviews)reviews=await window.FB.getPolicyReviews();
+  }catch(e){
+    el.innerHTML='<div style="padding:10px 12px;color:#dc2626;font-size:13px;">Could not load saved reviews.</div>';
+    return;
+  }
+  if(!reviews.length){el.innerHTML='<div style="padding:10px 12px;color:#6b7280;font-size:13px;">No saved reviews yet.</div>';return;}
+  el.innerHTML=reviews.map(r=>{
+    const date=r.savedAt?.toDate?(r.savedAt.toDate().toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})):(r.savedAt?new Date(r.savedAt).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'Unknown date');
+    const total=r.totalPremium?'R '+r.totalPremium.toLocaleString('en-ZA'):'—';
+    return`<div style="padding:10px 12px;border-bottom:1px solid #f3f4f6;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:700;font-size:13px;color:#0d1f3c;">${r.clientName||'[Unknown]'}</div>
+        <div style="font-size:11px;color:#6b7280;margin-top:2px;">${date} &nbsp;·&nbsp; ${r.policyCount||0} polic${r.policyCount===1?'y':'ies'} &nbsp;·&nbsp; ${total}/month${r.advisorName?' &nbsp;·&nbsp; '+r.advisorName:''}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 // ── END POLICY REVIEW ──────────────────────────────────────────────────────
 
