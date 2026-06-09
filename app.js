@@ -502,6 +502,7 @@ function todayStr(){return new Date().toISOString().slice(0,10);}
 function daysUntil(s){const d=new Date(s),t=new Date();t.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
 function daysFrom(s){return Math.abs(daysUntil(s));}
 function fmtDate(iso){if(!iso)return'Never';const d=new Date(iso),diff=Math.floor((Date.now()-d)/60000);if(diff<2)return'Just now';if(diff<60)return diff+'m ago';if(diff<1440)return Math.floor(diff/60)+'h ago';return Math.floor(diff/1440)+'d ago';}
+function fmtLastSeen(ts){if(!ts)return'';try{const d=ts?.toDate?ts.toDate():new Date(ts);const diff=Date.now()-d;if(isNaN(diff)||diff<0)return'';if(diff<90000)return'Active just now';if(diff<3600000)return`Active ${Math.floor(diff/60000)}m ago`;if(diff<86400000)return`Last seen today ${d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})}`;return`Last seen ${d.toLocaleDateString('en-ZA',{day:'numeric',month:'short'})}`;}catch(e){return'';} }
 function fmtLastActive(ts){
   if(!ts)return'Never logged in';
   const d=new Date(ts);
@@ -724,6 +725,7 @@ function enterHub(user){
   initStatsListener();
   // Sync from Firebase then render
   if(window.FB_READY){
+    if(window.FB.updateLastSeen){window.FB.updateLastSeen(user.code).catch(()=>{});setInterval(()=>{if(currentUser&&window.FB.updateLastSeen)window.FB.updateLastSeen(currentUser.code).catch(()=>{});},180000);}
     Promise.all([
       syncUsersFromFirebase(),
       syncSchedulesFromFirebase(),
@@ -1529,6 +1531,7 @@ function openChatPanel(){
   if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);renderChatContacts();}}).catch(()=>{});}
 }
 function closeChatPanel(){
+  if(_currentChatId){backToChatContacts();return;}
   document.getElementById('chatPanel').classList.remove('open');
   document.getElementById('chatOverlay').style.display='none';
   if(_chatThreadUnsub){_chatThreadUnsub();_chatThreadUnsub=null;}
@@ -1571,7 +1574,7 @@ function renderChatContacts(){
     const contactAvatar=contactPhoto
       ?`<img src="${contactPhoto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
       :`<div class="chat-av" style="background:${chatColor(c.code)};">${c.name.charAt(0)}</div>`;
-    return`<div class="chat-contact${unread?' chat-contact-unread':''}" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
+    return`<div class="chat-contact${unread?' chat-contact-unread':''}" style="${unread?'background:#e8eeff;':''};" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
       ${contactAvatar}
       <div style="flex:1;min-width:0;">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
@@ -1591,15 +1594,20 @@ function openChatThread(partnerCode,partnerName){
   const _lc=(window._myChats||[]).find(c=>c.id===_currentChatId);
   if(_lc){if(!_lc.unread)_lc.unread={};_lc.unread[currentUser.code]=0;updateChatBadge();}
   const el=document.getElementById('chatBody');
-  const _partnerPhoto=getUsers()[partnerCode]?.photo||null;
+  const _partnerUser=getUsers()[partnerCode]||{};
+  const _partnerPhoto=_partnerUser.photo||null;
   const _partnerAvatar=_partnerPhoto
-    ?`<img src="${_partnerPhoto}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
-    :`<div class="chat-av" style="background:${chatColor(partnerCode)};width:30px;height:30px;font-size:12px;">${partnerName.charAt(0)}</div>`;
+    ?`<img src="${_partnerPhoto}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
+    :`<div class="chat-av" style="background:${chatColor(partnerCode)};width:36px;height:36px;font-size:14px;">${partnerName.charAt(0)}</div>`;
+  const _lastSeenStr=fmtLastSeen(_partnerUser.lastSeen);
   el.innerHTML=`<div class="chat-thread">
     <div class="chat-thread-hd">
-      <button class="chat-back" onclick="backToChatContacts()">‹</button>
+      <button class="chat-back" onclick="backToChatContacts()" title="Back to chats">‹</button>
       ${_partnerAvatar}
-      <div class="chat-thread-name">${partnerName}</div>
+      <div style="min-width:0;">
+        <div class="chat-thread-name">${partnerName}</div>
+        ${_lastSeenStr?`<div id="chatLastSeen" style="font-size:10px;color:#6b7280;margin-top:1px;">${_lastSeenStr}</div>`:'<div id="chatLastSeen" style="font-size:10px;color:#6b7280;margin-top:1px;"></div>'}
+      </div>
     </div>
     <div class="chat-messages" id="chatThreadMessages"></div>
     <div class="chat-input-row" style="position:relative;">
@@ -1615,11 +1623,16 @@ function openChatThread(partnerCode,partnerName){
   if(window.FB_READY){
     _chatThreadUnsub=window.FB.onMessages(_currentChatId,msgs=>{
       renderChatMessages(msgs);
-      // Mark received messages as read
       msgs.forEach(m=>{if(m.from!==currentUser.code&&!(m.readBy||[]).includes(currentUser.code)){window.FB.markMessageRead(m.id,currentUser.code).catch(()=>{});}});
-      // Clear unread count on this chat
       window.FB.clearChatUnread(_currentChatId,currentUser.code).catch(()=>{});
     });
+    // Refresh partner's last seen from Firebase
+    window.FB.getAllUsers().then(fbUsers=>{
+      if(!fbUsers)return;
+      const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);
+      const lsEl=document.getElementById('chatLastSeen');
+      if(lsEl&&_currentChatPartner){const s=fmtLastSeen(local[_currentChatPartner.code]?.lastSeen);lsEl.textContent=s;}
+    }).catch(()=>{});
   }
 }
 function backToChatContacts(){
@@ -1643,12 +1656,14 @@ function renderChatMessages(msgs){
         ?`<img src="${senderPhoto}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;flex-shrink:0;margin-right:6px;align-self:flex-end;">`
         :`<div style="width:26px;height:26px;border-radius:50%;background:${chatColor(m.from||'X')};color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-right:6px;align-self:flex-end;">${senderInitialChat}</div>`
       :'';
+    const seenByPartner=mine&&(m.readBy||[]).includes(_currentChatPartner?.code);
+    const tickHtml=mine?`<span style="color:${seenByPartner?'#c9922a':'#9ca3af'};font-size:10px;margin-left:3px;">${seenByPartner?'✓✓':'✓'}</span>`:'';
     return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="margin-bottom:8px;">
       ${!mine?senderAvatar:''}
       <div style="max-width:75%;">
         ${!mine?`<div style="font-size:10px;color:#6b7280;margin-bottom:2px;padding:0 2px;">${m.fromName}</div>`:''}
         <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text}</div>
-        <div class="chat-bubble-time">${timeStr}</div>
+        <div class="chat-bubble-time">${timeStr}${tickHtml}</div>
       </div>
     </div>`;
   }).join('');
