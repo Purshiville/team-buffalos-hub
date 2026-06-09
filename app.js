@@ -296,6 +296,8 @@ window.addEventListener('load',()=>{
     try{if(typeof updateWelcomeBar==='function')updateWelcomeBar();}catch(e){}
     try{if(typeof renderBibleVerse==='function')renderBibleVerse();}catch(e){}
     try{if(typeof updatePrecanHubAlert==='function')updatePrecanHubAlert();}catch(e){}
+    try{if(typeof renderProdCountdownStandalone==='function')renderProdCountdownStandalone();}catch(e){}
+    try{if(typeof renderHubCountdown==='function')renderHubCountdown();}catch(e){}
     try{if(currentUser&&typeof renderDailyBrief==='function')renderDailyBrief();}catch(e){}
   },200);
 });
@@ -307,7 +309,7 @@ window.addEventListener('load',()=>{
   document.addEventListener('fb-ready',()=>{
     setTimeout(()=>{
       if(!currentUser)tryRestoreSession();
-    },800);
+    },0);
   },{once:true});
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
@@ -4287,6 +4289,20 @@ function renderDailyBrief(){
     items.push({icon:'🔮',text:`<b>Nothing scheduled for tomorrow</b>`});
   }
 
+  // Next Qlink run
+  if(typeof QLINK_DATES!=='undefined'){
+    const allRuns=[];
+    Object.entries(QLINK_DATES).forEach(([month,runs])=>{
+      runs.forEach(r=>{if(r.d>=todayStr)allRuns.push({date:r.d,month});});
+    });
+    allRuns.sort((a,b)=>a.date.localeCompare(b.date));
+    if(allRuns.length){
+      const next=allRuns[0];
+      const isToday=next.date===todayStr;
+      items.push({icon:'⚡',text:isToday?`<b>Qlink run TODAY</b> — submit before 13:00`:`<b>Next Qlink run: ${next.date}</b> (${next.month}) — submit before 13:00`});
+    }
+  }
+
   // Day of week motivation
   const dow=today.getDay();
   const dayTips={1:'<b>Monday:</b> Set the week\'s targets with your team first thing.',2:'<b>Tuesday:</b> Mid-week push — check pipeline and follow up on quotes.',3:'<b>Wednesday:</b> Ideal day for school visits and presentations.',4:'<b>Thursday:</b> Review submissions in progress before Friday.',5:'<b>Friday:</b> Confirm all cases are on Connect Me before end of day.',6:'<b>Saturday:</b> Quieter day — great time to plan next week.',0:'<b>Sunday:</b> Rest and prepare — week starts tomorrow.'};
@@ -4424,31 +4440,6 @@ function renderHubCountdown(){
   const now=new Date();
   const todayStr=now.toISOString().slice(0,10);
   const html=[];
-
-  // ── Next Qlink runs ──
-  if(typeof QLINK_DATES!=='undefined'){
-    const allRuns=[];
-    Object.entries(QLINK_DATES).forEach(([month,runs])=>{
-      runs.forEach(r=>{if(r.d>=todayStr)allRuns.push({date:r.d,month});});
-    });
-    allRuns.sort((a,b)=>a.date.localeCompare(b.date));
-    if(allRuns.length){
-      const next=allRuns[0];
-      const fd=new Date(next.date+'T13:00:00');
-      const diff=fd-now;
-      const isToday=next.date===todayStr;
-      const urgent=diff<86400000;
-      const colour=urgent?'#fca5a5':'rgba(255,255,255,0.85)';
-      const next3=allRuns.slice(0,3).map((r,i)=>`<div style="display:flex;justify-content:space-between;font-size:11px;color:${i===0?'#0d1f3c':'#9ca3af'};padding:2px 0;${i===0?'font-weight:700;':''}">
-        <span>${r.date} <span style="font-size:10px;color:#9ca3af;">${r.month}</span></span>
-        <span>${r.date===todayStr?'<span style="color:#dc2626;font-weight:700;">TODAY — before 13:00</span>':i===0?'<span style="color:#c9922a;">Next run</span>':''}</span>
-      </div>`).join('');
-      html.push(`<div style="background:#f8f7f4;border-radius:10px;padding:8px 12px;border-left:3px solid #c9922a;">
-        <div style="font-size:10px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">⚡ Qlink runs — submit before 13:00</div>
-        ${next3}
-      </div>`);
-    }
-  }
 
   el.innerHTML=html.join('');
   el.style.display=html.length?'flex':'none';
