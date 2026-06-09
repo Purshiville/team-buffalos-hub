@@ -1629,6 +1629,7 @@ function openChatThread(partnerCode,partnerName){
   if(_chatThreadUnsub){_chatThreadUnsub();_chatThreadUnsub=null;}
   if(window.FB_READY){
     _chatThreadUnsub=window.FB.onMessages(_currentChatId,msgs=>{
+      window._chatMsgsCache=msgs;
       renderChatMessages(msgs);
       // Mark each unread incoming message as read and decrement badge per message
       let newlyRead=0;
@@ -1683,16 +1684,51 @@ function renderChatMessages(msgs){
       :'';
     const seenByPartner=mine&&(m.readBy||[]).includes(_currentChatPartner?.code);
     const tickHtml=mine?`<span style="color:${seenByPartner?'#c9922a':'#9ca3af'};font-size:10px;margin-left:3px;">${seenByPartner?'✓✓':'✓'}</span>`:'';
+    const reactions=m.reactions||{};
+    const reactionHtml=Object.entries(reactions).filter(([,u])=>u?.length>0).map(([emoji,users])=>`<button class="chat-reaction-chip${users.includes(currentUser.code)?' mine':''}" onclick="toggleReactionOnMsg('${m.id}','${emoji}')">${emoji} <span style="font-size:11px;">${users.length}</span></button>`).join('');
+    const msgId=m.id;
+    let _lpt=null;
+    const lpStart=`_chatLPT=setTimeout(()=>openReactionPicker('${msgId}',this),600)`;
+    const lpEnd=`clearTimeout(_chatLPT)`;
     return`<div class="chat-bubble-wrap ${mine?'mine':'theirs'}" style="margin-bottom:8px;">
       ${!mine?senderAvatar:''}
       <div style="max-width:75%;">
         ${!mine?`<div style="font-size:10px;color:#6b7280;margin-bottom:2px;padding:0 2px;">${m.fromName}</div>`:''}
-        <div class="chat-bubble ${mine?'mine':'theirs'}">${m.text}</div>
+        <div class="chat-bubble ${mine?'mine':'theirs'}" ontouchstart="${lpStart}" ontouchend="${lpEnd}" ontouchmove="${lpEnd}" oncontextmenu="event.preventDefault();openReactionPicker('${msgId}',this);">${m.text}</div>
         <div class="chat-bubble-time">${timeStr}${tickHtml}</div>
+        ${reactionHtml?`<div class="chat-bubble-reactions">${reactionHtml}</div>`:''}
       </div>
     </div>`;
   }).join('');
   el.scrollTop=el.scrollHeight;
+}
+let _chatLPT=null;
+const _REACT_EMOJIS=['👍','❤️','😂','😮','😢','🙌','🔥','👏'];
+function openReactionPicker(msgId,bubbleEl){
+  closeReactionPicker();
+  const rect=bubbleEl.getBoundingClientRect();
+  const picker=document.createElement('div');
+  picker.className='chat-reaction-picker';
+  picker.id='chatReactionPicker';
+  // Position above the bubble, centred
+  const left=Math.min(Math.max(rect.left,8),window.innerWidth-280);
+  const top=Math.max(rect.top-60,8);
+  picker.style.cssText+=`left:${left}px;top:${top}px;`;
+  picker.innerHTML=_REACT_EMOJIS.map(e=>`<button onclick="toggleReactionOnMsg('${msgId}','${e}');closeReactionPicker();" style="background:none;border:none;font-size:24px;cursor:pointer;padding:4px 3px;border-radius:50%;line-height:1;-webkit-tap-highlight-color:transparent;" onmouseenter="this.style.background='#f3f4f6'" onmouseleave="this.style.background='none'">${e}</button>`).join('');
+  document.body.appendChild(picker);
+  setTimeout(()=>document.addEventListener('click',closeReactionPicker,{once:true}),100);
+}
+function closeReactionPicker(){
+  document.getElementById('chatReactionPicker')?.remove();
+}
+function toggleReactionOnMsg(msgId,emoji){
+  if(!window.FB_READY||!currentUser)return;
+  // Check local message data to determine add vs remove
+  const allMsgs=window._chatMsgsCache||[];
+  const msg=allMsgs.find(m=>m.id===msgId);
+  const alreadyReacted=msg&&(msg.reactions||{})[emoji]?.includes(currentUser.code);
+  if(alreadyReacted){window.FB.removeReaction(msgId,emoji,currentUser.code).catch(()=>{});}
+  else{window.FB.addReaction(msgId,emoji,currentUser.code).catch(()=>{});}
 }
 async function sendChatMsg(){
   const input=document.getElementById('chatThreadInput');

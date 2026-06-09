@@ -107,6 +107,10 @@ body::before {
 .chat-bubble.mine{background:#0d1f3c;color:#fff;border-bottom-right-radius:4px;}
 .chat-bubble.theirs{background:#f3f4f6;color:#1a1a2e;border-bottom-left-radius:4px;}
 .chat-bubble-time{font-size:10px;color:#9ca3af;margin-top:2px;padding:0 2px;}
+.chat-bubble-reactions{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+.chat-reaction-chip{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:12px;padding:3px 8px;font-size:12px;cursor:pointer;display:inline-flex;align-items:center;gap:3px;line-height:1.2;-webkit-tap-highlight-color:transparent;}
+.chat-reaction-chip.mine{background:#e0e7ff;border-color:#818cf8;}
+.chat-reaction-picker{position:fixed;background:#fff;border-radius:28px;box-shadow:0 4px 24px rgba(0,0,0,0.18);padding:8px 12px;display:flex;gap:4px;z-index:600;border:1px solid #e5e7eb;transform:translateY(-8px);}
 .chat-input-row{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #e8e4db;flex-shrink:0;background:#fff;}
 .chat-input{flex:1;padding:8px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:20px;outline:none;font-family:inherit;}
 .chat-input:focus{border-color:#0d1f3c;}
@@ -723,17 +727,28 @@ body::before {
 .btn-cancel{background:#f4f2ed;border:none;color:#6b7280;}
 .btn-save{background:#0d1f3c;color:#fff;border:none;}
 
+/* Fix sticky search bar to sit below sticky topbar+nav on all screen sizes */
+.dir-search-wrap { top: 92px; }
+
 @media (max-width: 640px) {
   .topbar { padding: 8px 12px; }
   .topbar-right button { font-size: 11px; padding: 5px 8px; }
   .nav-tabs { gap: 2px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-  .nav-tab { font-size: 11px; padding: 6px 8px; white-space: nowrap; flex-shrink: 0; }
+  .nav-tabs::-webkit-scrollbar { display: none; }
+  .nav-tab { font-size: 11px; padding: 8px 10px; white-space: nowrap; flex-shrink: 0; min-height: 38px; display: inline-flex; align-items: center; }
   .ops-grid { grid-template-columns: 1fr 1fr; }
   .docs-grid { grid-template-columns: 1fr; }
   .primary-tools-grid { grid-template-columns: 1fr; }
   .modal { width: 95vw !important; max-width: 95vw !important; margin: 10px auto; }
   .full-card { padding: 12px; }
   #hubQuickNotice .full-card { padding: 10px; }
+  /* Reduce page side padding on phones to maximise content width */
+  .page { padding: 12px 14px; }
+  /* Larger touch targets for key actions */
+  .dir-call, .dir-wa { min-height: 40px; padding: 8px 12px; }
+  .chat-reaction-chip { padding: 5px 10px; font-size: 13px; }
+  /* Blowup modals: tighter top on small screens */
+  #briefBlowupOv { padding-top: 5vh !important; }
 }
 /* Settings Panel */
 .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:900;display:none;}
