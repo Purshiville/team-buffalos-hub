@@ -1571,16 +1571,16 @@ function renderChatContacts(){
     const contactAvatar=contactPhoto
       ?`<img src="${contactPhoto}" style="width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;">`
       :`<div class="chat-av" style="background:${chatColor(c.code)};">${c.name.charAt(0)}</div>`;
-    return`<div class="chat-contact" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
+    return`<div class="chat-contact${unread?' chat-contact-unread':''}" onclick="openChatThread('${c.code}','${c.name.replace(/'/g,'&#39;')}')">
       ${contactAvatar}
       <div style="flex:1;min-width:0;">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;">
           <div class="chat-contact-name" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name}</div>
-          ${lastAtStr?`<div style="font-size:10px;color:#9ca3af;flex-shrink:0;">${lastAtStr}</div>`:''}
+          ${lastAtStr?`<div style="font-size:10px;flex-shrink:0;${unread?'color:#0d1f3c;font-weight:600;':'color:#9ca3af;'}">${lastAtStr}</div>`:''}
         </div>
-        <div class="chat-contact-last" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${lastMsg}</div>
+        <div class="chat-contact-last">${lastMsg}</div>
       </div>
-      ${unread?`<div class="chat-unread-badge" style="margin-left:8px;">${unread}</div>`:''}
+      ${unread?`<div class="chat-unread-badge">${unread}</div>`:''}
     </div>`;
   }).join('');
 }

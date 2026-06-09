@@ -89,7 +89,10 @@ body::before {
 .chat-contact:hover{background:#fafaf8;}
 .chat-av{width:38px;height:38px;border-radius:50%;color:#fff;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .chat-contact-name{font-size:13px;font-weight:600;color:#0d1f3c;}
-.chat-contact-last{font-size:11px;color:#9ca3af;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;}
+.chat-contact-last{font-size:11px;color:#9ca3af;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chat-contact-unread{background:#f0f4ff;}
+.chat-contact-unread .chat-contact-name{font-weight:700;color:#0d1f3c;}
+.chat-contact-unread .chat-contact-last{color:#374151;}
 .chat-unread-badge{min-width:18px;height:18px;background:#c9922a;color:#fff;font-size:10px;font-weight:800;border-radius:9px;display:flex;align-items:center;justify-content:center;padding:0 4px;margin-left:auto;flex-shrink:0;}
 /* Chat thread */
 .chat-thread{display:flex;flex-direction:column;height:100%;}
