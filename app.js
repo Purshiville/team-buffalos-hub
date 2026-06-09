@@ -3166,7 +3166,7 @@ function renderNoticeBoard(){
   const matchesRecipient=n=>(!n.recipientCode||n.recipientCode==='ALL')||isOps||(n.recipientCode===currentUser?.code);
 
   const current=allNotices.filter(n=>!dismissed.includes(n.id)&&getAge(n)<=getExpiry(n)&&matchesRecipient(n));
-  const archived=allNotices.filter(n=>getAge(n)>getExpiry(n)&&matchesRecipient(n));
+  const archived=allNotices.filter(n=>(dismissed.includes(n.id)||getAge(n)>getExpiry(n))&&matchesRecipient(n));
 
   let allComments={};
   try{allComments=JSON.parse(localStorage.getItem('tl_notice_comments')||'{}');}catch(e){}
