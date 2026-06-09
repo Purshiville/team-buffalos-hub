@@ -716,9 +716,9 @@ function enterHub(user){
   chatHistory=[];
   const fn=user.name.split(' ')[0];
   const bday=user.dob?getBdayInfo(user.dob):null;
-  let greeting=`Hi ${fn}! I'm the Team Buffalos business assistant.`;
-  if(bday&&bday.isToday)greeting=`🎂 Happy Birthday ${fn}! Wishing you a wonderful day from the whole Team Buffalos family! I'm also here for any business questions.`;
-  document.getElementById('chatMessages').innerHTML=`<div class="msg bot"><div class="msg-av bot">AI</div><div class="msg-bubble">${greeting} Ask me anything about products, commission, NTU, persistency, Qlink, pre-cancellations, fit &amp; proper, or compliance — I'm here 24/7.</div></div>`;
+  let greeting=`🦬 Mr Know-It-All of insurance, reporting for duty — ${fn}, ask me anything and I'll charge straight at it.`;
+  if(bday&&bday.isToday)greeting=`🎂 Happy Birthday ${fn}! Wishing you a wonderful day from the whole Team Buffalos family! Your Buffalo Genius is also standing by for any business questions.`;
+  document.getElementById('chatMessages').innerHTML=`<div class="msg bot"><div class="msg-av bot">AI</div><div class="msg-bubble">${greeting}<br><span style="font-size:11px;color:#9ca3af;">Products · Commission · NTU · Qlink · Pre-cancellations · Fit &amp; Proper · Compliance</span></div></div>`;
   renderFpPage();renderHubBirthdays();
   // Start stats listener immediately — no need to wait for other syncs
   initStatsListener();
@@ -1038,7 +1038,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${pc};">R${(a.actualPremium||0).toLocaleString()}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${pp}%</td>`+
       `</tr>`;
@@ -1052,7 +1052,7 @@ function renderProdStats(data,period){
     const isMe=a.code===currentUser.code;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
-      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' ★':''}${_newBadge(a.code)}</td>`+
+      `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${cc};">${a.actualCases||0}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${cp}%</td>`+
       `</tr>`;
@@ -1147,8 +1147,8 @@ function _renderYTDStatsInner(el){
     <div style="width:1px;background:#f4f2ed;margin:0 4px;"></div>
     <div style="flex:1;text-align:center;padding:0 8px;"><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">YTD Premium</div><div style="font-size:20px;font-weight:800;color:#c9922a;">R${my.premium.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;">#${myRankPrem} of ${n}</div></div>
   </div>`:'' ;
-  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td></tr>`;}).join('');
-  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' ★':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
+  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td></tr>`;}).join('');
+  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📅 ${yr} Year-to-Date</div>`+myCard+
     `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
@@ -4387,22 +4387,23 @@ function showBriefBlowup(type){
     const salaryMonthLabel=k=>{const yr=k.slice(0,4),mo=parseInt(k.slice(4))-1;return MONTHS[mo]+' '+yr;};
     const entries=Object.entries(QLINK_DATES).sort((a,b)=>a[0].localeCompare(b[0]));
     rows=entries.map(([salMo,runs])=>{
+      const allPast=runs.every(r=>r.d<todayStr);
       const runsHtml=runs.map(r=>{
         const isPast=r.d<todayStr,isToday=r.d===todayStr;
         const dt=new Date(r.d+'T00:00:00');
-        const label=DAYS_SHORT[dt.getDay()]+', '+dt.getDate()+' '+MONTHS[dt.getMonth()];
-        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0 5px 8px;${isPast?'opacity:.38;':''}">
-          <span style="font-size:13px;font-weight:${isToday?700:500};color:${isToday?'#dc2626':'#374151'};">${label}${isToday?' <span style="font-size:10px;font-weight:700;color:#dc2626;">TODAY</span>':''}</span>
-          <span style="font-size:11px;color:#9ca3af;">before 13:00</span>
+        const label=DAYS_SHORT[dt.getDay()]+' '+dt.getDate()+' '+MONTHS[dt.getMonth()].slice(0,3);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0 4px 8px;${isPast?'opacity:.3;':''}">
+          <span style="font-size:12px;font-weight:${isToday?700:400};color:${isToday?'#dc2626':'#374151'};">${label}${isToday?'  <b style="color:#dc2626;">TODAY</b>':''}</span>
+          <span style="font-size:10px;color:#9ca3af;">13:00</span>
         </div>`;
       }).join('');
-      const allPast=runs.every(r=>r.d<todayStr);
-      return `<div style="margin-bottom:10px;${allPast?'opacity:.45;':''}">
-        <div style="font-size:10px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:.5px;padding-bottom:4px;border-bottom:1px solid #f3f4f6;">Salary Month: ${salaryMonthLabel(salMo)}</div>
+      return `<div style="margin-bottom:6px;${allPast?'opacity:.45;':''}">
+        <div style="font-size:10px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:.5px;padding:3px 0 3px 0;border-bottom:1px solid #f3f4f6;">${salaryMonthLabel(salMo)}</div>
         ${runsHtml}
       </div>`;
     }).join('');
-    rows+=`<div style="margin-top:6px;padding:10px;background:#fef9c3;border-radius:8px;font-size:11px;color:#92400e;line-height:1.5;">Submit the Qlink on Connect Me before 13:00 on each run date to guarantee the deduction reflects on that salary month's payslip.</div>`;
+    rows+=`<div style="margin-top:8px;padding:8px 10px;background:#fef9c3;border-radius:8px;font-size:11px;color:#92400e;">Submit on Connect Me before 13:00 to guarantee the deduction on that salary month.</div>`;
+
   } else if(type==='prod'){
     title='📋 Production Cut-off Dates 2026';
     rows=PROD_CUTOFFS.map(p=>{
@@ -4410,26 +4411,46 @@ function showBriefBlowup(type){
       const isActive=todayStr>=p.opens&&todayStr<=p.cutoff;
       const cutDt=new Date(p.cutoff+'T00:00:00'),openDt=new Date(p.opens+'T00:00:00');
       const weeks=Math.round((cutDt-openDt)/(7*86400000));
-      const cutLabel=cutDt.getDate()+' '+MONTHS[cutDt.getMonth()];
-      const openLabel=openDt.getDate()+' '+MONTHS[openDt.getMonth()];
-      return `<div style="padding:10px 12px;border-radius:10px;margin-bottom:6px;${isActive?'background:#fef3c7;border:1.5px solid #f59e0b;':isPast?'background:#f9fafb;opacity:.4;':'background:#f8f7f4;border:1px solid #e8e4db;'}">
-        <div style="display:flex;justify-content:space-between;align-items:center;">
-          <span style="font-size:13px;font-weight:700;color:${isActive?'#92400e':'#0d1f3c'};">Cut-off: ${cutLabel} at 20:00${isActive?'  <span style="font-size:10px;color:#c9922a;">← current</span>':''}</span>
-          <span style="font-size:11px;color:#9ca3af;white-space:nowrap;margin-left:6px;">${weeks} wk${weeks!==1?'s':''}</span>
+      const cutLabel=DAYS_SHORT[cutDt.getDay()]+' '+cutDt.getDate()+' '+MONTHS[cutDt.getMonth()].slice(0,3);
+      const openLabel=openDt.getDate()+' '+MONTHS[openDt.getMonth()].slice(0,3);
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:7px;margin-bottom:3px;${isActive?'background:#fef3c7;border:1.5px solid #f59e0b;':isPast?'opacity:.3;background:#f9fafb;':'background:#f8f7f4;'}">
+        <div>
+          <span style="font-size:12px;font-weight:${isActive?700:500};color:${isActive?'#92400e':'#0d1f3c'};">${cutLabel} at 20:00</span>
+          ${isActive?'<span style="font-size:10px;font-weight:700;color:#c9922a;margin-left:5px;">← now</span>':''}
+          <div style="font-size:10px;color:#9ca3af;">opens ${openLabel}</div>
         </div>
-        <div style="font-size:11px;color:#6b7280;margin-top:2px;">Opens ${openLabel}</div>
+        <span style="font-size:10px;color:#9ca3af;flex-shrink:0;margin-left:8px;">${weeks}w</span>
       </div>`;
     }).join('');
-    rows+=`<div style="margin-top:4px;padding:10px;background:#fee2e2;border-radius:8px;font-size:11px;color:#991b1b;line-height:1.5;">⚠️ December cut-off is the shortest of the year (2 weeks) — plan your pipeline well in advance.</div>`;
+    rows+=`<div style="margin-top:6px;padding:8px 10px;background:#fee2e2;border-radius:8px;font-size:11px;color:#991b1b;">⚠️ December is only 2 weeks — shortest cut-off of the year.</div>`;
+
+  } else if(type==='tomorrow'){
+    const isOps=currentUser&&(currentUser.isManager||currentUser.isOps);
+    const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
+    const tKey=tomorrow.getFullYear()+'-'+(''+(tomorrow.getMonth()+1)).padStart(2,'0')+'-'+(''+tomorrow.getDate()).padStart(2,'0');
+    title=`📅 Tomorrow — ${DAYS_SHORT[tomorrow.getDay()]}, ${tomorrow.getDate()} ${MONTHS[tomorrow.getMonth()]}`;
+    const evs=diaryGetEvents().filter(e=>e.date===tKey&&(isOps||(e.advisorCode===currentUser?.code||e.advisorCode==='ALL')));
+    if(evs.length){
+      rows=evs.map(ev=>`<div style="background:#f8f7f4;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #c9922a;">
+        <div style="font-size:13px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
+        ${ev.startTime?`<div style="font-size:12px;color:#c9922a;margin-top:3px;">🕐 ${ev.startTime.slice(0,5)}${ev.endTime?' – '+ev.endTime.slice(0,5):''}</div>`:''}
+        ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">👤 ${ev.advisorName}</div>`:''}
+        ${ev.location?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">📍 ${ev.location}</div>`:''}
+        ${ev.notes?`<div style="font-size:11px;color:#6b7280;margin-top:4px;line-height:1.4;border-top:1px solid #e8e4db;padding-top:4px;">${ev.notes}</div>`:''}
+      </div>`).join('');
+    } else {
+      rows=`<div style="text-align:center;padding:20px 0;color:#9ca3af;font-size:13px;">No appointments scheduled for tomorrow.</div>`;
+    }
+    rows+=`<button onclick="document.getElementById('briefBlowupOv')?.remove();showPage('termcal')" style="width:100%;padding:11px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">Open Herd Calendar →</button>`;
   }
 
   const ov=document.createElement('div');
   ov.id='briefBlowupOv';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center;';
-  ov.innerHTML=`<div style="background:#fff;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:84vh;overflow-y:auto;padding:20px 18px 36px;" onclick="event.stopPropagation()">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
-      <div style="font-size:15px;font-weight:700;color:#0d1f3c;">${title}</div>
-      <button onclick="document.getElementById('briefBlowupOv')?.remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;line-height:1;">✕</button>
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding-top:7vh;';
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;width:calc(100% - 28px);max-width:500px;max-height:86vh;overflow-y:auto;padding:18px 16px 24px;" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${title}</div>
+      <button onclick="document.getElementById('briefBlowupOv')?.remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:28px;height:28px;font-size:13px;cursor:pointer;flex-shrink:0;">✕</button>
     </div>
     ${rows}
   </div>`;
@@ -4476,9 +4497,9 @@ function renderDailyBrief(){
   const tmrwEvs=diaryGetEvents().filter(e=>e.date===tomorrowKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
   const tmrwSlice=tmrwEvs.slice(0,3);
   if(tmrwSlice.length){
-    items.push({icon:'🔮',onclick:`showPage('termcal')`,text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
+    items.push({icon:'🔮',onclick:`showBriefBlowup('tomorrow')`,text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
   } else {
-    items.push({icon:'🔮',text:`<b>Nothing scheduled for tomorrow</b>`});
+    items.push({icon:'🔮',onclick:`showBriefBlowup('tomorrow')`,text:`<b>Nothing scheduled for tomorrow</b> — tap to add`});
   }
 
   // Next Qlink run — clickable to show all dates
@@ -4492,7 +4513,7 @@ function renderDailyBrief(){
       const next=allRuns[0];
       const isToday=next.date===todayStr;
       const qlinkText=isToday?`<b>Qlink run TODAY</b> — submit before 13:00`:`<b>Next Qlink run: ${next.date}</b> (${next.month}) — submit before 13:00`;
-      items.push({icon:'⚡',onclick:`showBriefBlowup('qlink')`,text:qlinkText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
+      items.push({icon:'⚡',onclick:`showBriefBlowup('qlink')`,text:qlinkText});
     }
   }
 
