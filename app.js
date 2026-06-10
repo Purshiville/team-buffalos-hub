@@ -731,6 +731,7 @@ function enterHub(user){
       syncUsersFromFirebase(),
       syncSchedulesFromFirebase(),
       syncDocsFromFirebase(),
+      syncCalEventsFromFirebase(),
     ]).then(()=>{
       renderNoticeBoard();
       renderDailyBrief();
@@ -2771,6 +2772,19 @@ async function syncSchedulesFromFirebase(){
     const rows=await window.FB.getSchedules();
     if(rows.length){localStorage.setItem('tl_schedules',JSON.stringify(rows));}
   }catch(e){console.warn('Schedule sync failed',e);}
+}
+async function syncCalEventsFromFirebase(){
+  if(!window.FB_READY||!window.FB.getAllCalEvents)return;
+  try{
+    const fbEvs=await window.FB.getAllCalEvents();
+    if(fbEvs&&fbEvs.length){
+      const local=diaryGetEvents();
+      const localIds=new Set(local.map(e=>e.id));
+      const merged=[...local];
+      fbEvs.forEach(e=>{if(!localIds.has(e.id))merged.push(e);});
+      diarySaveEvents(merged);
+    }
+  }catch(e){console.warn('Cal sync failed',e);}
 }
 let _schedUnsub=null;
 function startScheduleListener(){
