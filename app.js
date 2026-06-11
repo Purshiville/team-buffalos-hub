@@ -9882,9 +9882,15 @@ function diaryOpenAdd(dateStr){
   if(isMgr)_diaryPopulateAdvisorPicker(null);
   document.getElementById('diaryDeleteBtn').style.display='none';
   const dsBtnN=document.getElementById('diaryDeleteSeriesBtn');if(dsBtnN)dsBtnN.style.display='none';
+  const hWarn=document.getElementById('da_herd_warn');if(hWarn)hWarn.style.display='none';
   document.getElementById('diaryAddOverlay').style.display='flex';
+  diaryCheckHerdWarn();
 }
-function diaryCloseAdd(){document.getElementById('diaryAddOverlay').style.display='none';_diaryEditId=null;}
+function diaryCloseAdd(){
+  document.getElementById('diaryAddOverlay').style.display='none';
+  _diaryEditId=null;
+  const hWarn=document.getElementById('da_herd_warn');if(hWarn)hWarn.style.display='none';
+}
 
 function diaryViewEvent(id){
   const ev=diaryGetEvents().find(e=>e.id===id);if(!ev)return;
@@ -9922,11 +9928,50 @@ function diaryViewEvent(id){
   document.getElementById('diaryAddOverlay').style.display='flex';
 }
 
+function _diaryHerdConflict(date,startTime,endTime){
+  const herd=diaryGetEvents().filter(e=>e.date===date&&e.type==='meeting'&&e.advisorCode==='ALL');
+  if(!herd.length)return null;
+  const toMin=t=>{if(!t)return null;const[h,m]=t.split(':').map(Number);return h*60+(m||0);};
+  const pS=toMin(startTime),pE=toMin(endTime);
+  for(const h of herd){
+    const hS=toMin(h.startTime),hE=toMin(h.endTime);
+    if(hS===null||hE===null||pS===null||pE===null)return h;
+    if(pS<hE&&pE>hS)return h;
+  }
+  return null;
+}
+
+function diaryCheckHerdWarn(){
+  if(currentUser?.isManager||currentUser?.isOps)return;
+  const date=document.getElementById('da_date')?.value;
+  const start=document.getElementById('da_start')?.value;
+  const end=document.getElementById('da_end')?.value;
+  const warn=document.getElementById('da_herd_warn');
+  const txt=document.getElementById('da_herd_warn_text');
+  if(!warn||!txt)return;
+  const conflict=date?_diaryHerdConflict(date,start,end):null;
+  if(conflict){
+    const t=conflict.startTime&&conflict.endTime?` (${conflict.startTime}–${conflict.endTime})`:'';
+    txt.textContent=`Herd Meeting scheduled on this day${t}. You cannot book an appointment in this slot.`;
+    warn.style.display='block';
+  }else{
+    warn.style.display='none';
+  }
+}
+
 function diarySaveAdd(){
   const v=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
   const title=v('da_title'),date=v('da_date');
   if(!title)return showAlert('Please enter a title.','error');
   if(!date)return showAlert('Please enter a date.','error');
+  // Block advisors from saving during a Herd Meeting slot
+  if(!currentUser?.isManager&&!currentUser?.isOps){
+    const conflict=_diaryHerdConflict(date,v('da_start'),v('da_end'));
+    if(conflict){
+      const t=conflict.startTime&&conflict.endTime?` (${conflict.startTime}–${conflict.endTime})`:'';
+      return showAlert(`This slot is blocked — a Herd Meeting is scheduled on ${date}${t}. Please choose a different time.`,'error');
+    }
+  }
   const repeat=v('da_repeat');
   const events=diaryGetEvents();
   if(_diaryEditId){
