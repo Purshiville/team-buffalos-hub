@@ -11656,8 +11656,6 @@ async function updfUnlock(){
       throw err;
     }
 
-    // Remove all encryption by saving without encryption
-    pdfDoc.encrypt({});
     const out=await pdfDoc.save({useObjectStreams:false});
     _updfBytes=out;
 
