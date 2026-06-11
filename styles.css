@@ -982,3 +982,6 @@ body::before {
 .nav-more-item:hover { background: rgba(255,255,255,0.08); color: #c9922a; }
 .nav-more-item.active { color: #c9922a; font-weight: 700; }
 .nav-more-item-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+
+.cam-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:9px 12px;background:#fff;border:1.5px solid #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;margin-top:6px;box-sizing:border-box;}
+.cam-btn:active{background:#f3f4f6;}

@@ -9207,6 +9207,15 @@ function mdHandleDrop(e){
   mdPushFiles(files);
 }
 
+function openCameraCapture(cb){
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='image/*';inp.setAttribute('capture','environment');inp.style.display='none';
+  document.body.appendChild(inp);
+  inp.onchange=function(){if(this.files&&this.files.length)cb(this);setTimeout(()=>{try{inp.remove();}catch(e){}},0);};
+  inp.click();
+  setTimeout(()=>{try{inp.remove();}catch(e){}},30000);
+}
+
 function mdAddFiles(input){
   mdPushFiles(Array.from(input.files));
   input.value='';
