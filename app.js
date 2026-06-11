@@ -11646,10 +11646,12 @@ async function updfUnlock(){
     try{
       pdfJsDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes),password:pwd}).promise;
     }catch(err){
-      if(/password/i.test(err?.name||err?.message||'')){
+      const isPassErr=err?.name==='PasswordException'||/PasswordException/i.test(err?.name||'');
+      if(isPassErr){
         document.getElementById('updfPwdRow').style.display='block';
+        status.style.display='block';
         status.style.background='#fef9ec';status.style.color='#92400e';status.style.border='1px solid #f5d98b';
-        status.textContent='This PDF is protected with an open password. Enter it above.';
+        status.textContent=pwd?'❌ Incorrect password — please try again.':'🔐 This PDF requires an open password. Enter it above.';
         btn.disabled=false;btn.textContent='🔓 Remove Password';
         return;
       }
