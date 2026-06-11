@@ -9836,6 +9836,18 @@ function diaryToggleAdvisorPicker(){
   const wrap=document.getElementById('da_advisor_pick_wrap');
   if(wrap)wrap.style.display=(vis&&vis.value==='specific')?'block':'none';
 }
+function diaryOnTypeChange(){
+  if(!(currentUser?.isManager||currentUser?.isOps))return;
+  const type=document.getElementById('da_type')?.value;
+  const vis=document.getElementById('da_visibility');
+  const visWrap=document.getElementById('da_visibility_wrap');
+  if(!vis||!visWrap)return;
+  if(type==='meeting'){
+    visWrap.style.display='block';
+    vis.value='all';
+    diaryToggleAdvisorPicker();
+  }
+}
 function _diaryPopulateAdvisorPicker(currentCode){
   const sel=document.getElementById('da_advisor_pick');if(!sel)return;
   const advisors=Object.values(getUsers()||{}).filter(u=>u.code&&u.name&&!u.isManager&&!u.isOps).sort((a,b)=>a.name.localeCompare(b.name));
