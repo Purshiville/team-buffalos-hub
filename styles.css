@@ -820,6 +820,11 @@ body::before {
 .diary-chip.precan-lbl{background:#fef2f2;color:#dc2626;}
 .diary-chip.qlink-lbl{background:#ecfdf5;color:#059669;}
 .diary-chip.meeting{background:#ede9fe;color:#5b21b6;}
+.diary-chip.herd-lbl{background:#ede9fe;color:#5b21b6;border:1px solid #c4b5fd;}
+.diary-cell.herd-blocked{background:#f5f3ff !important;border:1.5px solid #c4b5fd !important;cursor:default !important;}
+.diary-cell.herd-blocked .diary-cell-num{color:#7c3aed !important;}
+.diary-week-col.herd-blocked{background:#f5f3ff !important;border:1.5px solid #c4b5fd !important;border-left:3px solid #7c3aed !important;}
+.diary-week-col.herd-blocked .diary-week-col-hd,.diary-week-col.herd-blocked .diary-week-col-day{color:#7c3aed !important;}
 /* Production cut-off day (22nd) */
 .diary-cell.cutoff{background:linear-gradient(160deg,#0d1f3c,#1b3460) !important;border-color:#c9922a !important;border-width:2px !important;}
 .diary-cell.cutoff .diary-cell-num{color:#f5d98b !important;}

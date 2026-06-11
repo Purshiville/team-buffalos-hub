@@ -9744,9 +9744,12 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     const dc=isCutoff?'cutoff':diaryDayClass(date);
     const dk=diaryDateKey(date);
     const evs=diaryEventsForKey(dk);const phol=tcPubHol(date);
-    let cls=`diary-cell ${dc}${isToday?' today':''}${isMini?' minicutoff':''}`;
-    h+=`<div class="${cls}" onclick="diaryOpenAdd('${dk}')">`;
+    const isMgr=currentUser?.isManager||currentUser?.isOps;
+    const hasHerd=!isMgr&&_diaryHasHerdMeeting(dk);
+    let cls=`diary-cell ${dc}${isToday?' today':''}${isMini?' minicutoff':''}${hasHerd?' herd-blocked':''}`;
+    h+=`<div class="${cls}" onclick="${hasHerd?`showAlert('Herd Meeting scheduled — this slot is blocked for advisors.','error')`:`diaryOpenAdd('${dk}')`}">`;
     h+=`<div class="diary-cell-num">${d}</div>`;
+    if(hasHerd)h+=`<div class="diary-chip herd-lbl">👥 Herd Mtg</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
     diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="event.stopPropagation();showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
@@ -9782,15 +9785,20 @@ function _renderDiaryWeek(el,ws,DAYS3,DAYS1,MONTHS){
     const dc=isCutoff?'cutoff':diaryDayClass(date);
     const dk=diaryDateKey(date);
     const evs=diaryEventsForKey(dk);const phol=tcPubHol(date);
-    h+=`<div class="diary-week-col ${dc}${isToday?' today':''}${isMini?' minicutoff':''}">`;
+    const isMgrW=currentUser?.isManager||currentUser?.isOps;
+    const hasHerdW=!isMgrW&&_diaryHasHerdMeeting(dk);
+    h+=`<div class="diary-week-col ${dc}${isToday?' today':''}${isMini?' minicutoff':''}${hasHerdW?' herd-blocked':''}">`;
     h+=`<div class="diary-week-col-hd">${DAYS3[date.getDay()].slice(0,3)}</div>`;
     h+=`<div class="diary-week-col-day">${date.getDate()}</div>`;
+    if(hasHerdW)h+=`<div style="font-size:8px;font-weight:700;color:#7c3aed;text-align:center;margin-bottom:3px;">👥 HERD MTG</div>`;
     if(isCutoff)h+=`<div style="font-size:8px;font-weight:700;color:#f5d98b;text-align:center;margin-bottom:3px;">CUT-OFF</div>`;
     else if(isMini)h+=`<div style="font-size:8px;font-weight:700;color:#92400e;text-align:center;margin-bottom:3px;">Mini ↓</div>`;
     if(phol)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;text-align:center;margin-bottom:3px;line-height:1.2;">${phol}</div>`;
     diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
     evs.forEach(ev=>{h+=`<div class="diary-week-ev diary-chip ${ev.type||'other'}" onclick="diaryViewEvent('${ev.id}')">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
-    h+=`<div onclick="diaryOpenAdd('${dk}')" style="text-align:center;font-size:16px;color:#d1d5db;cursor:pointer;margin-top:4px;">+</div>`;
+    h+=hasHerdW
+      ?`<div onclick="showAlert('Herd Meeting scheduled — this slot is blocked for advisors.','error')" style="text-align:center;font-size:14px;color:#c4b5fd;cursor:default;margin-top:4px;">🔒</div>`
+      :`<div onclick="diaryOpenAdd('${dk}')" style="text-align:center;font-size:16px;color:#d1d5db;cursor:pointer;margin-top:4px;">+</div>`;
     h+='</div>';
   }
   h+='</div>';
@@ -9801,7 +9809,13 @@ function _renderDiaryDay(el,MONTHS){
   const dk=diaryDateKey(_diaryDate);
   const evs=diaryEventsForKey(dk);
   const phol=tcPubHol(_diaryDate);const exam=tcExamLabel(_diaryDate);
+  const isMgrD=currentUser?.isManager||currentUser?.isOps;
   let h='';
+  if(!isMgrD&&_diaryHasHerdMeeting(dk)){
+    const hev=diaryGetEvents().find(e=>e.date===dk&&e.type==='meeting'&&e.advisorCode==='ALL');
+    const tStr=hev?.startTime&&hev?.endTime?` · ${hev.startTime}–${hev.endTime}`:'';
+    h+=`<div style="background:#f5f3ff;border:1.5px solid #c4b5fd;border-radius:10px;padding:10px 14px;margin-bottom:12px;font-size:12px;font-weight:700;color:#5b21b6;">👥 Herd Meeting scheduled${tStr} — you cannot add an appointment in this slot.</div>`;
+  }
   if(phol)h+=`<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:600;color:#dc2626;">🔴 Public Holiday: ${phol}</div>`;
   if(exam)h+=`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:12px;font-weight:600;color:#d97706;">⚠️ ${exam} — access possible but limited</div>`;
   const isCutoffDay=diaryIsCutoff(_diaryDate);
@@ -9926,6 +9940,10 @@ function diaryViewEvent(id){
   const dsBtnE=document.getElementById('diaryDeleteSeriesBtn');
   if(dsBtnE)dsBtnE.style.display=ev.recurringGroupId?'inline-block':'none';
   document.getElementById('diaryAddOverlay').style.display='flex';
+}
+
+function _diaryHasHerdMeeting(dk){
+  return diaryGetEvents().some(e=>e.date===dk&&e.type==='meeting'&&e.advisorCode==='ALL');
 }
 
 function _diaryHerdConflict(date,startTime,endTime){
