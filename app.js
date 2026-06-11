@@ -4515,6 +4515,45 @@ function showBriefBlowup(type){
     }).join('');
     rows+=`<div style="margin-top:6px;padding:8px 10px;background:#fee2e2;border-radius:8px;font-size:11px;color:#991b1b;">⚠️ December is only 2 weeks — shortest cut-off of the year.</div>`;
 
+  } else if(type==='collection'){
+    const now2=new Date();
+    const cm=now2.getMonth(),cy=now2.getFullYear();
+    const todayStr2=now2.toISOString().slice(0,10);
+    title='💳 Collection Dates';
+    const _buildMonthDates=(yr,mo)=>{
+      const maxDay=new Date(yr,mo+1,0).getDate();
+      return PAY_DATES.map(day=>{
+        if(day>maxDay)return null;
+        let dt=new Date(yr,mo,day,7,0,0);
+        let adj=false;
+        if(dt.getDay()===0){dt=new Date(yr,mo,day-2,7,0,0);adj=true;}
+        const ds=dt.getFullYear()+'-'+(''+(dt.getMonth()+1)).padStart(2,'0')+'-'+(''+dt.getDate()).padStart(2,'0');
+        const isPast=ds<todayStr2,isToday=ds===todayStr2;
+        const daysUntil=Math.ceil((dt-now2)/86400000);
+        return{day,dt,ds,isPast,isToday,daysUntil,adj};
+      }).filter(Boolean);
+    };
+    const _renderMonth=(yr,mo)=>{
+      const dates=_buildMonthDates(yr,mo);if(!dates.length)return'';
+      const datesHtml=dates.map(x=>{
+        const lbl=DAYS_SHORT[x.dt.getDay()]+' '+x.dt.getDate()+(x.adj?' (adj)':'');
+        const badge=x.isToday?'<span style="background:#dc2626;color:#fff;font-size:9px;font-weight:700;border-radius:4px;padding:1px 6px;margin-left:6px;">TODAY</span>'
+          :x.isPast?''
+          :`<span style="font-size:10px;color:#6b7280;margin-left:4px;">${x.daysUntil===1?'tomorrow':x.daysUntil===0?'today':'in '+x.daysUntil+' day'+(x.daysUntil!==1?'s':'')}</span>`;
+        return`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-radius:7px;margin-bottom:3px;${x.isToday?'background:#fef2f2;border:1.5px solid #fca5a5;':x.isPast?'opacity:.3;background:#f9fafb;':x.daysUntil<=3?'background:#fef3c7;':'background:#f8f7f4;'}">
+          <span style="font-size:13px;font-weight:${x.isToday||(x.daysUntil<=3&&!x.isPast)?700:400};color:${x.isToday?'#dc2626':'#0d1f3c'};">${lbl}</span>
+          ${badge}
+        </div>`;
+      }).join('');
+      return`<div style="margin-bottom:12px;">
+        <div style="font-size:10px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:.5px;padding:4px 0;border-bottom:1px solid #f3f4f6;margin-bottom:6px;">${MONTHS[mo]} ${yr}</div>
+        ${datesHtml}
+      </div>`;
+    };
+    const nm=cm===11?0:cm+1,ny=cm===11?cy+1:cy;
+    rows=_renderMonth(cy,cm)+_renderMonth(ny,nm);
+    rows+=`<div style="margin-top:4px;padding:8px 10px;background:#f0f9ff;border-radius:8px;font-size:11px;color:#075985;">Dates falling on Sunday are moved to the preceding Friday (adj). Ensure all debit orders are active before each date.</div>`;
+
   } else if(type==='tomorrow'){
     const isOps=currentUser&&(currentUser.isManager||currentUser.isOps);
     const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
@@ -4570,9 +4609,17 @@ function renderDailyBrief(){
   const prodText=daysLeft<=0?'<b>Production cut-off TODAY at 20:00</b> — all cases must be on Connect Me':daysLeft===1?'<b>Production cut-off TOMORROW at 20:00</b> — final cases must be submitted today':`<b>Production cut-off in ${daysLeft} days</b> — ${cutoff.getDate()} ${MONTHS[cutoff.getMonth()]}`;
   items.push({icon:'📋',onclick:`showBriefBlowup('prod')`,text:prodText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
 
-  // Collection day
-  if(d===19)items.push({icon:'💳',text:'<b>Collection day tomorrow (20th)</b> — remind all debit order clients to ensure funds are available. Check Connect Me.'});
-  if(d===20)items.push({icon:'💳',text:'<b>Collection day today</b> — debit orders running. Confirm all orders are active and loaded.'});
+  // Collection / pay-date reminder — show within 7 days, always clickable for full schedule
+  const _npd=getNextPayDate();
+  const _npdDiff=_npd.date-today;
+  const _npdDays=Math.floor(_npdDiff/86400000);
+  if(_npd.isToday||_npdDays<=7){
+    const _npdText=_npd.isToday
+      ?`<b>💳 Collection day today — ${_npd.day}th</b> — debit orders running. Confirm all orders are active and loaded.`
+      :_npdDays===1?`<b>💳 Collection tomorrow — ${_npd.day}th</b> — remind clients to ensure funds are available.`
+      :`<b>💳 Collection in ${_npdDays} day${_npdDays!==1?'s':''} — ${_npd.day}th</b> — remind clients to ensure funds are available.`;
+    items.push({icon:'💳',onclick:`showBriefBlowup('collection')`,text:_npdText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
+  }
 
   // Today's diary appointments — ops/manager see all, advisors see only their own
   const todayKey=y+'-'+(''+(m+1)).padStart(2,'0')+'-'+(''+d).padStart(2,'0');
