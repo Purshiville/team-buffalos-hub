@@ -126,7 +126,7 @@ body::before {
 .nav-tab:hover{color:rgba(255,255,255,0.85);}
 .nav-tab.active{color:#c9922a;border-bottom-color:#c9922a;font-weight:600;}
 
-.page{display:none;padding:1.5rem;max-width:980px;margin:0 auto;}
+.page{display:none;padding:1.5rem;width:100%;max-width:980px;margin:0 auto;}
 .page.active{display:block;}
 .section-label{font-size:10px;font-weight:700;color:#0d1f3c;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;margin-top:1.5rem;padding-left:8px;border-left:3px solid #c9922a;}
 .section-label:first-child{margin-top:0;}
