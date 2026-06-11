@@ -9675,6 +9675,7 @@ function diaryVisibleEvents(){
   const isMgr=currentUser?.isManager||currentUser?.isOps;
   if(isMgr){
     const f=document.getElementById('diaryAdvisorFilter')?.value||'';
+    if(f==='__me__')return events.filter(e=>e.advisorCode===currentUser.code||e.advisorCode==='ALL');
     return f?events.filter(e=>e.advisorCode===f||e.advisorCode==='ALL'):events;
   }
   return events.filter(e=>e.advisorCode===currentUser?.code||e.advisorCode==='ALL');
@@ -9695,6 +9696,8 @@ function renderDiary(){
     if(isMgr){
       const sel=document.getElementById('diaryAdvisorFilter');
       if(sel&&sel.options.length<=1){
+        const myOpt=document.createElement('option');myOpt.value='__me__';myOpt.textContent='My calendar';sel.appendChild(myOpt);
+        const sep=document.createElement('option');sep.disabled=true;sep.textContent='── Per advisor ──';sel.appendChild(sep);
         ADVISOR_LIST.forEach(a=>{const o=document.createElement('option');o.value=a.code;o.textContent=a.name;sel.appendChild(o);});
       }
     }
