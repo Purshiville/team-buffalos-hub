@@ -11659,7 +11659,7 @@ async function updfUnlock(){
 
     // Copy pages into a fresh document — new doc has no encryption dictionary
     const cleanDoc=await PDFDocument.create();
-    const pages=await cleanDoc.copyPagesFrom(srcDoc,srcDoc.getPageIndices());
+    const pages=await cleanDoc.copyPages(srcDoc,srcDoc.getPageIndices());
     pages.forEach(p=>cleanDoc.addPage(p));
     const out=await cleanDoc.save();
     _updfBytes=out;
