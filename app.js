@@ -2778,11 +2778,10 @@ async function syncCalEventsFromFirebase(){
   try{
     const fbEvs=await window.FB.getAllCalEvents();
     if(fbEvs&&fbEvs.length){
-      const local=diaryGetEvents();
-      const localIds=new Set(local.map(e=>e.id));
-      const merged=[...local];
-      fbEvs.forEach(e=>{if(!localIds.has(e.id))merged.push(e);});
-      diarySaveEvents(merged);
+      const fbIds=new Set(fbEvs.map(e=>e.id));
+      // Keep local-only events (not yet pushed to Firebase) alongside authoritative Firebase events
+      const localOnly=diaryGetEvents().filter(e=>!fbIds.has(e.id));
+      diarySaveEvents([...fbEvs,...localOnly]);
     }
   }catch(e){console.warn('Cal sync failed',e);}
 }
@@ -9829,6 +9828,16 @@ function diaryNav(dir){
 }
 function diarySetView(v){_diaryView=v;renderDiary();}
 
+function diaryToggleAdvisorPicker(){
+  const vis=document.getElementById('da_visibility');
+  const wrap=document.getElementById('da_advisor_pick_wrap');
+  if(wrap)wrap.style.display=(vis&&vis.value==='specific')?'block':'none';
+}
+function _diaryPopulateAdvisorPicker(currentCode){
+  const sel=document.getElementById('da_advisor_pick');if(!sel)return;
+  const advisors=Object.values(getUsers()||{}).filter(u=>u.code&&u.name&&!u.isManager&&!u.isOps).sort((a,b)=>a.name.localeCompare(b.name));
+  sel.innerHTML=advisors.map(u=>`<option value="${u.code}" data-name="${u.name}" ${u.code===currentCode?'selected':''}>${u.name}</option>`).join('');
+}
 function diaryOpenAdd(dateStr){
   _diaryEditId=null;
   document.getElementById('diaryAddTitle').textContent='Add Appointment';
@@ -9842,6 +9851,11 @@ function diaryOpenAdd(dateStr){
   document.getElementById('da_status').value='confirmed';
   const daRep=document.getElementById('da_repeat');if(daRep){daRep.value='';daRep.disabled=false;}
   const daRepWrap=document.getElementById('da_repeat_wrap');if(daRepWrap)daRepWrap.style.display='block';
+  const isMgr=currentUser?.isManager||currentUser?.isOps;
+  const visWrap=document.getElementById('da_visibility_wrap');if(visWrap)visWrap.style.display=isMgr?'block':'none';
+  const vis=document.getElementById('da_visibility');if(vis)vis.value='me';
+  const pickWrap=document.getElementById('da_advisor_pick_wrap');if(pickWrap)pickWrap.style.display='none';
+  if(isMgr)_diaryPopulateAdvisorPicker(null);
   document.getElementById('diaryDeleteBtn').style.display='none';
   const dsBtnN=document.getElementById('diaryDeleteSeriesBtn');if(dsBtnN)dsBtnN.style.display='none';
   document.getElementById('diaryAddOverlay').style.display='flex';
@@ -9864,6 +9878,20 @@ function diaryViewEvent(id){
   document.getElementById('da_status').value=ev.status||'confirmed';
   const daRepE=document.getElementById('da_repeat');if(daRepE){daRepE.value='';daRepE.disabled=true;}
   const daRepWrapE=document.getElementById('da_repeat_wrap');if(daRepWrapE)daRepWrapE.style.display='none';
+  const isMgr=currentUser?.isManager||currentUser?.isOps;
+  const visWrap=document.getElementById('da_visibility_wrap');
+  if(visWrap)visWrap.style.display=isMgr?'block':'none';
+  if(isMgr){
+    const vis=document.getElementById('da_visibility');
+    if(vis){
+      if(ev.advisorCode==='ALL')vis.value='all';
+      else if(ev.advisorCode===currentUser.code||!ev.advisorCode)vis.value='me';
+      else vis.value='specific';
+    }
+    _diaryPopulateAdvisorPicker(ev.advisorCode!=='ALL'&&ev.advisorCode!==currentUser.code?ev.advisorCode:null);
+    const pickWrap=document.getElementById('da_advisor_pick_wrap');
+    if(pickWrap)pickWrap.style.display=(ev.advisorCode!=='ALL'&&ev.advisorCode!==currentUser.code&&ev.advisorCode)?'block':'none';
+  }
   document.getElementById('diaryDeleteBtn').style.display='inline-block';
   const dsBtnE=document.getElementById('diaryDeleteSeriesBtn');
   if(dsBtnE)dsBtnE.style.display=ev.recurringGroupId?'inline-block':'none';
@@ -9883,7 +9911,14 @@ function diarySaveAdd(){
     if(window.FB_READY)window.FB.saveCalEvent(_diaryEditId,events[idx]).catch(()=>{});
   } else {
     const groupId=Date.now()+'_'+Math.random().toString(36).slice(2);
-    const base={advisorCode:currentUser.code,advisorName:currentUser.name,title,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status'),reminderSent:[]};
+    const _vis=(currentUser?.isManager||currentUser?.isOps)?(document.getElementById('da_visibility')?.value||'me'):'me';
+    let _aCode=currentUser.code,_aName=currentUser.name;
+    if(_vis==='all'){_aCode='ALL';_aName='All advisors';}
+    else if(_vis==='specific'){
+      const _pick=document.getElementById('da_advisor_pick');
+      if(_pick&&_pick.value){_aCode=_pick.value;_aName=_pick.options[_pick.selectedIndex]?.dataset?.name||_pick.value;}
+    }
+    const base={advisorCode:_aCode,advisorName:_aName,title,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status'),reminderSent:[]};
     const datesToCreate=[date];
     if(repeat){
       const parts=date.split('-').map(Number);
