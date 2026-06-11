@@ -11602,3 +11602,99 @@ async function cpBuild(){
   }
 }
 // ── END CANCELLATION PACK BUILDER ─────────────────────────────────────────────
+
+// ── UNLOCK PDF ────────────────────────────────────────────────────────────────
+let _updfFile=null,_updfBytes=null;
+
+function updfHandleFile(file){
+  if(!file||file.type!=='application/pdf')return;
+  _updfFile=file;
+  document.getElementById('updfFileName').textContent=file.name;
+  document.getElementById('updfFileSize').textContent=(file.size/1024).toFixed(1)+' KB';
+  document.getElementById('updfFileRow').style.display='block';
+  document.getElementById('updfPwdRow').style.display='none';
+  document.getElementById('updfStatus').style.display='none';
+  document.getElementById('updfResult').style.display='none';
+  document.getElementById('updfBtn').style.display='block';
+}
+
+function updfHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('updfDropZone').style.borderColor='#e5e7eb';
+  const f=e.dataTransfer?.files?.[0];
+  if(f)updfHandleFile(f);
+}
+
+async function updfUnlock(){
+  if(!_updfFile)return;
+  const btn=document.getElementById('updfBtn');
+  const status=document.getElementById('updfStatus');
+  const pwd=document.getElementById('updfPwd')?.value||'';
+
+  btn.disabled=true;btn.textContent='Unlocking…';
+  status.style.display='block';
+  status.style.background='#f0f9ff';status.style.color='#075985';status.style.border='1px solid #bae6fd';
+  status.textContent='Loading PDF engine…';
+
+  try{
+    await loadPdfLib();
+    const {PDFDocument}=window.PDFLib;
+    const bytes=await _updfFile.arrayBuffer();
+    status.textContent='Processing PDF…';
+
+    let pdfDoc;
+    try{
+      pdfDoc=await PDFDocument.load(bytes,{password:pwd||undefined,ignoreEncryption:true});
+    }catch(err){
+      if(/password|encrypted/i.test(err.message||'')){
+        document.getElementById('updfPwdRow').style.display='block';
+        status.style.background='#fef9ec';status.style.color='#92400e';status.style.border='1px solid #f5d98b';
+        status.textContent='This PDF requires a password. Enter it above and try again.';
+        btn.disabled=false;btn.textContent='🔓 Remove Password';
+        return;
+      }
+      throw err;
+    }
+
+    // Remove all encryption by saving without encryption
+    pdfDoc.encrypt({});
+    const out=await pdfDoc.save({useObjectStreams:false});
+    _updfBytes=out;
+
+    btn.style.display='none';
+    status.style.display='none';
+    document.getElementById('updfPwdRow').style.display='none';
+    const note=document.getElementById('updfResultNote');
+    note.textContent='Unlocked copy ready — '+(_updfFile.name.replace(/\.pdf$/i,''))+'-unlocked.pdf';
+    document.getElementById('updfResult').style.display='block';
+  }catch(e){
+    status.style.background='#fef2f2';status.style.color='#dc2626';status.style.border='1px solid #fca5a5';
+    status.textContent='Error: '+(e.message||'Could not process this PDF.');
+    btn.disabled=false;btn.textContent='🔓 Remove Password';
+  }
+}
+
+function updfDownload(){
+  if(!_updfBytes)return;
+  const blob=new Blob([_updfBytes],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=(_updfFile?.name||'document').replace(/\.pdf$/i,'')+'-unlocked.pdf';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),8000);
+}
+
+function updfReset(){
+  _updfFile=null;_updfBytes=null;
+  document.getElementById('updfInput').value='';
+  document.getElementById('updfFileRow').style.display='none';
+  document.getElementById('updfResult').style.display='none';
+  document.getElementById('updfStatus').style.display='none';
+  document.getElementById('updfPwdRow').style.display='none';
+  document.getElementById('updfPwd').value='';
+  document.getElementById('updfBtn').style.display='block';
+  document.getElementById('updfBtn').disabled=false;
+  document.getElementById('updfBtn').textContent='🔓 Remove Password';
+}
+// ── END UNLOCK PDF ────────────────────────────────────────────────────────────
