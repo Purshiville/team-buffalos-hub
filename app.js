@@ -11629,25 +11629,24 @@ async function updfUnlock(){
   if(!_updfFile)return;
   const btn=document.getElementById('updfBtn');
   const status=document.getElementById('updfStatus');
-  const pwd=document.getElementById('updfPwd')?.value||'';
+  const pwd=document.getElementById('updfPwd')?.value.trim()||'';
 
   btn.disabled=true;btn.textContent='Unlocking…';
   status.style.display='block';
   status.style.background='#f0f9ff';status.style.color='#075985';status.style.border='1px solid #bae6fd';
-  status.textContent='Loading PDF engine…';
+  status.textContent='Loading PDF engines…';
 
   try{
-    await loadPdfLib();
+    await Promise.all([_loadPdfJs(),loadPdfLib()]);
     const {PDFDocument}=window.PDFLib;
     const bytes=await _updfFile.arrayBuffer();
-    status.textContent='Processing PDF…';
 
-    let srcDoc;
+    // Use pdf.js to load & decrypt — it handles owner-password and open-password PDFs correctly
+    let pdfJsDoc;
     try{
-      const opts=pwd?{password:pwd}:{ignoreEncryption:true};
-      srcDoc=await PDFDocument.load(bytes,opts);
+      pdfJsDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes),password:pwd}).promise;
     }catch(err){
-      if(/password|encrypted/i.test(err.message||'')){
+      if(/password/i.test(err?.name||err?.message||'')){
         document.getElementById('updfPwdRow').style.display='block';
         status.style.background='#fef9ec';status.style.color='#92400e';status.style.border='1px solid #f5d98b';
         status.textContent='This PDF is protected with an open password. Enter it above.';
@@ -11657,18 +11656,35 @@ async function updfUnlock(){
       throw err;
     }
 
-    // Copy pages into a fresh document — new doc has no encryption dictionary
-    const cleanDoc=await PDFDocument.create();
-    const pages=await cleanDoc.copyPages(srcDoc,srcDoc.getPageIndices());
-    pages.forEach(p=>cleanDoc.addPage(p));
-    const out=await cleanDoc.save();
-    _updfBytes=out;
+    const total=pdfJsDoc.numPages;
+    const newDoc=await PDFDocument.create();
 
+    // Render each page via canvas then embed as JPEG into the new PDF
+    for(let i=1;i<=total;i++){
+      status.textContent=`Rendering page ${i} of ${total}…`;
+      const pg=await pdfJsDoc.getPage(i);
+      const vp=pg.getViewport({scale:2});
+      const canvas=document.createElement('canvas');
+      canvas.width=vp.width; canvas.height=vp.height;
+      await pg.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+
+      // Convert canvas to JPEG bytes
+      const dataUrl=canvas.toDataURL('image/jpeg',0.92);
+      const b64=dataUrl.split(',')[1];
+      const imgBytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
+
+      const img=await newDoc.embedJpg(imgBytes);
+      // Page size = original points (scale was 2, so divide by 2)
+      const w=vp.width/2, h=vp.height/2;
+      const newPg=newDoc.addPage([w,h]);
+      newPg.drawImage(img,{x:0,y:0,width:w,height:h});
+    }
+
+    _updfBytes=await newDoc.save();
     btn.style.display='none';
     status.style.display='none';
     document.getElementById('updfPwdRow').style.display='none';
-    const note=document.getElementById('updfResultNote');
-    note.textContent='Unlocked copy ready — '+(_updfFile.name.replace(/\.pdf$/i,''))+'-unlocked.pdf';
+    document.getElementById('updfResultNote').textContent='Unlocked copy ready — '+(_updfFile.name.replace(/\.pdf$/i,''))+'-unlocked.pdf';
     document.getElementById('updfResult').style.display='block';
   }catch(e){
     status.style.background='#fef2f2';status.style.color='#dc2626';status.style.border='1px solid #fca5a5';
