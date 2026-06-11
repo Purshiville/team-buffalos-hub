@@ -11642,21 +11642,26 @@ async function updfUnlock(){
     const bytes=await _updfFile.arrayBuffer();
     status.textContent='Processing PDF…';
 
-    let pdfDoc;
+    let srcDoc;
     try{
-      pdfDoc=await PDFDocument.load(bytes,{password:pwd||undefined,ignoreEncryption:true});
+      const opts=pwd?{password:pwd}:{ignoreEncryption:true};
+      srcDoc=await PDFDocument.load(bytes,opts);
     }catch(err){
       if(/password|encrypted/i.test(err.message||'')){
         document.getElementById('updfPwdRow').style.display='block';
         status.style.background='#fef9ec';status.style.color='#92400e';status.style.border='1px solid #f5d98b';
-        status.textContent='This PDF requires a password. Enter it above and try again.';
+        status.textContent='This PDF is protected with an open password. Enter it above.';
         btn.disabled=false;btn.textContent='🔓 Remove Password';
         return;
       }
       throw err;
     }
 
-    const out=await pdfDoc.save({useObjectStreams:false});
+    // Copy pages into a fresh document — new doc has no encryption dictionary
+    const cleanDoc=await PDFDocument.create();
+    const pages=await cleanDoc.copyPagesFrom(srcDoc,srcDoc.getPageIndices());
+    pages.forEach(p=>cleanDoc.addPage(p));
+    const out=await cleanDoc.save();
     _updfBytes=out;
 
     btn.style.display='none';
