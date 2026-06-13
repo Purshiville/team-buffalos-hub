@@ -10214,26 +10214,29 @@ function diaryShowDayPanel(dk){
         const st=_APPT_STATUSES.find(s=>s.v===(ev.status||'confirmed'))||_APPT_STATUSES[0];
         const timeStr=(ev.startTime?ev.startTime.slice(0,5):'')+(ev.endTime?' – '+ev.endTime.slice(0,5):'');
         const mapsUrl=ev.location?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(ev.location):'';
-        return`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
-            <div style="min-width:0;">
-              <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
-              ${timeStr?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">⏰ ${timeStr}</div>`:''}
-              ${ev.location?`<div style="font-size:11px;margin-top:2px;"><a href="${mapsUrl}" target="_blank" style="color:#1d4ed8;text-decoration:none;font-weight:600;">📍 ${ev.location}</a></div>`:''}
-              ${ev.notes?`<div style="font-size:11px;color:#9ca3af;margin-top:2px;">📝 ${ev.notes}</div>`:''}
-              ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">👤 ${ev.advisorName}</div>`:''}
+        return`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+          <div style="padding:12px 14px 10px;">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
+              <div style="min-width:0;">
+                <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
+                ${timeStr?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">⏰ ${timeStr}</div>`:''}
+                ${ev.location?`<div style="font-size:11px;margin-top:2px;"><a href="${mapsUrl}" target="_blank" style="color:#1d4ed8;text-decoration:none;font-weight:600;">📍 ${ev.location}</a></div>`:''}
+                ${ev.notes?`<div style="font-size:11px;color:#9ca3af;margin-top:2px;">📝 ${ev.notes}</div>`:''}
+                ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">👤 ${ev.advisorName}</div>`:''}
+              </div>
+              <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${st.bg};color:${st.color};white-space:nowrap;flex-shrink:0;">${st.label}</span>
             </div>
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
-              <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${st.bg};color:${st.color};white-space:nowrap;">${st.label}</span>
-              ${canEdit2?`<button onclick="document.getElementById('diaryDayPanel').remove();diaryViewEvent('${ev.id}')" style="font-size:10px;font-weight:600;background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:3px 8px;cursor:pointer;">✏️ Edit</button>`:''}
-              <button onclick="diaryCopyEvent('${ev.id}')" style="font-size:10px;font-weight:600;background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:3px 8px;cursor:pointer;">📋 Copy</button>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+              ${_APPT_STATUSES.map(s=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;border:1.5px solid ${(ev.status||'confirmed')===s.v?s.color:'#e5e7eb'};background:${(ev.status||'confirmed')===s.v?s.bg:'#fff'};color:${(ev.status||'confirmed')===s.v?s.color:'#6b7280'};transition:all .15s;">
+                <input type="radio" name="apst_${ev.id}" value="${s.v}" ${(ev.status||'confirmed')===s.v?'checked':''} onchange="diaryUpdateEventStatus('${ev.id}',this.value)" style="display:none;"/>
+                ${s.label}
+              </label>`).join('')}
             </div>
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:6px;">
-            ${_APPT_STATUSES.map(s=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;border:1.5px solid ${(ev.status||'confirmed')===s.v?s.color:'#e5e7eb'};background:${(ev.status||'confirmed')===s.v?s.bg:'#fff'};color:${(ev.status||'confirmed')===s.v?s.color:'#6b7280'};transition:all .15s;">
-              <input type="radio" name="apst_${ev.id}" value="${s.v}" ${(ev.status||'confirmed')===s.v?'checked':''} onchange="diaryUpdateEventStatus('${ev.id}',this.value)" style="display:none;"/>
-              ${s.label}
-            </label>`).join('')}
+          <div style="display:grid;grid-template-columns:${canEdit2?'1fr 1fr 1fr':'1fr'};border-top:1px solid #e5e7eb;">
+            ${canEdit2?`<button onclick="document.getElementById('diaryDayPanel').remove();diaryViewEvent('${ev.id}')" style="padding:10px 6px;font-size:12px;font-weight:700;color:#0d1f3c;background:#fff;border:none;border-right:1px solid #e5e7eb;cursor:pointer;">✏️ Edit</button>`:''}
+            <button onclick="diaryCopyEvent('${ev.id}')" style="padding:10px 6px;font-size:12px;font-weight:700;color:#374151;background:#fff;border:none;${canEdit2?'border-right:1px solid #e5e7eb;':''}cursor:pointer;">📋 Copy</button>
+            ${canEdit2?`<button onclick="diaryDeleteFromPanel('${ev.id}')" style="padding:10px 6px;font-size:12px;font-weight:700;color:#dc2626;background:#fff;border:none;cursor:pointer;">🗑️ Delete</button>`:''}
           </div>
         </div>`;
       }).join('')}
@@ -10263,6 +10266,15 @@ function diaryUpdateEventStatus(id,status){
   // Update badge in the panel
   const row=document.querySelector(`[name="apst_${id}"]`)?.closest('div[style*="background:#f9fafb"]');
   if(row){const badge=row.querySelector('span[style*="border-radius:20px"]');const st=_APPT_STATUSES.find(s=>s.v===status);if(badge&&st){badge.style.background=st.bg;badge.style.color=st.color;badge.textContent=st.label;}}
+}
+function diaryDeleteFromPanel(id){
+  if(!confirm('Delete this appointment?'))return;
+  const events=diaryGetEvents().filter(e=>e.id!==id);
+  diarySaveEvents(events);
+  if(window.FB_READY)window.FB.deleteCalEvent(id).catch(()=>{});
+  document.getElementById('diaryDayPanel')?.remove();
+  renderDiary();
+  showAlert('Appointment deleted.','success');
 }
 function diaryCopyEvent(id){
   const ev=diaryGetEvents().find(e=>e.id===id);if(!ev)return;
