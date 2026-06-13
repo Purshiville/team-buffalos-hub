@@ -913,6 +913,11 @@
           <div class="tc-name" style="color:#7c3aed;">App Checks</div>
           <div class="tc-desc">Case review &amp; checklist</div>
         </div>
+        <div class="tool-card" onclick="showPage('replguide')" style="border-top-color:#059669;">
+          <div class="tc-icon">📘</div>
+          <div class="tc-name" style="color:#059669;">Replacement Guide</div>
+          <div class="tc-desc">Smart replacement training</div>
+        </div>
       </div>
     </div>
 
@@ -2288,6 +2293,304 @@ Please send your Proof of Payment to your advisor once done.</div>
       <button id="updfDownloadBtn" onclick="updfDownload()" style="background:#065f46;color:#fff;border:none;border-radius:10px;padding:10px 24px;font-size:13px;font-weight:700;cursor:pointer;">⬇ Download Unlocked PDF</button>
       <button onclick="updfReset()" style="display:block;margin:8px auto 0;background:none;border:none;color:#9ca3af;font-size:12px;cursor:pointer;">Unlock another</button>
     </div>
+  </div>
+
+  <!-- SMART REPLACEMENT GUIDE (Manager only) -->
+  <div class="page" id="page-replguide">
+    <div style="background:linear-gradient(135deg,#064e3b,#065f46);border-radius:20px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#6ee7b7;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📘 Manager Guide</div>
+        <div style="color:#fff;font-size:16px;font-weight:700;">Smart Replacement Training Guide</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:4px;">Moving Beyond Like-for-Like — Compliance, Advice &amp; Affordability</div>
+      </div>
+      <button onclick="showPage('tools')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Tools</button>
+    </div>
+
+    <!-- Section Nav Pills -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
+      <a href="#rg-s1" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§1 Win-Win</a>
+      <a href="#rg-s2" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§2 Declaration</a>
+      <a href="#rg-s3" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§3 ROA Template</a>
+      <a href="#rg-s4" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§4 Scenarios</a>
+      <a href="#rg-s5" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§5 Pros &amp; Cons</a>
+      <a href="#rg-s6" style="font-size:10px;font-weight:700;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;border-radius:20px;padding:4px 10px;text-decoration:none;">§6 Consequences</a>
+      <a href="#rg-s7" style="font-size:10px;font-weight:700;background:#fef9ec;color:#92400e;border:1px solid #f5d98b;border-radius:20px;padding:4px 10px;text-decoration:none;">§7 Red Lines</a>
+      <a href="#rg-s8" style="font-size:10px;font-weight:700;background:#f5f3ff;color:#5b21b6;border:1px solid #c4b5fd;border-radius:20px;padding:4px 10px;text-decoration:none;">Checklist</a>
+    </div>
+
+    <!-- S1 -->
+    <div id="rg-s1" style="margin-bottom:20px;">
+      <div style="background:#065f46;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 1 — The Win-Win: Why This Strategy Protects &amp; Grows Your Career</div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+
+        <div style="font-size:12px;font-weight:700;color:#065f46;margin-bottom:8px;">💰 How This Benefits YOU (The Advisor)</div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;">
+          <div style="background:#fff;border-left:3px solid #059669;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:3px;">Unlock High-Value Upselling Legally</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">By asking for a comfortable budget upfront instead of blindly mirroring an old policy, you discover unallocated financial breathing room. If a client's old policy costs R250 but their true budget limit is R400, you have a R150 window to cross-sell or increase vital cover. This drives higher, fully compliant commission earnings.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #059669;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:3px;">Eradicate Commission Clawbacks</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Lapses occur when a client is sold a premium they cannot sustain over time. By securing a signed Affordability Declaration, you ensure the policy stays on the books long-term, completely protecting your cash flow from sudden reversal penalties.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #059669;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:3px;">Ironclad Personal Liability Protection</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">If your digital file contains a signed Client Needs Sheet and matching ROA boilerplate, internal compliance will dismiss complaints immediately. Your career and FSP standing remain bulletproof.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #059669;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:3px;">Evolution to a Financial Professional</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Straight order-taking can eventually be automated. Conducting proper risk, budget, and biological line analysis transforms you into an indispensable financial professional, sparking continuous word-of-mouth referrals.</div>
+          </div>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">🛡️ How This Protects Your Client</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:#fff;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;"><strong>Zero "Zombie Premiums":</strong> You protect clients from paying premiums for extended members who will be rejected at claim stage due to lack of insurable interest under South African law.</div>
+          <div style="background:#fff;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;"><strong>A Policy Built for the Present:</strong> Help them update old contracts that no longer match their lives — removing relatives with independent cover, adding new children, upgrading primary breadwinners.</div>
+          <div style="background:#fff;border-left:3px solid #3b82f6;border-radius:0 8px 8px 0;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;"><strong>Clarity on the 6-Month Rule:</strong> By educating them on storing the old policy's proof of cancellation, you save the family from a bureaucratic nightmare or delayed payouts during their deepest time of grief.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S2 -->
+    <div id="rg-s2" style="margin-bottom:20px;">
+      <div style="background:#1d4ed8;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 2 — The Dynamic Tool: Client Needs &amp; Affordability Declaration</div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+        <div style="font-size:11px;color:#374151;line-height:1.6;margin-bottom:12px;font-style:italic;">This document must be completed, signed by the client, and attached to the client's profile alongside the active competitor policy schedule as primary evidence of explicit instruction.</div>
+
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">Part A — Affordability, Budget &amp; Persal Cap Declaration</div>
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;margin-bottom:12px;font-size:11px;color:#374151;line-height:2;">
+          • Client's Declared Monthly Budget for this Cover: <strong>R___________</strong><br>
+          • Actual Final Proposed Monthly Premium: <strong>R___________</strong><br>
+          • For Persal Clients — Basic Salary (Excluding allowances): <strong>R___________</strong><br>
+          • Maximum 15% QLink Cap Limit: <strong>R___________</strong> <em>(Basic Salary × 0.15)</em>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:11px;color:#065f46;">☑ <strong>Persal Cap Compliance:</strong> I confirm the proposed premium falls safely below the statutory 15% QLink restriction based strictly on my Basic Salary.</div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:11px;color:#065f46;">☑ <strong>Affordability Confirmation:</strong> I confirm I have reviewed my monthly income and expenses and can comfortably afford this premium on an ongoing, long-term basis.</div>
+          <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;font-size:11px;color:#065f46;">☑ <strong>Immediate Cover &amp; Replacement Mandate:</strong> I understand my new policy provides immediate cover upon approval and explicitly authorize the FSP to handle cancellation of my previous policy/policies.</div>
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">Part B — Policy Reconciliation &amp; Insurable Interest Table</div>
+        <div style="overflow-x:auto;margin-bottom:10px;">
+          <table style="width:100%;border-collapse:collapse;font-size:10px;">
+            <thead>
+              <tr style="background:#1d4ed8;color:#fff;">
+                <th style="padding:6px 8px;text-align:left;border:1px solid #1e40af;">Member</th>
+                <th style="padding:6px 8px;text-align:left;border:1px solid #1e40af;">Current (Old)</th>
+                <th style="padding:6px 8px;text-align:left;border:1px solid #1e40af;">New Request</th>
+                <th style="padding:6px 8px;text-align:left;border:1px solid #1e40af;">Insurable Interest</th>
+                <th style="padding:6px 8px;text-align:left;border:1px solid #1e40af;">Variance &amp; Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="background:#fff;">
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:700;">Main Life</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R40,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R50,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#059669;font-weight:700;">Yes — Self</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R40k waived; extra R10k has <strong>6-month waiting period</strong></td>
+              </tr>
+              <tr style="background:#f9fafb;">
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:700;">Spouse</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R40,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R40,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#059669;font-weight:700;">Yes — Marriage Cert</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">Like-for-Like: full waiting period waived</td>
+              </tr>
+              <tr style="background:#fff;">
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:700;">Child 1</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R20,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#dc2626;">R0 (Removed)</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#9ca3af;">N/A</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#dc2626;">Forfeiture: immediate cover lost. Re-adding resets waiting periods.</td>
+              </tr>
+              <tr style="background:#f9fafb;">
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;font-weight:700;">Extended 1</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R10,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">R10,000</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#059669;font-weight:700;">Yes — Blood Relative</td>
+                <td style="padding:6px 8px;border:1px solid #e5e7eb;">Like-for-Like: full waiting period waived</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div style="background:#fef9ec;border:1.5px solid #f5d98b;border-radius:8px;padding:10px 12px;font-size:11px;color:#92400e;line-height:1.6;margin-bottom:12px;">
+          ⚠️ <strong>CRITICAL UNDERWRITING MANDATE:</strong> Insurable interest requires a direct, verifiable <strong>blood relation</strong> or legal partnership. Sharing a common Clan Name (<em>Isiduko / Sereto</em>) is a cultural connection and <strong>is not legally recognized</strong> as grounds for insurable interest. If there is no direct blood relationship or financial dependency, the life <strong>cannot</strong> be added.
+        </div>
+
+        <div style="font-size:11px;font-weight:700;color:#1d4ed8;margin-bottom:8px;">Part C — Mandatory FAIS Statutory Disclosures</div>
+        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px;">
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;">☑ <strong>Waiting Period Differentiation:</strong> I understand that any increase in cover amounts above my current policy limits will not have the waiting period waived. The additional amount is subject to standard statutory waiting periods for natural death.</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;">☑ <strong>Irrevocable Loss of Benefits:</strong> I understand that by reducing cover amounts or removing lives previously covered, I am voluntarily forfeiting existing, active cover. If I wish to cover these individuals in the future, they will be treated as new entrants and must serve full waiting periods.</div>
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;font-size:11px;color:#374151;line-height:1.6;">☑ <strong>6-Month Claim Warning:</strong> I acknowledge that if a natural death claim occurs within the first 6 months of this policy, my beneficiaries or I <strong>must provide written proof that the previous policy was successfully cancelled</strong>.</div>
+        </div>
+        <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:10px 14px;font-size:11px;color:#374151;">
+          Client Signature: _______________________ &nbsp;&nbsp; Date: _______________
+        </div>
+      </div>
+    </div>
+
+    <!-- S3 -->
+    <div id="rg-s3" style="margin-bottom:20px;">
+      <div style="background:#7c3aed;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 3 — The ROA Template Text (Compliance Boilerplate)</div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+        <div style="font-size:11px;color:#374151;font-style:italic;margin-bottom:10px;">Advisors must copy, paste, and customize this exact text in their Record of Advice whenever a client deviates from a straight like-for-like swap.</div>
+        <div style="background:#fff;border:1px dashed #c4b5fd;border-radius:8px;padding:14px;font-size:11px;color:#374151;line-height:1.8;">
+          <strong style="color:#5b21b6;">Replacement Advice, Justification &amp; Affordability Analysis</strong><br><br>
+          A straight, identical like-for-like replacement was presented to the client to preserve existing cover terms and ensure a 100% waiver of waiting periods. However, using the <strong>Client Needs &amp; Affordability Declaration Form (attached)</strong>, the client explicitly instructed a structural change to their risk profile and analyzed their monthly budget boundaries.<br><br>
+          <strong>1. Affordability &amp; Budget Reconciliation:</strong><br>
+          The client initially declared a comfortable monthly budget of <strong>[Insert Declared Budget, e.g., R300]</strong>.<br>
+          &nbsp;&nbsp;• <em>Alternative A (Within Budget):</em> The final proposed premium of <strong>[Insert Final Premium]</strong> sits safely within the client's declared affordability threshold, mitigating the risk of early policy lapse.<br>
+          &nbsp;&nbsp;• <em>Alternative B (Budget Override):</em> The final premium of <strong>[Insert Final Premium]</strong> exceeds the client's initial target. The client was counseled on this gap but explicitly chose to override their initial limit to ensure essential family members were not left uninsured.<br>
+          &nbsp;&nbsp;• <em>For Persal Cases:</em> The proposed premium complies fully with the statutory 15% QLink ceiling, calculated strictly against the client's <strong>Basic Salary</strong> (excluding allowances) as per their current payslip. The premium has been aligned with the client's true household cash flow limits rather than maximizing the system's legal ceiling blindly.<br><br>
+          <strong>2. Rationale for Restructuring &amp; Insurable Interest:</strong><br>
+          The client's needs have evolved since the inception of the original active policy. Specifically, the client required <strong>[Insert Reason]</strong>. Insurable interest has been verified for all customized listings. It is therefore in the client's financial interest to replace the policy under this new structure rather than a rigid like-for-like transfer.<br><br>
+          <strong>3. Explicit Material Disadvantages Disclosed:</strong><br>
+          &nbsp;&nbsp;• <em>Waiting Periods:</em> The client was informed that while the existing active base cover of <strong>[RXX,XXX]</strong> is transferred with waiting periods waived, the newly requested increase of <strong>[RXX,XXX]</strong> for <strong>[Member Name]</strong> is subject to a new waiting period of <strong>[X]</strong> months.<br>
+          &nbsp;&nbsp;• <em>Forfeiture of Active Cover:</em> The client was explicitly cautioned that removing <strong>[Member Name]</strong> results in the immediate termination of their active risk cover. The client acknowledges they are forfeiting a benefit that has already served its waiting period.<br>
+          &nbsp;&nbsp;• <em>Proof of Cancellation Requirement:</em> The client was explicitly briefed that if a natural death claim arises within the first 6 months, the underwriter requires written proof of the previous policy's cancellation to process the payout under the waived waiting period rule.<br><br>
+          <strong>4. Client Confirmation:</strong><br>
+          The client has validated these instructions by signing the Client Needs &amp; Affordability Declaration Form, confirming that the suitability of the new layout and affordability profile outweighs the benefits being forfeited from the replaced active policy.
+        </div>
+      </div>
+    </div>
+
+    <!-- S4 -->
+    <div id="rg-s4" style="margin-bottom:20px;">
+      <div style="background:#c9922a;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 4 — Practical Training Scenarios &amp; ROA Quotes</div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+          <div style="font-size:12px;font-weight:700;color:#0d1f3c;margin-bottom:6px;">Scenario 1 — The Clean Like-for-Like Swap</div>
+          <div style="font-size:11px;color:#374151;line-height:1.6;margin-bottom:10px;background:#f0fdf4;border-radius:8px;padding:8px 12px;">Mr. Khumalo has an active funeral policy with Competitor X. He pays R250pm for R40,000 cover on himself and R40,000 on his spouse. He wants to move because our service is better, with the exact same setup. His budget is R250. Our quote matches perfectly at R230pm.</div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">✏️ Approved ROA Quote:</div>
+          <div style="background:#f5f3ff;border:1px dashed #c4b5fd;border-radius:8px;padding:10px 12px;font-size:11px;color:#374151;line-height:1.8;">
+            <strong>Affordability:</strong> The client's declared monthly budget is R250. The new monthly premium is R230, sitting safely within his affordability threshold and offering an immediate monthly saving of R20 without changing his risk profile.<br><br>
+            <strong>Material Disadvantages &amp; Waiting Periods:</strong> Because this is an exact like-for-like transfer of active benefits, all statutory waiting periods for natural death are 100% waived. The client faces zero material disadvantages or gaps in cover by moving this policy to us. The client was informed that written proof of the competitor's cancellation will be required by the underwriter only if a claim is lodged within the first 6 months.
+          </div>
+        </div>
+
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;">
+          <div style="font-size:12px;font-weight:700;color:#0d1f3c;margin-bottom:6px;">Scenario 2 — The Complex Deviation (Using the New Sheet)</div>
+          <div style="font-size:11px;color:#374151;line-height:1.6;margin-bottom:10px;background:#fff7ed;border-radius:8px;padding:8px 12px;">Ms. Sithole has an active policy with Competitor Y. She pays R350pm for R40,000 (self), R40,000 (husband), and R15,000 (aunt). Max budget R400. She wants to drop her aunt (now has own cover) and increase husband's cover to R50,000. New quote: R320pm.</div>
+          <div style="font-size:11px;font-weight:700;color:#7c3aed;margin-bottom:6px;">✏️ Approved ROA Quote:</div>
+          <div style="background:#f5f3ff;border:1px dashed #c4b5fd;border-radius:8px;padding:10px 12px;font-size:11px;color:#374151;line-height:1.8;">
+            <strong>Affordability:</strong> The client declared a maximum budget of R400. The restructured policy premium is R320, which aligns with her affordability limit and leaves R80 of unallocated budget space, protecting the policy against premium distress and early lapse.<br><br>
+            <strong>Rationale for Deviation &amp; Insurable Interest:</strong> The client explicitly instructed the removal of her Aunt because the Aunt has obtained independent insurance. Furthermore, the client requested a R10,000 increase on her Spouse due to his increased financial responsibilities. Insurable interest has been validated via direct blood relationships; an un-verifiable clan relative request was rejected.<br><br>
+            <strong>Explicit Material Disadvantages Disclosed (Client Signed Off):</strong><br>
+            &nbsp;&nbsp;1. <em>Forfeiture of Cover:</em> The client was explicitly warned that by removing her Aunt, active cover is permanently terminated, and any waiting periods previously served are lost.<br>
+            &nbsp;&nbsp;2. <em>New Waiting Periods:</em> The active base R40,000 on herself and her spouse will have waiting periods waived. The additional R10,000 increase on her spouse is treated as a new benefit and is subject to a brand-new statutory 6-month waiting period for natural death.<br>
+            &nbsp;&nbsp;3. <em>Proof of Cancellation:</em> The client understands that if a claim occurs within 6 months, proof of cancellation of the competitor policy must be presented.<br><br>
+            The client confirmed she understands these trade-offs and signed the declaration form, validating that the customized layout is heavily in her current best financial interest.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S5 -->
+    <div id="rg-s5" style="margin-bottom:20px;">
+      <div style="background:#374151;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 5 — Strategic Comparison (Pros &amp; Cons)</div>
+      <div style="background:#f9fafb;border:1px solid #e5e7eb;border-top:none;border-radius:0 0 10px 10px;padding:14px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="background:#fff;border-radius:10px;padding:12px;border:1px solid #e5e7eb;">
+          <div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:8px;">1. Traditional Like-for-Like</div>
+          <div style="font-size:10px;color:#059669;font-weight:700;margin-bottom:4px;">✅ PROS</div>
+          <div style="font-size:10px;color:#374151;line-height:1.7;margin-bottom:8px;">• Low compliance friction under FAIS §8<br>• Minimal risk of material disadvantage<br>• Faster sales pipeline turnaround</div>
+          <div style="font-size:10px;color:#dc2626;font-weight:700;margin-bottom:4px;">❌ CONS</div>
+          <div style="font-size:10px;color:#374151;line-height:1.7;">• Blind to severe affordability issues<br>• Acts as order-taking, not advising<br>• Cuts off natural upselling options</div>
+        </div>
+        <div style="background:#fff;border-radius:10px;padding:12px;border:1px solid #e5e7eb;">
+          <div style="font-size:11px;font-weight:700;color:#065f46;margin-bottom:8px;">2. Customized Deviation Strategy</div>
+          <div style="font-size:10px;color:#059669;font-weight:700;margin-bottom:4px;">✅ PROS</div>
+          <div style="font-size:10px;color:#374151;line-height:1.7;margin-bottom:8px;">• Validates status as professional advisor<br>• Drops early lapse records completely<br>• Protects payouts by eliminating clan-name errors</div>
+          <div style="font-size:10px;color:#dc2626;font-weight:700;margin-bottom:4px;">❌ CONS</div>
+          <div style="font-size:10px;color:#374151;line-height:1.7;">• Legal compliance liability shifts entirely onto advisor if any line item, disclosure, or signature is skipped</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S6 -->
+    <div id="rg-s6" style="margin-bottom:20px;">
+      <div style="background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 6 — The Consequences of Non-Compliance</div>
+      <div style="background:#fef2f2;border:1px solid #fecaca;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+        <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:10px;">Why Shortcuts are Career-Ending</div>
+        <div style="font-size:11px;color:#374151;line-height:1.6;margin-bottom:12px;">The FSCA treats replacement irregularities with aggressive enforcement. If a compliance gap, clan-name error, or unverified affordability failure is flagged on your file:</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:#fff;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:3px;">Mandatory Professional Debarment (FAIS Act §14)</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Skipping warnings or falsifying declarations breaks your Fit &amp; Proper standing. The FSP will execute immediate debarment, wiping out your registration to trade as a broker in South Africa.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:3px;">Personal and Corporate Liability for Claims</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">If a client dies and a claim is rejected because you failed to detail a waiting period or relationship mismatch correctly, the NFO handles the dispute. If the ROA is weak, <strong>you or the FSP can be ordered to settle the multi-thousand Rand death claim out of your own pockets.</strong></div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #dc2626;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:3px;">Administrative Fines &amp; License Suspension</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Systemic failure by advisors to properly track replacement files triggers massive fines for the firm and risks immediate operational suspension of our corporate trading license.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- S7 -->
+    <div id="rg-s7" style="margin-bottom:20px;">
+      <div style="background:#92400e;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">Section 7 — The Advisor Red Line Rules</div>
+      <div style="background:#fffbeb;border:1px solid #f5d98b;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:#fff;border-left:3px solid #c9922a;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#92400e;">Rule 1 — No Verbal Agreements</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;margin-top:3px;">If a client verbally details a budget override, an extended relative biological link, or a cover reduction, it has zero legal standing unless ticked on the form and physically detailed in the text of the ROA.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #c9922a;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#92400e;">Rule 2 — The Blood vs. Clan Rule</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;margin-top:3px;">Never capture an extended family member based purely on a shared traditional title or a matching clan name (<em>Isiduko / Sereto</em>). If they do not share a direct biological line or proven legal dependency, they cannot be listed.</div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #c9922a;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#92400e;">Rule 3 — Active Policies Only</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;margin-top:3px;">We do not structure replacements for historical or dead policies under this framework. If the competitor contract is not fully active, it cannot be replaced with a waiver of waiting periods.</div>
+          </div>
+          <div style="background:#fef9ec;border:1.5px solid #f5d98b;border-radius:8px;padding:10px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#92400e;">Rule 4 — The QLink 15% Persal Cap Mandate</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;margin-top:3px;">For all Persal clients, the total premium <strong>must never exceed 15% of the client's Basic Salary</strong>.</div>
+            <div style="background:#fff;border:1px solid #f5d98b;border-radius:6px;padding:8px 10px;margin-top:6px;font-size:10px;color:#92400e;line-height:1.7;">
+              ⚠️ <strong>CRITICAL PAYSLIP AUDIT RULE:</strong> Look strictly at the <strong>Basic Salary</strong> line on the payslip — <strong>do not use the Gross or Net totals</strong>, as these include allowances that cannot be used for the QLink calculation. If you calculate the 15% limit on the Gross salary, the deduction will be automatically rejected by the system.<br><br>
+              Furthermore, the 15% cap is a <em>legal ceiling</em>, <strong>not a target</strong>. If the basic salary allows for R500 but the client states they only have R300 available, <strong>R300 is your absolute limit.</strong>
+            </div>
+          </div>
+          <div style="background:#fff;border-left:3px solid #c9922a;border-radius:0 8px 8px 0;padding:8px 12px;">
+            <div style="font-size:11px;font-weight:700;color:#92400e;">Rule 5 — The Date Rule</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;margin-top:3px;">The Client Needs &amp; Affordability Declaration Form must be executed <strong>on or before</strong> the exact date the system captures the application. Backdating documents is fraud.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Checklist -->
+    <div id="rg-s8" style="margin-bottom:28px;">
+      <div style="background:#5b21b6;color:#fff;font-size:12px;font-weight:700;padding:8px 14px;border-radius:10px 10px 0 0;">📋 The Complete Advisor File Checklist</div>
+      <div style="background:#f5f3ff;border:1px solid #c4b5fd;border-top:none;border-radius:0 0 10px 10px;padding:14px;">
+        <div style="font-size:11px;color:#374151;font-style:italic;margin-bottom:10px;">Before finalizing any customized replacement case, verify your digital file contains these four mandatory components:</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="background:#fff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <div style="width:20px;height:20px;border:2px solid #7c3aed;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7c3aed;">1</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Copy of the original insurer's <strong>active policy schedule</strong>.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <div style="width:20px;height:20px;border:2px solid #7c3aed;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7c3aed;">2</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Signed &amp; ticked <strong>"Client Needs &amp; Affordability Declaration Form"</strong>.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <div style="width:20px;height:20px;border:2px solid #7c3aed;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7c3aed;">3</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">Fully completed <strong>ROA</strong> containing the mandatory boilerplate replacement text.</div>
+          </div>
+          <div style="background:#fff;border:1px solid #c4b5fd;border-radius:8px;padding:10px 14px;display:flex;align-items:flex-start;gap:10px;">
+            <div style="width:20px;height:20px;border:2px solid #7c3aed;border-radius:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#7c3aed;">4</div>
+            <div style="font-size:11px;color:#374151;line-height:1.6;">The <strong>new policy application</strong> captured on the system matching the declaration sheet perfectly.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- ROA GENERATOR (Manager only) -->
