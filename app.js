@@ -680,6 +680,8 @@ function requestNotificationPermission(){
 }
 
 function enterHub(user){
+  // Capture hash NOW — before any showPage call inside render functions overwrites it
+  const _entryHash=(location.hash||'').replace(/^#/,'');
   // Keep lastActive fresh in Firebase so the manager roster is accurate
   const _users=getUsers();
   if(_users[user.code]){
@@ -773,9 +775,8 @@ function enterHub(user){
   }
   renderOpsLand();
   if(user.isOps)renderOpsPage();
-  // Restore page from URL hash on refresh, otherwise go to hub
-  const _hashPage=(location.hash||'').replace(/^#/,'');
-  const _restorePage=_hashPage&&document.getElementById('page-'+_hashPage)?_hashPage:'hub';
+  // Restore page captured at top of enterHub (before any render calls changed the hash)
+  const _restorePage=_entryHash&&document.getElementById('page-'+_entryHash)?_entryHash:'hub';
   showPage(_restorePage);
   updateWelcomeBar();
   updatePrecanHubAlert();
