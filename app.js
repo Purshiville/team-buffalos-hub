@@ -11794,13 +11794,16 @@ async function rfInit(){
   document.getElementById('rfAdvSigName').textContent=currentUser?.name||'';
   if(!_rfState.members.length)_rfState.members=[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
   renderReplMembers();
-  _rfInitSigPad('rfAdvisorSigCanvas');
-  if(!_rfState.id){
-    _rfClearSig('rfAdvisorSigCanvas');
-    _rfState.advisorSig=null;
-    _rfState.clientSig=null;
-    rfUpdateClientSigUI();
-  }
+  // Defer sig pad setup — canvas needs one paint cycle to get real dimensions
+  setTimeout(()=>{
+    _rfInitSigPad('rfAdvisorSigCanvas');
+    if(!_rfState.id){
+      _rfClearSig('rfAdvisorSigCanvas');
+      _rfState.advisorSig=null;
+      _rfState.clientSig=null;
+      rfUpdateClientSigUI();
+    }
+  },80);
   await rfLoadCases();
   renderReplCases();
 }
@@ -11814,14 +11817,18 @@ function rfNewCase(){
   ['rfChkPersal','rfChkAfford','rfChkMandate','rfChkWaiting','rfChkLoss','rfChkProof'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
   document.getElementById('rfStatus').textContent='New Case';
   renderReplMembers();
-  _rfInitSigPad('rfAdvisorSigCanvas');
-  _rfClearSig('rfAdvisorSigCanvas');
+  setTimeout(()=>{_rfInitSigPad('rfAdvisorSigCanvas');_rfClearSig('rfAdvisorSigCanvas');},50);
   rfUpdateClientSigUI();
+  document.getElementById('page-replform').scrollTop=0;
 }
 
 async function rfLoadCases(){
   if(!window.FB_READY)return;
-  try{_rfState.cases=await window.FB.getReplCases(currentUser.code);}catch(e){_rfState.cases=[];}
+  try{_rfState.cases=await window.FB.getReplCases(currentUser.code);}catch(e){
+    // Index may not exist yet — surface the error in console but don't crash
+    console.warn('rfLoadCases:',e?.message||e);
+    _rfState.cases=[];
+  }
 }
 
 function renderReplCases(){
@@ -11850,9 +11857,11 @@ async function rfLoadCase(id){
   Object.entries(chkMap).forEach(([eid,key])=>{const e=document.getElementById(eid);if(e)e.checked=!!c[key];});
   rfUpdateQlink();
   renderReplMembers();
-  _rfInitSigPad('rfAdvisorSigCanvas');
-  _rfClearSig('rfAdvisorSigCanvas');
-  if(c.advisorSig){const img=new Image();img.onload=()=>{const cv=document.getElementById('rfAdvisorSigCanvas');if(cv)cv.getContext('2d').drawImage(img,0,0,cv.width/window.devicePixelRatio,cv.height/window.devicePixelRatio);};img.src=c.advisorSig;}
+  setTimeout(()=>{
+    _rfInitSigPad('rfAdvisorSigCanvas');
+    _rfClearSig('rfAdvisorSigCanvas');
+    if(c.advisorSig){const img=new Image();img.onload=()=>{const cv=document.getElementById('rfAdvisorSigCanvas');if(cv)cv.getContext('2d').drawImage(img,0,0,cv.width/window.devicePixelRatio,cv.height/window.devicePixelRatio);};img.src=c.advisorSig;}
+  },50);
   rfUpdateClientSigUI();
   document.getElementById('rfStatus').textContent=c.status==='signed'?'✅ Signed':'📝 Draft';
   document.getElementById('page-replform').scrollTop=0;
