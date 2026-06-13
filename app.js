@@ -2400,6 +2400,7 @@ function showPage(p){
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
   if(p==='policyreview'){renderPRSavedList();}
+  if(p==='replform'){rfInit();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -11782,3 +11783,363 @@ function updfReset(){
   document.getElementById('updfBtn').textContent='🔓 Remove Password';
 }
 // ── END UNLOCK PDF ────────────────────────────────────────────────────────────
+
+// ── REPLACEMENT CASE FORM ────────────────────────────────────────────────────
+const RF_MEMBER_TYPES=['Main Life','Spouse','Child','Extended Family','Other'];
+let _rfState={id:null,cases:[],advisorSig:null,clientSig:null,members:[]};
+
+async function rfInit(){
+  document.getElementById('rfDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('rfAdvSigName').textContent=currentUser?.name||'';
+  if(!_rfState.members.length)_rfState.members=[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
+  renderReplMembers();
+  _rfInitSigPad('rfAdvisorSigCanvas');
+  if(!_rfState.id){
+    _rfClearSig('rfAdvisorSigCanvas');
+    _rfState.advisorSig=null;
+    _rfState.clientSig=null;
+    rfUpdateClientSigUI();
+  }
+  await rfLoadCases();
+  renderReplCases();
+}
+
+function rfNewCase(){
+  _rfState.id=null;_rfState.advisorSig=null;_rfState.clientSig=null;
+  _rfState.members=[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
+  ['rfClientName','rfClientId','rfClientPhone','rfCompetitor','rfCompetitorPolicy','rfBudget','rfPremium','rfBasicSalary','rfRoaText'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('rfDate').value=new Date().toISOString().slice(0,10);
+  document.getElementById('rfIsPersal').checked=false;rfTogglePersal();
+  ['rfChkPersal','rfChkAfford','rfChkMandate','rfChkWaiting','rfChkLoss','rfChkProof'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
+  document.getElementById('rfStatus').textContent='New Case';
+  renderReplMembers();
+  _rfInitSigPad('rfAdvisorSigCanvas');
+  _rfClearSig('rfAdvisorSigCanvas');
+  rfUpdateClientSigUI();
+}
+
+async function rfLoadCases(){
+  if(!window.FB_READY)return;
+  try{_rfState.cases=await window.FB.getReplCases(currentUser.code);}catch(e){_rfState.cases=[];}
+}
+
+function renderReplCases(){
+  const el=document.getElementById('rfCasesList');if(!el)return;
+  if(!_rfState.cases.length){el.innerHTML='<div style="font-size:11px;color:#9ca3af;padding:6px 0;">No saved cases yet — tap + New Case to start.</div>';return;}
+  el.innerHTML=_rfState.cases.map(c=>`
+    <div class="rf-case-item ${c.status==='signed'?'rf-case-signed':''}" onclick="rfLoadCase('${c.id}')">
+      <div style="min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.clientName||'Unknown Client'}</div>
+        <div style="font-size:10px;color:#6b7280;">${c.date||''} · ${c.competitor||'N/A'} · ${c.status==='signed'?'<span style="color:#059669;">✅ Signed</span>':'📝 Draft'}</div>
+      </div>
+      <button onclick="event.stopPropagation();rfDeleteCase('${c.id}')" style="background:none;border:none;color:#d1d5db;font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;" title="Delete">✕</button>
+    </div>`).join('');
+}
+
+async function rfLoadCase(id){
+  const c=_rfState.cases.find(x=>x.id===id);if(!c)return;
+  _rfState.id=id;_rfState.advisorSig=c.advisorSig||null;_rfState.clientSig=c.clientSig||null;
+  _rfState.members=c.members&&c.members.length?c.members:[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
+  const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=v||'';};
+  sv('rfClientName',c.clientName);sv('rfClientId',c.clientId);sv('rfClientPhone',c.clientPhone);
+  sv('rfCompetitor',c.competitor);sv('rfCompetitorPolicy',c.competitorPolicy);sv('rfDate',c.date);
+  sv('rfBudget',c.budgetDeclared);sv('rfPremium',c.finalPremium);sv('rfBasicSalary',c.basicSalary);sv('rfRoaText',c.roaText);
+  const persalEl=document.getElementById('rfIsPersal');if(persalEl){persalEl.checked=!!c.isPersal;rfTogglePersal();}
+  const chkMap={rfChkPersal:'persalChecked',rfChkAfford:'affordChecked',rfChkMandate:'mandateChecked',rfChkWaiting:'waitingChecked',rfChkLoss:'lossChecked',rfChkProof:'proofChecked'};
+  Object.entries(chkMap).forEach(([eid,key])=>{const e=document.getElementById(eid);if(e)e.checked=!!c[key];});
+  rfUpdateQlink();
+  renderReplMembers();
+  _rfInitSigPad('rfAdvisorSigCanvas');
+  _rfClearSig('rfAdvisorSigCanvas');
+  if(c.advisorSig){const img=new Image();img.onload=()=>{const cv=document.getElementById('rfAdvisorSigCanvas');if(cv)cv.getContext('2d').drawImage(img,0,0,cv.width/window.devicePixelRatio,cv.height/window.devicePixelRatio);};img.src=c.advisorSig;}
+  rfUpdateClientSigUI();
+  document.getElementById('rfStatus').textContent=c.status==='signed'?'✅ Signed':'📝 Draft';
+  document.getElementById('page-replform').scrollTop=0;
+  showAlert('Loaded: '+(c.clientName||'case'),'success');
+}
+
+function rfTogglePersal(){
+  const isP=document.getElementById('rfIsPersal')?.checked;
+  const s=document.getElementById('rfPersalSection');if(s)s.style.display=isP?'block':'none';
+  rfUpdateQlink();
+}
+function rfUpdateQlink(){
+  const b=parseFloat(document.getElementById('rfBasicSalary')?.value||0);
+  const el=document.getElementById('rfQlinkCap');if(el)el.textContent=b>0?'R'+( b*0.15).toFixed(2):'R0.00';
+}
+
+function renderReplMembers(){
+  const el=document.getElementById('rfMembersList');if(!el)return;
+  el.innerHTML=_rfState.members.map((m,i)=>`
+    <div class="rf-member-card">
+      <button onclick="rfRemoveMember(${i})" style="position:absolute;top:8px;right:8px;background:none;border:none;color:#d1d5db;font-size:18px;cursor:pointer;line-height:1;" title="Remove">✕</button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;padding-right:24px;">
+        <div><label>MEMBER TYPE</label>
+          <select id="rfMT_${i}">${RF_MEMBER_TYPES.map(t=>`<option value="${t}"${m.type===t?' selected':''}>${t}</option>`).join('')}</select>
+        </div>
+        <div><label>FULL NAME</label><input id="rfMN_${i}" type="text" value="${m.name||''}" placeholder="Name"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label>OLD COVER (R)</label><input id="rfMO_${i}" type="number" value="${m.oldCover||''}" placeholder="0" inputmode="decimal"/></div>
+        <div><label>NEW COVER (R)</label><input id="rfMNC_${i}" type="number" value="${m.newCover||''}" placeholder="0" inputmode="decimal"/></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div><label>RELATIONSHIP</label><input id="rfMR_${i}" type="text" value="${m.relationship||''}" placeholder="e.g. Self, Spouse"/></div>
+        <div><label>INSURABLE INTEREST</label>
+          <select id="rfMI_${i}">
+            <option value="yes"${m.insurable==='yes'?' selected':''}>✅ Yes — Verified</option>
+            <option value="no"${m.insurable==='no'?' selected':''}>❌ No — Cannot add</option>
+            <option value="removed"${m.insurable==='removed'?' selected':''}>🚫 Removed</option>
+          </select>
+        </div>
+      </div>
+      <div><label>VARIANCE / NOTES</label><input id="rfMV_${i}" type="text" value="${m.notes||''}" placeholder="e.g. Like-for-like waived; extra R10k = 6-month wait"/></div>
+    </div>`).join('');
+}
+
+function rfAddMember(){
+  _rfState.members.push({type:'Spouse',name:'',oldCover:'',newCover:'',relationship:'',insurable:'yes',notes:''});
+  renderReplMembers();
+}
+function rfRemoveMember(i){
+  if(_rfState.members.length<=1)return showAlert('At least one member required.','error');
+  _rfState.members.splice(i,1);renderReplMembers();
+}
+function rfReadMembers(){
+  return _rfState.members.map((_,i)=>({
+    type:document.getElementById(`rfMT_${i}`)?.value||'',
+    name:document.getElementById(`rfMN_${i}`)?.value||'',
+    oldCover:document.getElementById(`rfMO_${i}`)?.value||'',
+    newCover:document.getElementById(`rfMNC_${i}`)?.value||'',
+    relationship:document.getElementById(`rfMR_${i}`)?.value||'',
+    insurable:document.getElementById(`rfMI_${i}`)?.value||'yes',
+    notes:document.getElementById(`rfMV_${i}`)?.value||''
+  }));
+}
+function rfReadForm(){
+  const gv=id=>document.getElementById(id)?.value?.trim()||'';
+  const gc=id=>!!document.getElementById(id)?.checked;
+  return{
+    clientName:gv('rfClientName'),clientId:gv('rfClientId'),clientPhone:gv('rfClientPhone'),
+    competitor:gv('rfCompetitor'),competitorPolicy:gv('rfCompetitorPolicy'),
+    date:gv('rfDate')||new Date().toISOString().slice(0,10),
+    budgetDeclared:gv('rfBudget'),finalPremium:gv('rfPremium'),
+    isPersal:gc('rfIsPersal'),basicSalary:gv('rfBasicSalary'),
+    qlinkCap:document.getElementById('rfQlinkCap')?.textContent||'',
+    persalChecked:gc('rfChkPersal'),affordChecked:gc('rfChkAfford'),mandateChecked:gc('rfChkMandate'),
+    waitingChecked:gc('rfChkWaiting'),lossChecked:gc('rfChkLoss'),proofChecked:gc('rfChkProof'),
+    members:rfReadMembers(),roaText:gv('rfRoaText'),
+    advisorCode:currentUser?.code||'',advisorName:currentUser?.name||''
+  };
+}
+
+function rfGenerateROA(){
+  const d=rfReadForm();
+  if(!d.clientName)return showAlert('Please enter client name first.','error');
+  const members=d.members;
+  const removed=members.filter(m=>m.insurable==='removed'||parseFloat(m.newCover||0)===0);
+  const increased=members.filter(m=>m.insurable!=='removed'&&parseFloat(m.newCover||0)>parseFloat(m.oldCover||0));
+  const fmt=v=>v?'R'+parseFloat(v).toLocaleString('en-ZA'):'[Amount]';
+  let t=`REPLACEMENT ADVICE, JUSTIFICATION & AFFORDABILITY ANALYSIS\n`;
+  t+=`Client: ${d.clientName} | ID: ${d.clientId||'N/A'} | Date: ${d.date}\n`;
+  t+=`Competitor: ${d.competitor||'N/A'} | Policy No: ${d.competitorPolicy||'N/A'}\n\n`;
+  t+=`A straight, identical like-for-like replacement was presented to the client to preserve existing cover terms and ensure a 100% waiver of waiting periods. However, using the Client Needs & Affordability Declaration Form (attached), the client explicitly instructed a structural change to their risk profile.\n\n`;
+  t+=`1. AFFORDABILITY & BUDGET RECONCILIATION:\n`;
+  t+=`The client declared a comfortable monthly budget of ${fmt(d.budgetDeclared)}. `;
+  const b=parseFloat(d.budgetDeclared||0),p=parseFloat(d.finalPremium||0);
+  if(p>0&&b>0&&p<=b)t+=`The final proposed premium of ${fmt(d.finalPremium)} sits safely within the client's declared affordability threshold, mitigating the risk of early policy lapse.\n\n`;
+  else if(p>0&&b>0&&p>b)t+=`The final premium of ${fmt(d.finalPremium)} exceeds the client's initial target of ${fmt(d.budgetDeclared)}. The client was counselled on this gap but explicitly chose to override their initial limit to ensure essential family members were not left uninsured. The client confirmed the additional premium is sustainable.\n\n`;
+  else t+=`The final proposed premium of ${fmt(d.finalPremium)} [sits within / exceeds] the client's declared affordability threshold.\n\n`;
+  if(d.isPersal)t+=`For Persal Case: The proposed premium of ${fmt(d.finalPremium)} complies fully with the statutory 15% QLink ceiling (${d.qlinkCap}), calculated strictly against the client's Basic Salary of ${fmt(d.basicSalary)} (excluding allowances) per their current payslip. The premium has been aligned with the client's true household cash flow limits rather than maximising the system's legal ceiling blindly.\n\n`;
+  t+=`2. RATIONALE FOR RESTRUCTURING & INSURABLE INTEREST:\n`;
+  if(removed.length>0)t+=`The client requested removal of ${removed.map(m=>m.name||m.type).join(', ')} who now hold independent insurance. `;
+  if(increased.length>0)t+=`The client requested increased cover for ${increased.map(m=>`${m.name||m.type} (${fmt(m.oldCover)} → ${fmt(m.newCover)})`).join(', ')}. `;
+  t+=`Insurable interest has been verified for all customised listings. It is therefore in the client's financial interest to replace the policy under this new structure.\n\n`;
+  t+=`3. EXPLICIT MATERIAL DISADVANTAGES DISCLOSED:\n`;
+  increased.forEach(m=>{const diff=parseFloat(m.newCover||0)-parseFloat(m.oldCover||0);t+=`• Waiting Periods: The existing active base cover of ${fmt(m.oldCover)} on ${m.name||m.type} is transferred with waiting periods waived. The newly requested increase of R${diff.toLocaleString('en-ZA')} is subject to a new 6-month waiting period for natural death.\n`;});
+  removed.forEach(m=>{t+=`• Forfeiture of Active Cover: Removing ${m.name||m.type} results in the immediate termination of their active risk cover. The client acknowledges forfeiting a benefit that has already served its waiting period.\n`;});
+  t+=`• Proof of Cancellation: If a natural death claim arises within the first 6 months, the underwriter requires written proof of the previous policy's cancellation.\n\n`;
+  t+=`4. CLIENT CONFIRMATION:\nThe client has validated these instructions by signing the Client Needs & Affordability Declaration Form, confirming that the suitability of the new layout and affordability profile outweighs the benefits forfeited from the replaced active policy.\n\nAdvisor: ${d.advisorName} | Date: ${d.date}`;
+  const el=document.getElementById('rfRoaText');if(el)el.value=t;
+}
+
+// Signature pad
+function _rfInitSigPad(canvasId){
+  const cv=document.getElementById(canvasId);if(!cv)return;
+  const dpr=window.devicePixelRatio||1;
+  const rect=cv.getBoundingClientRect();
+  const w=Math.round(rect.width||300),h=Math.round(rect.height||120);
+  cv.width=w*dpr;cv.height=h*dpr;
+  const ctx=cv.getContext('2d');ctx.scale(dpr,dpr);
+  ctx.strokeStyle='#1d4ed8';ctx.lineWidth=2.5;ctx.lineCap='round';ctx.lineJoin='round';
+  let drawing=false,lx=0,ly=0;
+  function pos(e){const r=cv.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return[(t.clientX-r.left),(t.clientY-r.top)];}
+  function start(e){e.preventDefault();drawing=true;[lx,ly]=pos(e);}
+  function draw(e){e.preventDefault();if(!drawing)return;const[x,y]=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(x,y);ctx.stroke();[lx,ly]=[x,y];}
+  function stop(){drawing=false;}
+  cv.onmousedown=start;cv.onmousemove=draw;cv.onmouseup=stop;cv.onmouseleave=stop;
+  cv.addEventListener('touchstart',start,{passive:false});
+  cv.addEventListener('touchmove',draw,{passive:false});
+  cv.addEventListener('touchend',stop);
+}
+function _rfClearSig(canvasId){const cv=document.getElementById(canvasId);if(cv)cv.getContext('2d').clearRect(0,0,cv.width,cv.height);}
+function _rfSigEmpty(canvasId){const cv=document.getElementById(canvasId);if(!cv)return true;return !cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data.some(v=>v>0);}
+function rfClearAdvisorSig(){_rfClearSig('rfAdvisorSigCanvas');_rfState.advisorSig=null;}
+function rfClearClientSig(){_rfState.clientSig=null;rfUpdateClientSigUI();}
+function rfUpdateClientSigUI(){
+  const img=document.getElementById('rfClientSigImg');
+  const prev=document.getElementById('rfClientSigPreview');
+  const clrBtn=document.getElementById('rfClearClientSigBtn');
+  const hasSig=!!_rfState.clientSig;
+  if(img){img.src=hasSig?_rfState.clientSig:'';img.style.display=hasSig?'block':'none';}
+  if(prev)prev.style.display=hasSig?'block':'none';
+  if(clrBtn)clrBtn.style.display=hasSig?'block':'none';
+}
+
+// Client signing overlay
+function rfClientSign(){
+  const ov=document.getElementById('rfClientSigOverlay');if(!ov)return;
+  ov.style.display='flex';
+  setTimeout(()=>{_rfClearSig('rfClientSigCanvas');_rfInitSigPad('rfClientSigCanvas');},100);
+}
+function rfClientSignCancel(){const ov=document.getElementById('rfClientSigOverlay');if(ov)ov.style.display='none';}
+function rfClientSignDone(){
+  if(_rfSigEmpty('rfClientSigCanvas'))return showAlert('Please sign before confirming.','error');
+  _rfState.clientSig=document.getElementById('rfClientSigCanvas').toDataURL('image/png');
+  document.getElementById('rfClientSigOverlay').style.display='none';
+  rfUpdateClientSigUI();
+  showAlert('Client signature captured.','success');
+}
+
+// Save
+async function rfSave(){
+  const d=rfReadForm();
+  if(!d.clientName)return showAlert('Please enter client name.','error');
+  const cv=document.getElementById('rfAdvisorSigCanvas');
+  if(cv&&!_rfSigEmpty('rfAdvisorSigCanvas'))_rfState.advisorSig=cv.toDataURL('image/png');
+  const id=_rfState.id||(Date.now()+'_'+Math.random().toString(36).slice(2));
+  _rfState.id=id;
+  const payload={...d,id,advisorSig:_rfState.advisorSig||null,clientSig:_rfState.clientSig||null,status:(_rfState.advisorSig&&_rfState.clientSig)?'signed':'draft'};
+  if(window.FB_READY){
+    try{
+      await window.FB.saveReplCase(id,payload);
+      await rfLoadCases();renderReplCases();
+      document.getElementById('rfStatus').textContent=payload.status==='signed'?'✅ Signed':'💾 Saved';
+      showAlert('Case saved.','success');
+    }catch(e){showAlert('Save failed: '+e.message,'error');}
+  }else{showAlert('Not connected — please try again.','error');}
+}
+
+async function rfDeleteCase(id){
+  if(!confirm('Delete this case?'))return;
+  if(window.FB_READY){
+    try{
+      await window.FB.deleteReplCase(id);
+      _rfState.cases=_rfState.cases.filter(c=>c.id!==id);
+      if(_rfState.id===id)rfNewCase();
+      renderReplCases();showAlert('Case deleted.','success');
+    }catch(e){showAlert('Delete failed.','error');}
+  }
+}
+
+// PDF export via print window
+function rfExportPDF(){
+  const d=rfReadForm();
+  if(!d.clientName)return showAlert('Please enter client name first.','error');
+  const cv=document.getElementById('rfAdvisorSigCanvas');
+  if(cv&&!_rfSigEmpty('rfAdvisorSigCanvas'))_rfState.advisorSig=cv.toDataURL('image/png');
+  d.advisorSig=_rfState.advisorSig;d.clientSig=_rfState.clientSig;
+  const w=window.open('','_blank','width=900,height=700');
+  if(!w)return showAlert('Please allow pop-ups to export PDF.','error');
+  w.document.write(_rfBuildPrintHTML(d));
+  w.document.close();w.focus();
+  setTimeout(()=>w.print(),700);
+}
+
+function _rfBuildPrintHTML(d){
+  const chk=v=>v?'<span style="color:#059669;font-weight:bold;">☑</span>':'<span style="color:#9ca3af;">☐</span>';
+  const fmt=v=>v?'R'+parseFloat(v).toLocaleString('en-ZA'):'—';
+  const ins=v=>v==='removed'?'🚫 Removed':v==='no'?'❌ No — Cannot add':'✅ Yes — Verified';
+  const members=d.members||[];
+  return`<!DOCTYPE html><html><head><meta charset="UTF-8"/>
+<title>Replacement Case — ${d.clientName}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#111;padding:16px;line-height:1.55;}
+.hdr{background:#0d1f3c;color:#fff;padding:12px 16px;border-radius:6px;margin-bottom:14px;}
+.hdr .lbl{font-size:9px;color:#f5d98b;font-weight:bold;text-transform:uppercase;letter-spacing:1px;}
+.hdr .ttl{font-size:15px;font-weight:bold;margin:3px 0;}
+.hdr .meta{font-size:9px;color:rgba(255,255,255,.7);margin-top:3px;}
+.sec{border:1px solid #e5e7eb;border-radius:6px;margin-bottom:12px;overflow:hidden;}
+.sec-hd{font-size:10px;font-weight:bold;color:#fff;padding:6px 10px;}
+.sec-body{padding:10px;}
+table{width:100%;border-collapse:collapse;font-size:10px;}
+th{background:#1d4ed8;color:#fff;padding:5px 7px;text-align:left;}
+td{padding:5px 7px;border:1px solid #e5e7eb;vertical-align:top;}
+tr:nth-child(even) td{background:#f9fafb;}
+.chk-row{display:flex;gap:7px;padding:5px 0;border-bottom:1px solid #f3f4f6;align-items:flex-start;}
+.chk-row:last-child{border-bottom:none;}
+.roa{white-space:pre-wrap;font-size:10px;line-height:1.7;background:#f9fafb;border:1px solid #e5e7eb;border-radius:4px;padding:10px;font-family:Arial,sans-serif;}
+.sig-box{display:inline-block;width:220px;margin-right:20px;vertical-align:top;text-align:center;}
+.sig-img{width:220px;height:70px;object-fit:contain;border:1px solid #e5e7eb;border-radius:4px;display:block;}
+.sig-empty{width:220px;height:70px;border:1px solid #e5e7eb;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#9ca3af;font-size:10px;}
+.sig-lbl{font-size:9px;color:#374151;border-top:1.5px solid #374151;margin-top:5px;padding-top:3px;}
+.warn{background:#fef9ec;border:1px solid #f5d98b;border-radius:4px;padding:6px 10px;font-size:10px;color:#92400e;margin:8px 0;}
+@media print{body{padding:0;}@page{margin:12mm;size:A4;}}
+</style></head><body>
+<div class="hdr">
+  <div class="lbl">📝 Team Buffalos — Smart Replacement</div>
+  <div class="ttl">Client Needs &amp; Affordability Declaration Form</div>
+  <div class="meta">Client: <b>${d.clientName}</b> &nbsp;|&nbsp; ID: ${d.clientId||'N/A'} &nbsp;|&nbsp; Phone: ${d.clientPhone||'N/A'} &nbsp;|&nbsp; Date: ${d.date}</div>
+  <div class="meta">Competitor: ${d.competitor||'N/A'} &nbsp;|&nbsp; Policy No: ${d.competitorPolicy||'N/A'} &nbsp;|&nbsp; Advisor: ${d.advisorName}</div>
+</div>
+
+<div class="sec"><div class="sec-hd" style="background:#1d4ed8;">Part A — Affordability, Budget &amp; Persal Cap Declaration</div><div class="sec-body">
+<table style="margin-bottom:10px;">
+  <tr><th>Item</th><th>Value</th></tr>
+  <tr><td>Declared Monthly Budget</td><td><b>${fmt(d.budgetDeclared)}</b></td></tr>
+  <tr><td>Final Proposed Monthly Premium</td><td><b>${fmt(d.finalPremium)}</b></td></tr>
+  ${d.isPersal?`<tr><td>Basic Salary (excl. allowances)</td><td>${fmt(d.basicSalary)}</td></tr><tr><td>15% QLink Cap</td><td>${d.qlinkCap}</td></tr>`:''}
+</table>
+<div class="chk-row">${chk(d.isPersal&&d.persalChecked)} <span><b>Persal Cap Compliance:</b> ${d.isPersal?'I confirm the proposed premium falls safely below the statutory 15% QLink restriction based strictly on my Basic Salary.':'<em>Not applicable — not a Persal client.</em>'}</span></div>
+<div class="chk-row">${chk(d.affordChecked)} <span><b>Affordability Confirmation:</b> I have reviewed my monthly income and expenses and can comfortably afford this premium on an ongoing, long-term basis without financial distress.</span></div>
+<div class="chk-row">${chk(d.mandateChecked)} <span><b>Replacement Mandate:</b> My new policy provides immediate cover upon approval. I authorise the FSP to handle cancellation of my previous policy/policies.</span></div>
+</div></div>
+
+<div class="sec"><div class="sec-hd" style="background:#065f46;">Part B — Policy Reconciliation &amp; Insurable Interest Table</div><div class="sec-body">
+<table>
+  <tr><th>Member / Name</th><th>Old Cover</th><th>New Cover</th><th>Relationship</th><th>Insurable Interest</th><th>Variance &amp; Notes</th></tr>
+  ${members.map(m=>`<tr><td><b>${m.type}</b>${m.name?'<br><span style="font-weight:normal;">'+m.name+'</span>':''}</td><td>${fmt(m.oldCover)}</td><td>${parseFloat(m.newCover||0)===0&&m.insurable==='removed'?'<span style="color:#dc2626;">Removed</span>':fmt(m.newCover)}</td><td>${m.relationship||'—'}</td><td>${ins(m.insurable)}</td><td style="font-size:9px;">${m.notes||'—'}</td></tr>`).join('')}
+</table>
+<div class="warn">⚠️ <b>Insurable Interest Mandate:</b> Sharing a Clan Name (Isiduko / Sereto) does NOT constitute insurable interest. Only direct blood relatives or legal dependants may be listed.</div>
+</div></div>
+
+<div class="sec"><div class="sec-hd" style="background:#7c3aed;">Part C — Mandatory FAIS Statutory Disclosures</div><div class="sec-body">
+<div class="chk-row">${chk(d.waitingChecked)} <span><b>Waiting Period Differentiation:</b> Any increase in cover amounts above current policy limits is NOT waived and is subject to standard statutory waiting periods for natural death.</span></div>
+<div class="chk-row">${chk(d.lossChecked)} <span><b>Irrevocable Loss of Benefits:</b> Removing or reducing previously covered lives voluntarily forfeits their existing active cover. They must serve full waiting periods as new entrants if re-added.</span></div>
+<div class="chk-row">${chk(d.proofChecked)} <span><b>6-Month Claim Warning:</b> If a natural death claim occurs within the first 6 months of this policy, written proof that the previous policy was successfully cancelled must be provided.</span></div>
+</div></div>
+
+${d.roaText?`<div class="sec"><div class="sec-hd" style="background:#92400e;">Record of Advice (ROA) — Compliance Boilerplate</div><div class="sec-body"><div class="roa">${d.roaText.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div></div></div>`:''}
+
+<div class="sec"><div class="sec-hd" style="background:#374151;">📋 File Checklist</div><div class="sec-body">
+<div class="chk-row">☐ <span>Copy of the original insurer's <b>active policy schedule</b>.</span></div>
+<div class="chk-row">☐ <span>Signed &amp; ticked <b>Client Needs &amp; Affordability Declaration Form</b> (this document).</span></div>
+<div class="chk-row">☐ <span>Fully completed <b>ROA</b> containing the mandatory boilerplate replacement text.</span></div>
+<div class="chk-row">☐ <span>The <b>new policy application</b> captured on the system matching the declaration sheet perfectly.</span></div>
+</div></div>
+
+<div class="sec"><div class="sec-hd" style="background:#0d1f3c;">Signatures</div><div class="sec-body" style="padding-top:12px;">
+<div class="sig-box">
+  ${d.advisorSig?`<img src="${d.advisorSig}" class="sig-img" alt="Advisor Signature"/>`:'<div class="sig-empty">Not signed</div>'}
+  <div class="sig-lbl">Advisor: <b>${d.advisorName}</b></div>
+</div>
+<div class="sig-box">
+  ${d.clientSig?`<img src="${d.clientSig}" class="sig-img" alt="Client Signature"/>`:'<div class="sig-empty">Client not signed</div>'}
+  <div class="sig-lbl">Client: <b>${d.clientName}</b></div>
+</div>
+<div style="margin-top:14px;font-size:9px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:8px;">Generated by Team Buffalos Hub · ${new Date().toLocaleString('en-ZA')} · This document is the official signed declaration for this replacement case and must be uploaded to iManagePro under Supporting Documents.</div>
+</div></div>
+</body></html>`;
+}
+// ── END REPLACEMENT CASE FORM ─────────────────────────────────────────────────
