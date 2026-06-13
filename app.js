@@ -681,7 +681,7 @@ function requestNotificationPermission(){
 
 function enterHub(user){
   // Read saved page BEFORE startup renders run (they call showPage and would overwrite it)
-  const _entryPage=sessionStorage.getItem('tl_page')||'hub';
+  const _entryPage=localStorage.getItem('tl_page')||'hub';
   window._appBooting=true;
   // Keep lastActive fresh in Firebase so the manager roster is accurate
   const _users=getUsers();
@@ -2387,7 +2387,7 @@ function showPage(p){
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
   // Only save when user is navigating, not during app startup renders
-  if(!window._appBooting)try{sessionStorage.setItem('tl_page',p);}catch(e){}
+  if(!window._appBooting)try{localStorage.setItem('tl_page',p);}catch(e){}
   // highlight matching nav tab by onclick attribute
   document.querySelectorAll('.nav-tab').forEach(t=>{
     const oc=t.getAttribute('onclick')||'';
