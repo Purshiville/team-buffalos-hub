@@ -773,7 +773,10 @@ function enterHub(user){
   }
   renderOpsLand();
   if(user.isOps)renderOpsPage();
-  showPage('hub');
+  // Restore page from URL hash on refresh, otherwise go to hub
+  const _hashPage=(location.hash||'').replace(/^#/,'');
+  const _restorePage=_hashPage&&document.getElementById('page-'+_hashPage)?_hashPage:'hub';
+  showPage(_restorePage);
   updateWelcomeBar();
   updatePrecanHubAlert();
   renderBibleVerse();
@@ -2381,6 +2384,7 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
+  try{if(history.replaceState)history.replaceState(null,'','#'+p);}catch(e){}
   // highlight matching nav tab by onclick attribute
   document.querySelectorAll('.nav-tab').forEach(t=>{
     const oc=t.getAttribute('onclick')||'';
