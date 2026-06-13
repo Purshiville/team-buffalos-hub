@@ -682,6 +682,9 @@ function requestNotificationPermission(){
 function enterHub(user){
   // Read saved page BEFORE startup renders run (they call showPage and would overwrite it)
   const _entryPage=localStorage.getItem('tl_page')||'hub';
+  // TEMP DEBUG — remove once refresh issue is confirmed fixed
+  const _dbgRaw=localStorage.getItem('tl_page');
+  setTimeout(()=>{try{showToast('🔍 DEBUG restore: tl_page="'+(_dbgRaw||'[empty]')+'" → going to "'+_entryPage+'"','info');}catch(e){}},800);
   window._appBooting=true;
   // Keep lastActive fresh in Firebase so the manager roster is accurate
   const _users=getUsers();
@@ -2383,6 +2386,7 @@ function wrapFspEmails(){
   });
 }
 function showPage(p){
+  console.log('[TB] showPage('+p+') _appBooting='+!!window._appBooting);
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
