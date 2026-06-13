@@ -9718,6 +9718,40 @@ function diaryVisibleEvents(){
 }
 function diaryEventsForKey(k){return diaryVisibleEvents().filter(e=>e.date===k).sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));}
 
+function diaryQuickFilter(mode){
+  const sel=document.getElementById('diaryAdvisorFilter');
+  const btnMe=document.getElementById('dToggleMe');
+  const btnAll=document.getElementById('dToggleAll');
+  if(mode==='me'){
+    if(sel)sel.value='__me__';
+    if(btnMe)btnMe.classList.add('active');
+    if(btnAll)btnAll.classList.remove('active');
+  } else if(mode==='all'){
+    if(sel)sel.value='';
+    if(btnMe)btnMe.classList.remove('active');
+    if(btnAll)btnAll.classList.add('active');
+  } else {
+    // specific advisor chosen from dropdown
+    const v=sel?.value||'';
+    if(btnMe)btnMe.classList.toggle('active',v==='__me__');
+    if(btnAll)btnAll.classList.toggle('active',v===''||(!v&&v!=='__me__'));
+  }
+  renderDiary();
+}
+
+function _renderDiaryCutoffBanner(){
+  const el=document.getElementById('diaryCutoffBanner');if(!el)return;
+  const ts=new Date().toISOString().slice(0,10);
+  const cur=PROD_CUTOFFS.find(p=>ts>=p.opens&&ts<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>ts);
+  if(!cur){el.innerHTML='';return;}
+  const days=Math.ceil((new Date(cur.cutoff+'T20:00:00')-new Date())/86400000);
+  const urgent=days<=5;
+  el.innerHTML=`<div style="margin-bottom:10px;padding:9px 14px;border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;background:${urgent?'linear-gradient(90deg,#7f1d1d,#991b1b)':'linear-gradient(90deg,#0d1f3c,#1b3460)'};border:1px solid ${urgent?'#ef4444':'#c9922a'};">
+    <div style="font-size:12px;font-weight:700;color:#f5d98b;">${days<=0?'⚠️ Cut-off TODAY at 20:00':days===1?'⚠️ Cut-off TOMORROW at 20:00':`📅 ${days} days to production cut-off`}</div>
+    <div style="font-size:10px;color:rgba(255,255,255,0.65);white-space:nowrap;">${cur.cutoff}</div>
+  </div>`;
+}
+
 function renderDiary(){
   const el=document.getElementById('diaryContent');if(!el||!currentUser)return;
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -9738,6 +9772,8 @@ function renderDiary(){
       }
     }
   }
+
+  _renderDiaryCutoffBanner();
 
   // Period label + render
   if(_diaryView==='month'){
@@ -9774,7 +9810,8 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     const isMgr=currentUser?.isManager||currentUser?.isOps;
     const hasHerd=!isMgr&&_diaryHasHerdMeeting(dk);
     let cls=`diary-cell ${dc}${isToday?' today':''}${isMini?' minicutoff':''}${hasHerd?' herd-blocked':''}`;
-    h+=`<div class="${cls}" onclick="${hasHerd?`showAlert('Herd Meeting scheduled — this slot is blocked for advisors.','error')`:`diaryOpenAdd('${dk}')`}">`;
+    const _cellClick=hasHerd?`showAlert('Herd Meeting scheduled — this slot is blocked for advisors.','error')`:evs.length?`diaryShowDayPanel('${dk}')`:(`diaryOpenAdd('${dk}')`);
+    h+=`<div class="${cls}" onclick="${_cellClick}">`;
     h+=`<div class="diary-cell-num">${d}</div>`;
     if(hasHerd)h+=`<div class="diary-chip herd-lbl">👥 Herd Mtg</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
@@ -10162,7 +10199,6 @@ function diaryShowDayPanel(dk){
   panel.style.cssText='position:fixed;inset:0;z-index:9100;display:flex;align-items:flex-end;background:rgba(0,0,0,.45);';
   const inner=document.createElement('div');
   inner.style.cssText='background:#fff;width:100%;max-height:80vh;border-radius:20px 20px 0 0;overflow-y:auto;padding:0 0 32px;';
-  const statusOpts=_APPT_STATUSES.map(s=>`<option value="${s.v}">${s.label}</option>`).join('');
   inner.innerHTML=`
     <div style="position:sticky;top:0;background:#fff;padding:14px 16px 10px;border-bottom:1px solid #f4f2ed;display:flex;align-items:center;justify-content:space-between;z-index:1;">
       <div>
@@ -10173,17 +10209,24 @@ function diaryShowDayPanel(dk){
     </div>
     <div style="padding:10px 14px;display:flex;flex-direction:column;gap:10px;">
       ${evs.map(ev=>{
+        const canEdit2=currentUser?.isManager||currentUser?.isOps||ev.advisorCode===currentUser?.code;
         const st=_APPT_STATUSES.find(s=>s.v===(ev.status||'confirmed'))||_APPT_STATUSES[0];
         const timeStr=(ev.startTime?ev.startTime.slice(0,5):'')+(ev.endTime?' – '+ev.endTime.slice(0,5):'');
+        const mapsUrl=ev.location?'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(ev.location):'';
         return`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:12px 14px;">
           <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;">
-            <div>
+            <div style="min-width:0;">
               <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
               ${timeStr?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">⏰ ${timeStr}</div>`:''}
-              ${ev.location?`<div style="font-size:11px;color:#6b7280;">📍 ${ev.location}</div>`:''}
-              ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;">👤 ${ev.advisorName}</div>`:''}
+              ${ev.location?`<div style="font-size:11px;margin-top:2px;"><a href="${mapsUrl}" target="_blank" style="color:#1d4ed8;text-decoration:none;font-weight:600;">📍 ${ev.location}</a></div>`:''}
+              ${ev.notes?`<div style="font-size:11px;color:#9ca3af;margin-top:2px;">📝 ${ev.notes}</div>`:''}
+              ${isOps&&ev.advisorName?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">👤 ${ev.advisorName}</div>`:''}
             </div>
-            <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${st.bg};color:${st.color};white-space:nowrap;">${st.label}</span>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;">
+              <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:20px;background:${st.bg};color:${st.color};white-space:nowrap;">${st.label}</span>
+              ${canEdit2?`<button onclick="document.getElementById('diaryDayPanel').remove();diaryViewEvent('${ev.id}')" style="font-size:10px;font-weight:600;background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:3px 8px;cursor:pointer;">✏️ Edit</button>`:''}
+              <button onclick="diaryCopyEvent('${ev.id}')" style="font-size:10px;font-weight:600;background:#f3f4f6;color:#374151;border:none;border-radius:8px;padding:3px 8px;cursor:pointer;">📋 Copy</button>
+            </div>
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:6px;">
             ${_APPT_STATUSES.map(s=>`<label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:11px;font-weight:600;padding:4px 9px;border-radius:20px;border:1.5px solid ${(ev.status||'confirmed')===s.v?s.color:'#e5e7eb'};background:${(ev.status||'confirmed')===s.v?s.bg:'#fff'};color:${(ev.status||'confirmed')===s.v?s.color:'#6b7280'};transition:all .15s;">
@@ -10193,6 +10236,7 @@ function diaryShowDayPanel(dk){
           </div>
         </div>`;
       }).join('')}
+      <button onclick="document.getElementById('diaryDayPanel').remove();diaryOpenAdd('${dk}')" style="width:100%;padding:13px;background:#0d1f3c;color:#f5d98b;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;">+ Add Appointment</button>
     </div>`;
   panel.appendChild(inner);
   panel.addEventListener('click',e=>{if(e.target===panel)panel.remove();});
@@ -10218,6 +10262,15 @@ function diaryUpdateEventStatus(id,status){
   // Update badge in the panel
   const row=document.querySelector(`[name="apst_${id}"]`)?.closest('div[style*="background:#f9fafb"]');
   if(row){const badge=row.querySelector('span[style*="border-radius:20px"]');const st=_APPT_STATUSES.find(s=>s.v===status);if(badge&&st){badge.style.background=st.bg;badge.style.color=st.color;badge.textContent=st.label;}}
+}
+function diaryCopyEvent(id){
+  const ev=diaryGetEvents().find(e=>e.id===id);if(!ev)return;
+  const parts=[ev.title];
+  if(ev.date){const[y,mo,d]=ev.date.split('-');parts.push('📅 '+parseInt(d)+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][parseInt(mo)-1]+' '+y);}
+  if(ev.startTime)parts.push('⏰ '+ev.startTime.slice(0,5)+(ev.endTime?' – '+ev.endTime.slice(0,5):''));
+  if(ev.location)parts.push('📍 '+ev.location);
+  if(ev.notes)parts.push('📝 '+ev.notes);
+  navigator.clipboard?.writeText(parts.join('\n')).then(()=>showAlert('Copied — paste into WhatsApp or message.','success')).catch(()=>showAlert('Copy failed. Please copy manually.','error'));
 }
 // ── END DIARY / PLANNER ───────────────────────────────────────────────────────
 

@@ -1439,12 +1439,18 @@
       </div>
       <button class="diary-add-btn" onclick="diaryOpenAdd('')">+ Add</button>
     </div>
-    <!-- Manager advisor filter -->
+    <!-- Manager advisor filter + quick toggles -->
     <div id="diaryMgrFilter" style="display:none;margin-bottom:10px;">
-      <select id="diaryAdvisorFilter" onchange="renderDiary()" style="width:100%;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;">
+      <div style="display:flex;gap:6px;margin-bottom:8px;">
+        <button id="dToggleMe" class="diary-toggle-chip" onclick="diaryQuickFilter('me')">My Calendar</button>
+        <button id="dToggleAll" class="diary-toggle-chip active" onclick="diaryQuickFilter('all')">Team View</button>
+      </div>
+      <select id="diaryAdvisorFilter" onchange="diaryQuickFilter('specific')" style="width:100%;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;">
         <option value="">All advisors</option>
       </select>
     </div>
+    <!-- Cut-off countdown banner -->
+    <div id="diaryCutoffBanner"></div>
     <!-- Legend -->
     <div class="diary-legend">
       <div class="diary-leg-item"><div class="diary-leg-dot" style="background:#f0fdf4;border:1.5px solid #86efac;"></div>School term ✓</div>
