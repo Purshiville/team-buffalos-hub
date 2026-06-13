@@ -4636,15 +4636,16 @@ function renderDailyBrief(){
   const _npdDays=Math.floor(_npdDiff/86400000);
   if(_npd.isToday||_npdDays<=7){
     const _npdText=_npd.isToday
-      ?`<b>💳 Collection day today — ${_npd.day}th</b> — debit orders running. Confirm all orders are active and loaded.`
-      :_npdDays===1?`<b>💳 Collection tomorrow — ${_npd.day}th</b> — remind clients to ensure funds are available.`
-      :`<b>💳 Collection in ${_npdDays} day${_npdDays!==1?'s':''} — ${_npd.day}th</b> — remind clients to ensure funds are available.`;
-    items.push({icon:'💳',onclick:`showBriefBlowup('collection')`,text:_npdText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
+      ?`<b>Collection day today — ${_npd.day}th</b> — debit orders running. Confirm all orders are active and loaded.`
+      :_npdDays===1?`<b>Collection tomorrow — ${_npd.day}th</b> — remind clients to ensure funds are available.`
+      :`<b>Collection in ${_npdDays} day${_npdDays!==1?'s':''} — ${_npd.day}th</b> — remind clients to ensure funds are available.`;
+    items.push({icon:'💰',onclick:`showBriefBlowup('collection')`,text:_npdText+' <span style="font-size:10px;color:#c9922a;font-weight:600;">View all ›</span>'});
   }
 
   // Today's diary appointments — ops/manager see all, advisors see only their own
   const todayKey=y+'-'+(''+(m+1)).padStart(2,'0')+'-'+(''+d).padStart(2,'0');
   const todayEvs=diaryGetEvents().filter(e=>e.date===todayKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
+  todayEvs.sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
   if(todayEvs.length){
     items.push({icon:'🗓️',onclick:`showPage('termcal')`,text:`<b>${todayEvs.length} appointment${todayEvs.length>1?'s':''} today:</b> `+todayEvs.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(', ')});
   } else {
@@ -4786,8 +4787,8 @@ function renderHubPaymentReminder(){
   const titleColor=isToday?'#dc2626':soon?'#92400e':'#075985';
   const subColor=isToday?'#991b1b':soon?'#b45309':'#0369a1';
   const title=isToday
-    ?`💳 Collection day — ${next.day}th`
-    :`💳 Collection in ${daysLeft} day${daysLeft!==1?'s':''} — ${next.day}th`;
+    ?`💰 Collection day — ${next.day}th`
+    :`💰 Collection in ${daysLeft} day${daysLeft!==1?'s':''} — ${next.day}th`;
   const sub='Client debit orders run on this date — ensure all debit orders are active and loaded.';
   el.innerHTML=`<div style="background:${bg};border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;border-left:3px solid ${border};">
     <div>
