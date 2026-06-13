@@ -680,8 +680,9 @@ function requestNotificationPermission(){
 }
 
 function enterHub(user){
-  // Capture hash NOW — before any showPage call inside render functions overwrites it
-  const _entryHash=(location.hash||'').replace(/^#/,'');
+  // Read saved page BEFORE startup renders run (they call showPage and would overwrite it)
+  const _entryPage=sessionStorage.getItem('tl_page')||'hub';
+  window._appBooting=true;
   // Keep lastActive fresh in Firebase so the manager roster is accurate
   const _users=getUsers();
   if(_users[user.code]){
@@ -775,8 +776,8 @@ function enterHub(user){
   }
   renderOpsLand();
   if(user.isOps)renderOpsPage();
-  // Restore page captured at top of enterHub (before any render calls changed the hash)
-  const _restorePage=_entryHash&&document.getElementById('page-'+_entryHash)?_entryHash:'hub';
+  window._appBooting=false;
+  const _restorePage=_entryPage&&document.getElementById('page-'+_entryPage)?_entryPage:'hub';
   showPage(_restorePage);
   updateWelcomeBar();
   updatePrecanHubAlert();
@@ -2385,7 +2386,8 @@ function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
-  try{if(history.replaceState)history.replaceState(null,'','#'+p);}catch(e){}
+  // Only save when user is navigating, not during app startup renders
+  if(!window._appBooting)try{sessionStorage.setItem('tl_page',p);}catch(e){}
   // highlight matching nav tab by onclick attribute
   document.querySelectorAll('.nav-tab').forEach(t=>{
     const oc=t.getAttribute('onclick')||'';
