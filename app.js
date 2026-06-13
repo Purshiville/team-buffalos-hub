@@ -515,6 +515,19 @@ function fmtLastActive(ts){
 function getBdayInfo(dob){if(!dob)return null;const t=new Date(),d=new Date(dob),ty=new Date(t.getFullYear(),d.getMonth(),d.getDate()),ny=new Date(t.getFullYear()+1,d.getMonth(),d.getDate()),tm=new Date(t.getFullYear(),t.getMonth(),t.getDate());const diff=Math.round((ty-tm)/86400000);const du=diff<0?Math.round((ny-tm)/86400000):diff;const age=t.getFullYear()-d.getFullYear();const ta=diff<=0?age:age+1;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return{daysUntil:du,isToday:du===0,dateStr:d.getDate()+' '+mo[d.getMonth()],turningAge:ta};}
 function showAlert(m,t){const el=document.getElementById('alertBox');el.textContent=m;el.className='alert '+t;}
 function clearAlert(){const el=document.getElementById('alertBox');el.className='alert';el.textContent='';}
+// Floating toast — works anywhere in the app (auth alertBox is hidden once logged in)
+let _toastTimer=null;
+function showToast(m,t='info'){
+  let el=document.getElementById('_appToast');
+  if(!el){el=document.createElement('div');el.id='_appToast';
+    Object.assign(el.style,{position:'fixed',bottom:'80px',left:'50%',transform:'translateX(-50%)',zIndex:'99999',padding:'11px 18px',borderRadius:'10px',fontSize:'13px',fontWeight:'700',boxShadow:'0 4px 16px rgba(0,0,0,0.18)',maxWidth:'88vw',textAlign:'center',transition:'opacity .2s',pointerEvents:'none'});
+    document.body.appendChild(el);}
+  const styles={success:{bg:'#065f46',color:'#fff'},error:{bg:'#991b1b',color:'#fff'},info:{bg:'#0d1f3c',color:'#fff'},warning:{bg:'#92400e',color:'#fff'}};
+  const s=styles[t]||styles.info;
+  el.style.background=s.bg;el.style.color=s.color;el.textContent=m;el.style.opacity='1';
+  if(_toastTimer)clearTimeout(_toastTimer);
+  _toastTimer=setTimeout(()=>{el.style.opacity='0';},3200);
+}
 function switchTab(t){clearAlert();document.getElementById('loginForm').style.display=t==='login'?'block':'none';document.getElementById('registerForm').style.display=t==='register'?'block':'none';document.getElementById('changePassForm').style.display=t==='changepass'?'block':'none';document.getElementById('tabLogin').className='tab'+(t==='login'?' active':'');document.getElementById('tabRegister').className='tab'+(t==='register'?' active':'');document.getElementById('tabChangePass').className='tab'+(t==='changepass'?' active':'');}
 function validateCode(c){return/^SKA\d{6,}$/i.test(c.trim());}
 
@@ -11912,7 +11925,7 @@ function rfAddMember(){
   renderReplMembers();
 }
 function rfRemoveMember(i){
-  if(_rfState.members.length<=1)return showAlert('At least one member required.','error');
+  if(_rfState.members.length<=1)return showToast('At least one member required.','error');
   _rfState.members.splice(i,1);renderReplMembers();
 }
 function rfReadMembers(){
@@ -11945,7 +11958,7 @@ function rfReadForm(){
 
 function rfGenerateROA(){
   const d=rfReadForm();
-  if(!d.clientName)return showAlert('Please enter client name first.','error');
+  if(!d.clientName)return showToast('Please enter client name first.','error');
   const members=d.members;
   const removed=members.filter(m=>m.insurable==='removed'||parseFloat(m.newCover||0)===0);
   const increased=members.filter(m=>m.insurable!=='removed'&&parseFloat(m.newCover||0)>parseFloat(m.oldCover||0));
@@ -12014,53 +12027,62 @@ function rfClientSign(){
 }
 function rfClientSignCancel(){const ov=document.getElementById('rfClientSigOverlay');if(ov)ov.style.display='none';}
 function rfClientSignDone(){
-  if(_rfSigEmpty('rfClientSigCanvas'))return showAlert('Please sign before confirming.','error');
+  if(_rfSigEmpty('rfClientSigCanvas'))return showToast('Please sign before confirming.','error');
   _rfState.clientSig=document.getElementById('rfClientSigCanvas').toDataURL('image/png');
   document.getElementById('rfClientSigOverlay').style.display='none';
   rfUpdateClientSigUI();
-  showAlert('Client signature captured.','success');
+  showToast('Client signature captured ✓','success');
 }
 
 // Save
 async function rfSave(){
   const d=rfReadForm();
-  if(!d.clientName)return showAlert('Please enter client name.','error');
+  if(!d.clientName){
+    const f=document.getElementById('rfClientName');
+    if(f){f.style.border='2px solid #dc2626';f.focus();setTimeout(()=>f.style.border='',2000);}
+    return showToast('Please enter client name first.','error');
+  }
+  const saveBtn=document.querySelector('[onclick="rfSave()"]');
+  if(saveBtn){saveBtn.textContent='💾 Saving…';saveBtn.disabled=true;}
   const cv=document.getElementById('rfAdvisorSigCanvas');
   if(cv&&!_rfSigEmpty('rfAdvisorSigCanvas'))_rfState.advisorSig=cv.toDataURL('image/png');
   const id=_rfState.id||(Date.now()+'_'+Math.random().toString(36).slice(2));
   _rfState.id=id;
   const payload={...d,id,advisorSig:_rfState.advisorSig||null,clientSig:_rfState.clientSig||null,status:(_rfState.advisorSig&&_rfState.clientSig)?'signed':'draft'};
-  if(window.FB_READY){
-    try{
-      await window.FB.saveReplCase(id,payload);
-      await rfLoadCases();renderReplCases();
-      document.getElementById('rfStatus').textContent=payload.status==='signed'?'✅ Signed':'💾 Saved';
-      showAlert('Case saved.','success');
-    }catch(e){showAlert('Save failed: '+e.message,'error');}
-  }else{showAlert('Not connected — please try again.','error');}
+  try{
+    if(!window.FB_READY)throw new Error('Not connected to Firebase — please try again.');
+    await window.FB.saveReplCase(id,payload);
+    await rfLoadCases();renderReplCases();
+    document.getElementById('rfStatus').textContent=payload.status==='signed'?'✅ Signed':'💾 Saved';
+    showToast('Case saved ✓','success');
+  }catch(e){
+    console.error('rfSave:',e);
+    showToast('Save failed: '+(e.message||e),'error');
+  }finally{
+    if(saveBtn){saveBtn.textContent='💾 Save Draft';saveBtn.disabled=false;}
+  }
 }
 
 async function rfDeleteCase(id){
   if(!confirm('Delete this case?'))return;
-  if(window.FB_READY){
-    try{
-      await window.FB.deleteReplCase(id);
-      _rfState.cases=_rfState.cases.filter(c=>c.id!==id);
-      if(_rfState.id===id)rfNewCase();
-      renderReplCases();showAlert('Case deleted.','success');
-    }catch(e){showAlert('Delete failed.','error');}
-  }
+  try{
+    if(!window.FB_READY)throw new Error('Not connected');
+    await window.FB.deleteReplCase(id);
+    _rfState.cases=_rfState.cases.filter(c=>c.id!==id);
+    if(_rfState.id===id)rfNewCase();
+    renderReplCases();showToast('Case deleted.','info');
+  }catch(e){showToast('Delete failed: '+(e.message||e),'error');}
 }
 
 // PDF export via print window
 function rfExportPDF(){
   const d=rfReadForm();
-  if(!d.clientName)return showAlert('Please enter client name first.','error');
+  if(!d.clientName)return showToast('Please enter client name first.','error');
   const cv=document.getElementById('rfAdvisorSigCanvas');
   if(cv&&!_rfSigEmpty('rfAdvisorSigCanvas'))_rfState.advisorSig=cv.toDataURL('image/png');
   d.advisorSig=_rfState.advisorSig;d.clientSig=_rfState.clientSig;
   const w=window.open('','_blank','width=900,height=700');
-  if(!w)return showAlert('Please allow pop-ups to export PDF.','error');
+  if(!w)return showToast('Please allow pop-ups to export PDF.','error');
   w.document.write(_rfBuildPrintHTML(d));
   w.document.close();w.focus();
   setTimeout(()=>w.print(),700);
