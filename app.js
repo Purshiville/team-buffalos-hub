@@ -666,6 +666,9 @@ function updateWelcomeBar(){
   if(gd){
     const now=new Date();
     gd.textContent=now.toLocaleDateString('en-ZA',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+    gd.style.cursor='pointer';
+    gd.title='Open Herd Strategy calendar';
+    gd.onclick=()=>showPage('termcal');
   }
   const tg=document.getElementById('topbarGreeting');
   if(tg)tg.style.display='block';
@@ -682,9 +685,6 @@ function requestNotificationPermission(){
 function enterHub(user){
   // Read saved page BEFORE startup renders run (they call showPage and would overwrite it)
   const _entryPage=localStorage.getItem('tl_page')||'hub';
-  // TEMP DEBUG — remove once refresh issue is confirmed fixed
-  const _dbgRaw=localStorage.getItem('tl_page');
-  setTimeout(()=>{try{showToast('🔍 DEBUG: saved="'+(_dbgRaw||'[empty]')+'" restoring="'+_entryPage+'" (check console for errors)','info');}catch(e){}},800);
   window._appBooting=true;
   try{
   // Keep lastActive fresh in Firebase so the manager roster is accurate
@@ -2387,7 +2387,6 @@ function wrapFspEmails(){
   });
 }
 function showPage(p){
-  console.log('[TB] showPage('+p+') _appBooting='+!!window._appBooting);
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
@@ -9887,6 +9886,23 @@ function diaryToggleAdvisorPicker(){
   const wrap=document.getElementById('da_advisor_pick_wrap');
   if(wrap)wrap.style.display=(vis&&vis.value==='specific')?'block':'none';
 }
+function _diaryFilterTypeOptions(){
+  const sel=document.getElementById('da_type');if(!sel)return;
+  const isMgr=currentUser?.isManager||currentUser?.isOps;
+  const ALL_TYPES=[
+    {v:'visit',l:'School Visit'},
+    {v:'presentation',l:'Presentation'},
+    {v:'gatekeeper',l:'Meet Gatekeeper'},
+    {v:'close',l:'Close'},
+    {v:'planning',l:'Planning'},
+    {v:'admin',l:'Admin'},
+    {v:'other',l:'Other'},
+  ];
+  if(isMgr)ALL_TYPES.splice(2,0,{v:'meeting',l:'Herd Meeting'});
+  const cur=sel.value;
+  sel.innerHTML=ALL_TYPES.map(t=>`<option value="${t.v}">${t.l}</option>`).join('');
+  if(ALL_TYPES.find(t=>t.v===cur))sel.value=cur;
+}
 function diaryOnTypeChange(){
   if(!(currentUser?.isManager||currentUser?.isOps))return;
   const type=document.getElementById('da_type')?.value;
@@ -9911,6 +9927,7 @@ function diaryOpenAdd(dateStr){
   document.getElementById('da_date').value=dateStr||diaryDateKey(new Date());
   document.getElementById('da_start').value='08:00';
   document.getElementById('da_end').value='10:00';
+  _diaryFilterTypeOptions();
   document.getElementById('da_type').value='visit';
   document.getElementById('da_loc').value='';
   document.getElementById('da_notes').value='';
@@ -9944,6 +9961,7 @@ function diaryViewEvent(id){
   document.getElementById('da_date').value=ev.date||'';
   document.getElementById('da_start').value=ev.startTime||'';
   document.getElementById('da_end').value=ev.endTime||'';
+  _diaryFilterTypeOptions();
   document.getElementById('da_type').value=ev.type||'visit';
   document.getElementById('da_loc').value=ev.location||'';
   document.getElementById('da_notes').value=ev.notes||'';
