@@ -698,6 +698,7 @@ function enterHub(user){
   // Ops tab only for manager/Arlene; advisors use Tools instead
   document.getElementById('opsTab').style.display=(user.isManager||user.isOps)?'inline-block':'none';
   const toolMgrSec=document.getElementById('toolMgrSection');if(toolMgrSec)toolMgrSec.style.display=(user.isManager||user.isOps)?'block':'none';
+  const guidesMgrSec=document.getElementById('guidesMgrSection');if(guidesMgrSec)guidesMgrSec.style.display=(user.isManager||user.isOps)?'block':'none';
   const bTab=document.getElementById('budgetTab');if(bTab)bTab.style.display='none';
   const tmTab=document.getElementById('teamTab');if(tmTab)tmTab.style.display=(user.isManager||user.isOps)?'inline-block':'none';
   // More dropdown role-aware items
