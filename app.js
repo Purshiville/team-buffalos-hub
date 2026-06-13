@@ -9816,7 +9816,7 @@ function _renderDiaryMonth(el,MONTHS,DAYS){
     if(hasHerd)h+=`<div class="diary-chip herd-lbl">👥 Herd Mtg</div>`;
     if(isCutoff)h+=`<div class="diary-chip cutoff-lbl">CUT-OFF</div>`;
     else if(isMini)h+=`<div class="diary-chip mini-lbl">Mini ↓</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="event.stopPropagation();showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="event.stopPropagation();window.open(\'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk\',\'_blank\')" style="cursor:pointer;"':''}>${s.label}</div>`);
     evs.slice(0,1).forEach(ev=>{h+=`<div class="diary-chip ${ev.type||'other'}" onclick="event.stopPropagation();diaryViewEvent('${ev.id}')" title="${ev.title}">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     if(evs.length>1)h+=`<div class="diary-chip more" onclick="event.stopPropagation();diaryShowDayPanel('${dk}')">+${evs.length-1}</div>`;
     if(phol&&!isCutoff)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;margin-top:auto;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${phol}</div>`;
@@ -9858,7 +9858,7 @@ function _renderDiaryWeek(el,ws,DAYS3,DAYS1,MONTHS){
     if(isCutoff)h+=`<div style="font-size:8px;font-weight:700;color:#f5d98b;text-align:center;margin-bottom:3px;">CUT-OFF</div>`;
     else if(isMini)h+=`<div style="font-size:8px;font-weight:700;color:#92400e;text-align:center;margin-bottom:3px;">Mini ↓</div>`;
     if(phol)h+=`<div style="font-size:7px;color:#dc2626;font-weight:700;text-align:center;margin-bottom:3px;line-height:1.2;">${phol}</div>`;
-    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="showPage(\'precansheet\')" style="cursor:pointer;"':''}>${s.label}</div>`);
+    diaryGetSystemChips(date,isCutoff).forEach(s=>h+=`<div class="diary-week-ev diary-chip ${s.cls}" title="${s.title}" ${s.cls==='precan-lbl'?'onclick="window.open(\'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk\',\'_blank\')" style="cursor:pointer;"':''}>${s.label}</div>`);
     evs.forEach(ev=>{h+=`<div class="diary-week-ev diary-chip ${ev.type||'other'}" onclick="diaryViewEvent('${ev.id}')">${ev.startTime?ev.startTime.slice(0,5)+' ':''}${ev.title}</div>`;});
     h+=hasHerdW
       ?`<div onclick="showAlert('Herd Meeting scheduled — this slot is blocked for advisors.','error')" style="text-align:center;font-size:14px;color:#c4b5fd;cursor:default;margin-top:4px;">🔒</div>`
@@ -9885,7 +9885,8 @@ function _renderDiaryDay(el,MONTHS){
   const isCutoffDay=diaryIsCutoff(_diaryDate);
   const sysChips=diaryGetSystemChips(_diaryDate,isCutoffDay);
   if(sysChips.length){
-    sysChips.forEach(s=>{h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;"><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}</span></div>`;});
+    const _precanUrl='https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk';
+    sysChips.forEach(s=>{const isP=s.cls==='precan-lbl';h+=`<div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;gap:8px;${isP?'cursor:pointer;':''}" ${isP?`onclick="window.open('${_precanUrl}','_blank')"`:''}><span class="diary-chip ${s.cls}" style="font-size:11px;padding:3px 7px;">${s.label}</span><span style="font-size:12px;color:#6b7280;">${s.title}${isP?' — tap to open sheet':''}</span></div>`;});
   }
   if(!evs.length){
     h+=`<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">No appointments for this day.<br><span style="font-size:11px;">Tap <b>+ Add</b> to schedule one.</span></div>`;
