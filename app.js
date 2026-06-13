@@ -7482,14 +7482,15 @@ function renderPRDocList(){
     else if(f.status==='done')badge='<span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">✓ Done</span>';
     else if(f.status==='error')badge='<span style="background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;">⚠ Error</span>';
     const reReadBtn=(f.status==='error'||f.status==='done')?`<button onclick="reReadPRDoc(${i})" style="background:#f4f2ed;border:1px solid #e5e7eb;color:#0d1f3c;cursor:pointer;font-size:11px;font-weight:700;padding:3px 10px;border-radius:7px;white-space:nowrap;">↻ Re-read</button>`:'';
-    const addPageBtn=`<button onclick="addPageToPRDoc(${i})" style="background:#f0f9ff;border:1px solid #bae6fd;color:#075985;cursor:pointer;font-size:11px;font-weight:700;padding:3px 10px;border-radius:7px;white-space:nowrap;">+ Add page</button>`;
+    const reUploadBtn=f.status==='error'?`<button onclick="reUploadPRDoc(${i})" style="background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;cursor:pointer;font-size:11px;font-weight:700;padding:3px 10px;border-radius:7px;white-space:nowrap;">↑ Re-upload</button>`:'';
+    const addPageBtn=f.status!=='error'?`<button onclick="addPageToPRDoc(${i})" style="background:#f0f9ff;border:1px solid #bae6fd;color:#075985;cursor:pointer;font-size:11px;font-weight:700;padding:3px 10px;border-radius:7px;white-space:nowrap;">+ Add page</button>`:'';
     const pageList=f.files.length>1?`<div style="font-size:10px;color:#6b7280;margin-top:3px;">${f.files.map(p=>'📄 '+p.name).join(' · ')}</div>`:'';
     const preview=f.data?`<div style="font-size:11px;color:#6b7280;margin-top:4px;">${f.data.insurer||'Unknown'} — ${f.data.plan_name||'Unknown plan'} — ${_prFmtR(f.data.premium||0)}/month</div>`:'';
     const errMsg=f.error?`<div style="font-size:11px;color:#dc2626;margin-top:4px;">${f.error}</div>`:'';
     return `<div style="display:flex;align-items:flex-start;justify-content:space-between;background:#f8f7f4;border-radius:10px;padding:9px 12px;border:1px solid #e5e7eb;">
       <div style="flex:1;">
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-          <span style="font-size:12px;font-weight:700;color:#0d1f3c;">${f.label}</span>${badge}${reReadBtn}${addPageBtn}
+          <span style="font-size:12px;font-weight:700;color:#0d1f3c;">${f.label}</span>${badge}${reReadBtn}${reUploadBtn}${addPageBtn}
         </div>
         ${pageList}${preview}${errMsg}
       </div>
@@ -7505,8 +7506,12 @@ async function _prExtractOne(idx){
   try{
     const raw=await callClaudeVisionMulti(f.files,PR_EXTRACT_PROMPT,4096);
     let parsed;
-    try{const m=raw.match(/\{[\s\S]*\}/);parsed=JSON.parse(m?m[0]:raw);}
-    catch(e){throw new Error('Could not parse the document response. Please try re-reading or use a clearer scan.');}
+    try{
+      let js=raw.replace(/```(?:json)?\s*/gi,'').replace(/```\s*/g,'').trim();
+      const s=js.indexOf('{');
+      if(s>=0){let d=0,end=-1;for(let ci=s;ci<js.length;ci++){if(js[ci]==='{')d++;else if(js[ci]==='}'){d--;if(d===0){end=ci;break;}}}js=end>=0?js.slice(s,end+1):js.slice(s);}
+      parsed=JSON.parse(js);
+    }catch(e){throw new Error('Could not read this document. Please tap Re-upload with a clearer scan or a different file.');}
     f.status='done';f.data=parsed;_prExtracted[idx]=parsed;
   }catch(err){
     f.status='error';f.error=err.message||'Analysis failed — tap Re-read to try again.';_prExtracted[idx]=null;
@@ -7519,6 +7524,30 @@ async function reReadPRDoc(idx){
   await _prExtractOne(idx);
   renderPRSummary();
   updatePRButtons();
+}
+
+function reUploadPRDoc(idx){
+  if(!_prDocFiles[idx])return;
+  const inp=document.createElement('input');
+  inp.type='file';inp.accept='.pdf,image/*';inp.multiple=true;
+  inp.onchange=async()=>{
+    const files=Array.from(inp.files);if(!files.length)return;
+    const loaded=[];
+    for(const file of files){
+      await new Promise((res,rej)=>{
+        const r=new FileReader();
+        r.onload=e=>{loaded.push({b64:e.target.result.split(',')[1],mediaType:file.type||'image/jpeg',name:file.name});res();};
+        r.onerror=rej;r.readAsDataURL(file);
+      });
+    }
+    _prDocFiles[idx].files=loaded;
+    _prDocFiles[idx].label=loaded[0].name+(loaded.length>1?` + ${loaded.length-1} more`:'');
+    _prDocFiles[idx].status='pending';_prDocFiles[idx].data=null;_prDocFiles[idx].error=null;
+    renderPRDocList();
+    await _prExtractOne(idx);
+    renderPRSummary();updatePRButtons();
+  };
+  inp.click();
 }
 
 function updatePRButtons(){
