@@ -684,8 +684,9 @@ function enterHub(user){
   const _entryPage=localStorage.getItem('tl_page')||'hub';
   // TEMP DEBUG — remove once refresh issue is confirmed fixed
   const _dbgRaw=localStorage.getItem('tl_page');
-  setTimeout(()=>{try{showToast('🔍 DEBUG restore: tl_page="'+(_dbgRaw||'[empty]')+'" → going to "'+_entryPage+'"','info');}catch(e){}},800);
+  setTimeout(()=>{try{showToast('🔍 DEBUG: saved="'+(_dbgRaw||'[empty]')+'" restoring="'+_entryPage+'" (check console for errors)','info');}catch(e){}},800);
   window._appBooting=true;
+  try{
   // Keep lastActive fresh in Firebase so the manager roster is accurate
   const _users=getUsers();
   if(_users[user.code]){
@@ -779,7 +780,7 @@ function enterHub(user){
   }
   renderOpsLand();
   if(user.isOps)renderOpsPage();
-  window._appBooting=false;
+  }catch(e){console.error('[TB] enterHub setup error:',e);}finally{window._appBooting=false;}
   const _restorePage=_entryPage&&document.getElementById('page-'+_entryPage)?_entryPage:'hub';
   showPage(_restorePage);
   updateWelcomeBar();
