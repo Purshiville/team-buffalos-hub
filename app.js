@@ -2400,7 +2400,7 @@ function showPage(p){
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
   if(p==='policyreview'){renderPRSavedList();}
-  if(p==='replform'){rfInit();}
+  if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
