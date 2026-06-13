@@ -2389,7 +2389,7 @@ function wrapFspEmails(){
 function showPage(p){
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
-  const pg=document.getElementById('page-'+p);if(pg)pg.classList.add('active');
+  const pg=document.getElementById('page-'+p);if(pg){pg.classList.add('active');pg.scrollTop=0;}
   // Only save when user is navigating, not during app startup renders
   if(!window._appBooting)try{localStorage.setItem('tl_page',p);}catch(e){}
   // highlight matching nav tab by onclick attribute
