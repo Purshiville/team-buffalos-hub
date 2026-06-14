@@ -707,6 +707,72 @@ function updateCpdsSection(){
   el.innerHTML=`<div style="background:linear-gradient(135deg,#fefce8,#fffdf5);border:1.5px solid #fde68a;border-left:4px solid #d97706;border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" onchange="(function(cb){const k='tl_cpds_prod_${_prodMo}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:#92400e;">CPD — ${_label} production month</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Log your CPD hours on FA News · Tick once done for this period</div></div></label></div>`;
 }
 
+// ── ACTIVITY LOG ──────────────────────────────────────────────────────────────
+const ACT_LABELS={LOGIN:'🔐 Login',LOGOUT:'🚪 Logout',INACTIVITY_LOGOUT:'⏱️ Inactivity logout',PASSWORD_CHANGED:'🔑 Password changed',CALENDAR_ADD:'📅 Calendar — added',CALENDAR_EDIT:'📅 Calendar — edited',CALENDAR_DELETE:'🗑️ Calendar — deleted',COMPLIANCE_TICK:'✅ Compliance tick',PRECAN_ADD:'🚨 Pre-can case added'};
+function logActivity(action,detail){
+  if(!currentUser)return;
+  const entry={userCode:currentUser.code,userName:currentUser.name,action,detail:detail||'',localTs:new Date().toISOString()};
+  if(window.FB_READY&&window.FB.logActivity)window.FB.logActivity(entry).catch(()=>{});
+}
+function sendCpdNotifIfNeeded(){
+  if(!currentUser||!['SKA310889','PURSHIVILLE'].includes(currentUser.code))return;
+  const _n=new Date();let _yr=_n.getFullYear();let _mo=_n.getMonth()+1;
+  if(_n.getDate()>=23){_mo+=1;if(_mo>12){_mo=1;_yr+=1;}}
+  const _pm=_yr+'-'+String(_mo).padStart(2,'0');
+  if(localStorage.getItem('tl_cpds_prod_'+_pm)==='1')return;
+  if(localStorage.getItem('tl_cpds_notif_'+_pm)==='1')return;
+  const MNMS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  if(window.FB_READY&&window.FB.sendInbox){
+    window.FB.sendInbox({to:currentUser.code,from:'SYSTEM',fromName:'Team Buffalos',title:`CPD reminder — ${MNMS[_mo-1]} ${_yr} production month`,body:`Your CPD hours for the ${MNMS[_mo-1]} ${_yr} production period have not been logged yet. Log via FA News (fanews.co.za) and tick it off on your home screen.`,type:'cpd'}).then(()=>localStorage.setItem('tl_cpds_notif_'+_pm,'1')).catch(()=>{});
+  }
+}
+let _activityUnsub=null;
+function startActivityLogListener(){
+  if(!window.FB_READY||!window.FB.onActivityLog)return;
+  if(_activityUnsub){_activityUnsub();_activityUnsub=null;}
+  _activityUnsub=window.FB.onActivityLog(entries=>{
+    window._activityLog=entries;
+    const pg=document.getElementById('page-activity');
+    if(pg&&pg.classList.contains('active'))renderActivityLog();
+  });
+}
+function renderActivityLog(){
+  if(!currentUser||(!currentUser.isOps&&!currentUser.isManager))return;
+  // Inactive users section
+  const inactEl=document.getElementById('activityInactiveUsers');
+  if(inactEl){
+    const users=Object.values(getUsers()).filter(u=>!REVOKED_CODES.has(u.code)&&!EXCLUDED_NAMES.has(u.name)&&u.code!=='PURSHIVILLE'&&u.code!=='ARLENE');
+    const cutoff=Date.now()-24*60*60*1000;
+    const inactive=users.filter(u=>{
+      const ls=u.lastActive;if(!ls)return true;
+      return new Date(ls).getTime()<cutoff;
+    });
+    if(inactive.length){
+      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#fef2f2,#fff5f5);border:1.5px solid #fca5a5;border-left:4px solid #dc2626;border-radius:14px;padding:12px 16px;"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px;">⚠️ Inactive advisors (24h+)</div>${inactive.map(u=>{const la=u.lastActive?new Date(u.lastActive):null;const ago=la?Math.floor((Date.now()-la.getTime())/3600000):null;return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid #fca5a530;font-size:11px;"><span style="font-weight:600;color:#0d1f3c;">${u.name}</span><span style="color:#dc2626;">${ago?ago+'h ago':'Never logged in'}</span></div>`;}).join('')}</div>`;
+    }else{
+      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#f0fdf4,#f8fff8);border:1.5px solid #86efac;border-left:4px solid #16a34a;border-radius:14px;padding:10px 16px;font-size:12px;font-weight:700;color:#166534;">✅ All advisors active within 24 hours</div>`;
+    }
+  }
+  // Populate user filter
+  const uf=document.getElementById('actFilterUser');
+  if(uf&&uf.options.length<=1){
+    const users=Object.values(getUsers()).filter(u=>!REVOKED_CODES.has(u.code));
+    users.sort((a,b)=>a.name.localeCompare(b.name));
+    users.forEach(u=>{const o=document.createElement('option');o.value=u.code;o.textContent=u.name;uf.appendChild(o);});
+  }
+  const el=document.getElementById('activityLogList');if(!el)return;
+  let entries=window._activityLog||[];
+  const fUser=document.getElementById('actFilterUser')?.value||'';
+  const fAction=document.getElementById('actFilterAction')?.value||'';
+  const fDate=document.getElementById('actFilterDate')?.value||'';
+  if(fUser)entries=entries.filter(e=>e.userCode===fUser);
+  if(fAction)entries=entries.filter(e=>e.action===fAction);
+  if(fDate)entries=entries.filter(e=>(e.localTs||'').startsWith(fDate));
+  if(!entries.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:32px;font-size:13px;">No activity recorded yet.</div>';return;}
+  el.innerHTML=`<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8f7f4;"><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Date &amp; Time</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">User</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Action</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Detail</th></tr></thead><tbody>${entries.map((e,i)=>{const ts=e.localTs?new Date(e.localTs):null;const dateStr=ts?ts.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';const timeStr=ts?ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';return`<tr style="border-top:1px solid #f4f2ed;${i%2===0?'':'background:#fafaf9;'}"><td style="padding:9px 12px;white-space:nowrap;"><div style="font-size:11px;font-weight:700;color:#0d1f3c;">${dateStr}</div><div style="font-size:10px;color:#9ca3af;">${timeStr}</div></td><td style="padding:9px 12px;font-size:11px;font-weight:600;color:#374151;white-space:nowrap;">${e.userName||e.userCode||'—'}</td><td style="padding:9px 12px;font-size:11px;white-space:nowrap;">${ACT_LABELS[e.action]||e.action||'—'}</td><td style="padding:9px 12px;font-size:11px;color:#6b7280;max-width:200px;">${e.detail||''}</td></tr>`;}).join('')}</tbody></table></div>`;
+}
+// ── END ACTIVITY LOG ──────────────────────────────────────────────────────────
+
 function updateWelcomeBar(){
   if(!currentUser)return;
   const fn=currentUser.name.split(' ')[0];
@@ -777,6 +843,7 @@ function enterHub(user){
   // More dropdown role-aware items
   const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
   const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=(user.isManager||user.isOps)?'flex':'none';
+  const activityMore=document.getElementById('activityMoreItem');if(activityMore)activityMore.style.display=(user.isManager||user.isOps)?'flex':'none';
   const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=(user.isManager||user.isOps)?'block':'none';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
@@ -798,6 +865,10 @@ function enterHub(user){
   if(bday&&bday.isToday)greeting=`🎂 Happy Birthday ${fn}! Wishing you a wonderful day from the whole Team Buffalos family! Your Buffalo Genius is also standing by for any business questions.`;
   document.getElementById('chatMessages').innerHTML=`<div class="msg bot"><div class="msg-av bot">AI</div><div class="msg-bubble">${greeting}<br><span style="font-size:11px;color:#9ca3af;">Products · Commission · NTU · Qlink · Pre-cancellations · Fit &amp; Proper · Compliance</span></div></div>`;
   renderFpPage();renderHubBirthdays();
+  // Log login event and start activity log listener for manager/ops
+  logActivity('LOGIN','Signed in');
+  if(user.isOps||user.isManager)startActivityLogListener();
+  sendCpdNotifIfNeeded();
   // Start stats listener immediately — no need to wait for other syncs
   initStatsListener();
   // Sync from Firebase then render
@@ -874,7 +945,7 @@ function resetInactivityTimer(){
   _inactivityTimer = setTimeout(()=>{
     if(currentUser){
       document.getElementById('inactivityWarning').style.display = 'none';
-      doLogout();
+      doLogout('inactivity');
     }
   }, INACTIVITY_LOGOUT_MS);
 }
@@ -898,7 +969,8 @@ function stopInactivityTimer(){
   if(warn) warn.style.display = 'none';
 }
 
-function doLogout(){
+function doLogout(reason){
+  logActivity(reason==='inactivity'?'INACTIVITY_LOGOUT':'LOGOUT',reason==='inactivity'?'Auto-logged out after 30 min inactivity':'Signed out');
   stopInactivityTimer();
   if(_inboxUnsub){_inboxUnsub();_inboxUnsub=null;}
   if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
@@ -2462,6 +2534,7 @@ function showPage(p){
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
   if(p==='guides'){const fc=document.getElementById('fanewsCard');if(fc)fc.style.display=(currentUser&&['SKA310889','PURSHIVILLE'].includes(currentUser.code))?'flex':'none';}
+  if(p==='activity')renderActivityLog();
   if(p==='canpack'){mdInit();}
   if(p==='termcal')renderTermCal();
   if(p==='ntu')renderNTUDash();
@@ -6817,7 +6890,7 @@ function openModal(type){
 function closeModal(){document.getElementById('modalOverlay').style.display='none';currentModal=null;}
 function saveModal(){
   const v=id=>document.getElementById(id)?document.getElementById(id).value:'';
-  if(currentModal==='precan'){const rows=getTracker('precan');const _cpdsEl=document.getElementById('m_cpds');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted'),cpds:_cpdsEl?_cpdsEl.checked:false});saveTracker('precan',rows);closeModal();renderPrecanTracker();renderDeadlineAlerts();updatePrecanHubAlert();}
+  if(currentModal==='precan'){const rows=getTracker('precan');const _cpdsEl=document.getElementById('m_cpds');const _pr={advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted'),cpds:_cpdsEl?_cpdsEl.checked:false};rows.push(_pr);saveTracker('precan',rows);logActivity('PRECAN_ADD',`Added pre-can case: ${_pr.client||'?'} (${_pr.advisor||'?'}) — ${_pr.product||'?'}`);closeModal();renderPrecanTracker();renderDeadlineAlerts();updatePrecanHubAlert();}
   else if(currentModal==='ntu'){const rows=getTracker('ntu');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),type:v('m_type'),lapseDate:v('m_lapseDate'),status:v('m_status')});saveTracker('ntu',rows);closeModal();renderNtuTracker();renderDeadlineAlerts();}
   else if(currentModal==='hr'){const rows=getTracker('hr');rows.push({advisor:v('m_advisor'),client:v('m_client'),employer:v('m_employer'),blockingPolicy:v('m_blockingPolicy'),proofDate:v('m_proofDate'),hrSentDate:v('m_hrSentDate'),persalCleared:v('m_persalCleared'),status:v('m_status')});saveTracker('hr',rows);closeModal();renderHrTracker();}
   else if(currentModal==='meeting'){
@@ -6942,6 +7015,7 @@ function toggleCheck(itemId){
   checks[itemId]=!checks[itemId];
   saveFpChecks(currentUser.code,checks);
   if(window.FB_READY){window.FB.saveCompliance(currentUser.code,{checks,updatedAt:new Date().toISOString()}).catch(()=>{});}
+  logActivity('COMPLIANCE_TICK',`${checks[itemId]?'Ticked':'Unticked'} compliance item: ${itemId}`);
 
   // Update just the clicked checkbox — no full re-render so categories stay open
   const el=document.getElementById('fpchk_'+itemId);
@@ -7422,6 +7496,7 @@ async function doChangePassword(){
   users[code].pass=newPass;
   saveUsers(users);
   if(window.FB_READY){window.FB.saveUser(code,users[code]).catch(()=>{});}
+  if(window.FB_READY&&window.FB.logActivity){window.FB.logActivity({userCode:code,userName:users[code]?.name||code,action:'PASSWORD_CHANGED',detail:'Password updated via login screen',localTs:new Date().toISOString()}).catch(()=>{});}
   document.getElementById('cpCode').value='';document.getElementById('cpOld').value='';document.getElementById('cpNew').value='';document.getElementById('cpNew2').value='';
   showAlert('Password updated successfully. You can now sign in.','success');
   setTimeout(()=>switchTab('login'),2000);
@@ -10209,6 +10284,7 @@ function diarySaveAdd(){
     const idx=events.findIndex(e=>e.id===_diaryEditId);
     if(idx>=0)events[idx]={...events[idx],title,date,startTime:v('da_start'),endTime:v('da_end'),type:v('da_type'),location:v('da_loc'),notes:v('da_notes'),status:v('da_status')};
     if(window.FB_READY)window.FB.saveCalEvent(_diaryEditId,events[idx]).catch(()=>{});
+    logActivity('CALENDAR_EDIT',`Edited appointment: "${title}" on ${date}`);
   } else {
     const groupId=Date.now()+'_'+Math.random().toString(36).slice(2);
     const _vis=(currentUser?.isManager||currentUser?.isOps)?(document.getElementById('da_visibility')?.value||'me'):'me';
@@ -10244,14 +10320,17 @@ function diarySaveAdd(){
   _diaryDate=new Date(parts[0],parts[1]-1,parts[2]);
   renderDiary();
   const savedMsg=repeat?(repeat==='weekly'?'Recurring appointment created for 12 weeks.':'Recurring appointment created for 6 months.'):'Appointment saved.';
+  logActivity('CALENDAR_ADD',`Added appointment: "${title}" on ${date}${repeat?' ('+repeat+' recurring)':''}`);
   showAlert(savedMsg,'success');
 }
 
 function diaryDeleteFromModal(){
   if(!_diaryEditId||!confirm('Delete this appointment?'))return;
+  const _delEv=diaryGetEvents().find(e=>e.id===_diaryEditId);
   const events=diaryGetEvents().filter(e=>e.id!==_diaryEditId);
   diarySaveEvents(events);
   if(window.FB_READY)window.FB.deleteCalEvent(_diaryEditId).catch(()=>{});
+  logActivity('CALENDAR_DELETE',`Deleted appointment${_delEv?' "'+_delEv.title+'" on '+_delEv.date:''}`);
   diaryCloseAdd();renderDiary();
   showAlert('Appointment deleted.','success');
 }
