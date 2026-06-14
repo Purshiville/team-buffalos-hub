@@ -724,6 +724,7 @@ function enterHub(user){
   // More dropdown role-aware items
   const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
   const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=(user.isManager||user.isOps)?'flex':'none';
+  const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=(user.isManager||user.isOps)?'block':'none';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
