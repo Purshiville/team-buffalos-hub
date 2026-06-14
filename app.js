@@ -2630,7 +2630,7 @@ Client is expecting a callback. I have not commented on the matter.`
   }
 ];
 
-function renderOpsPage(){renderDeadlineAlerts();renderProdCountdown();renderQlinkRuns();renderPaydayList();renderPrecanTracker();renderNtuTracker();renderHrTracker();renderMeetingCard();renderMinutes();renderMorningBrief();renderWaTemplates();renderContacts();}
+function renderOpsPage(){generateBrief();renderTodayFocus();renderProdCountdown();renderNextQlink();renderPrecanTracker();renderNtuTracker();renderHrTracker();renderMeetingCard();renderMinutes();renderWaTemplates();renderContacts();}
 
 
 const COMPETITORS = [
@@ -4882,19 +4882,38 @@ function renderOpsLand(){
     if(dailyBadge)dailyBadge.style.display='none';
   }
 
-  // Today snapshot
+  // Today snapshot — rich morning briefing
   const snap=document.getElementById('opsTodayContent');
   if(snap){
     const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const lines=[
-      '<b>'+dayNames[now.getDay()]+', '+now.toLocaleDateString('en-ZA',{day:'numeric',month:'long',year:'numeric'})+'</b>',
-      d===12?'📋 <b>Cut-off:</b> Submit 15th-pay cases today':'',
-      d===15?'💳 <b>Pay day:</b> 15th pay clients — confirm deductions':'',
-      d===19?'💳 <b>General pay date tomorrow:</b> Remind debit order clients to have funds available — check Connect Me for affected clients':'',
-      precanLeft>0&&precanLeft<=480?'🚨 <b>Pre-can deadline:</b> '+Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m remaining':'',
-      precanLeft<=0&&precanLeft>-120?'⏰ Pre-cancellation window closed for today':'',
+    const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const precanRows=getTracker('precan');
+    const precanPending=precanRows.filter(r=>r.status==='Pending'||r.status==='No response');
+    const precanIcon=precanLeft<=0?'✓':precanLeft<=240?'🚨':'📋';
+    const precanText=precanLeft>0
+      ?'<b>Pre-can:</b> '+precanRows.length+' case'+(precanRows.length!==1?'s':'')+' — '+precanPending.length+' pending — deadline '+(precanLeft<=240?Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m away':'at 12:00')
+      :'<b>Pre-can:</b> Deadline passed — '+precanRows.filter(r=>r.status==='Saved').length+' saved / '+precanRows.filter(r=>r.status==='Not saved').length+' not saved';
+    let qlText='';const ts2=todayStr();let isQday2=false;
+    Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===ts2)isQday2=true;}));
+    if(isQday2){const qlLeft2=13*60-mins;qlText=qlLeft2>0?'⚡ <b>Qlink run day</b> — submit before 13:00 ('+Math.floor(qlLeft2/60)+'h '+(qlLeft2%60)+'m)':'⚡ Qlink cut-off passed today';}
+    else{const up2=[];Object.entries(QLINK_DATES).forEach(([,runs])=>runs.forEach(r=>{const d3=daysUntil(r.d);if(d3>=0)up2.push({date:r.d,d:d3});}));up2.sort((a,b)=>a.d-b.d);const nxt2=up2[0];if(nxt2)qlText='⚡ <b>Next Qlink:</b> '+(nxt2.d===0?'today':nxt2.d===1?'tomorrow':'in '+nxt2.d+' days')+' ('+nxt2.date+')';}
+    let payText='';
+    if(PAYMENT_DATES.includes(d)){payText='💳 <b>'+(d===1?'1st':d+'th')+' pay date today</b> — confirm client deductions';}
+    else{const td2=new Date(now.getFullYear(),now.getMonth(),d+1);if(PAYMENT_DATES.includes(td2.getDate()))payText='💳 Pay date tomorrow ('+td2.getDate()+'th) — <b>send reminders today</b>';}
+    const prodEntry2=PROD_CUTOFFS.find(p=>ts2>=p.opens&&ts2<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>ts2);
+    const prodDays2=prodEntry2?daysUntil(prodEntry2.cutoff):null;
+    const prodText2=prodEntry2?'📊 <b>Production cut-off:</b> '+(prodDays2===0?'<span style="color:#dc2626;">TODAY</span>':'in '+prodDays2+' days')+' ('+prodEntry2.cutoff+')':'';
+    const critNtu2=getTracker('ntu').filter(r=>r.lapseDate&&(120-daysFrom(r.lapseDate))>=0&&(120-daysFrom(r.lapseDate))<=30);
+    const hrOpen2=getTracker('hr').filter(r=>r.status!=='Cleared');
+    const rows2=[
+      precanIcon+' '+precanText,
+      qlText,
+      payText,
+      prodText2,
+      critNtu2.length?'⏳ <b>NTU watch:</b> '+critNtu2.length+' case'+(critNtu2.length>1?'s':'')+' in 30-day critical window':'',
+      hrOpen2.length?'🏦 <b>HR:</b> '+hrOpen2.length+' PERSAL engagement'+(hrOpen2.length>1?'s':'')+' open':'',
     ].filter(Boolean);
-    snap.innerHTML=lines.join('<br>')||'<span style="color:#9ca3af;">No urgent items today.</span>';
+    snap.innerHTML='<div style="font-size:13px;font-weight:700;color:#0d1f3c;padding-bottom:8px;border-bottom:1px solid #f4f2ed;margin-bottom:8px;">'+dayNames[now.getDay()]+', '+now.getDate()+' '+monthNames[now.getMonth()]+' '+now.getFullYear()+'</div><div style="display:flex;flex-direction:column;gap:7px;">'+rows2.map(r=>'<div style="font-size:12px;color:#374151;line-height:1.4;">'+r+'</div>').join('')+'</div>';
   }
 
   // Update ops tile desc
@@ -6581,20 +6600,57 @@ function copyWaTemplate(idx){
 }
 
 
-function renderDeadlineAlerts(){
-  const el=document.getElementById('deadlineAlerts');
-  const t=new Date(),mins=t.getHours()*60+t.getMinutes();
+function renderDeadlineAlerts(){renderTodayFocus();}
+
+function renderTodayFocus(){
+  const el=document.getElementById('todayFocus');if(!el)return;
+  const now=new Date(),mins=now.getHours()*60+now.getMinutes(),d=now.getDate();
   const items=[];
+  // Pre-can
   const precanLeft=12*60-mins;
-  if(precanLeft>0&&precanLeft<=240)items.push({cls:'urgent',icon:'🚨',text:`Pre-cancellation letters — ${Math.floor(precanLeft/60)}h ${precanLeft%60}m until 12:00pm deadline`});
-  else if(precanLeft<=0)items.push({cls:'ok',icon:'✓',text:'Pre-cancellation deadline passed for today (12:00pm)'});
-  else items.push({cls:'ok',icon:'📋',text:'Pre-cancellation deadline: 12:00pm today'});
+  const precanRows=getTracker('precan');
+  const precanPending=precanRows.filter(r=>r.status==='Pending'||r.status==='No response');
+  if(precanLeft>0&&precanLeft<=240)items.push({p:'urgent',t:'12:00',i:'⚠️',a:'Pre-cancellations — '+Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m until 12:00 deadline',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' on today\'s list — '+precanPending.length+' still pending':'No cases logged yet — check Pavlov report'});
+  else if(precanLeft>240)items.push({p:'info',t:'12:00',i:'📋',a:'Pre-cancellations — deadline at 12:00',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' logged — '+precanPending.length+' pending feedback':'Log cases when Pavlov report arrives (08:00–09:00)'});
+  else items.push({p:'done',t:'12:00',i:'✓',a:'Pre-can deadline passed',d:precanRows.filter(r=>r.status==='Saved').length+' saved · '+precanRows.filter(r=>r.status==='Not saved').length+' not saved · '+precanPending.length+' no response'});
+  // Qlink
   const ts=todayStr();let isQday=false;
   Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===ts)isQday=true;}));
-  if(isQday){const ql=13*60-mins;if(ql>0)items.push({cls:'urgent',icon:'⚡',text:`Qlink run day! Submit before 13:00 — ${Math.floor(ql/60)}h ${ql%60}m remaining`});else items.push({cls:'ok',icon:'✓',text:'Qlink cut-off passed for today (13:00)'});}
-  const ntus=getTracker('ntu');const crit=ntus.filter(r=>r.lapseDate&&(120-daysFrom(r.lapseDate))>=0&&(120-daysFrom(r.lapseDate))<=30);
-  if(crit.length)items.push({cls:'warn',icon:'⚠️',text:`${crit.length} NTU/lapse case${crit.length>1?'s':''} within 30 days of 120-day window`});
-  el.innerHTML=items.map(i=>`<div class="deadline-pill ${i.cls}">${i.icon} ${i.text}</div>`).join('');
+  if(isQday){const qlLeft=13*60-mins;items.push({p:qlLeft>0?'urgent':'done',t:'13:00',i:'⚡',a:qlLeft>0?'Qlink run day — submit before 13:00 ('+Math.floor(qlLeft/60)+'h '+(qlLeft%60)+'m)':'Qlink cut-off passed for today',d:qlLeft>0?'Submit all PERSAL case amendments now — no late submissions accepted':'PERSAL submissions closed for this run'});}
+  else{const up=[];Object.entries(QLINK_DATES).forEach(([,runs])=>runs.forEach(r=>{const d2=daysUntil(r.d);if(d2>=0)up.push({date:r.d,d:d2});}));up.sort((a,b)=>a.d-b.d);const nxt=up[0];if(nxt)items.push({p:nxt.d<=2?'warn':'info',t:nxt.date,i:'⚡',a:'Next Qlink: '+(nxt.d===0?'today':nxt.d===1?'tomorrow':'in '+nxt.d+' days')+' ('+nxt.date+')',d:'Prepare PERSAL submissions — cut-off is 13:00 on the run day'});}
+  // Payment
+  if(PAYMENT_DATES.includes(d))items.push({p:'warn',t:'today',i:'💳',a:(d===1?'1st':d+'th')+' pay date — deductions processing today',d:'Remind clients with insufficient funds to deposit now — DebiCheck runs during business hours'});
+  else{const td=new Date(now.getFullYear(),now.getMonth(),d+1);if(PAYMENT_DATES.includes(td.getDate()))items.push({p:'warn',t:'today',i:'💳',a:td.getDate()+'th pay date tomorrow — send payment reminders now',d:'WhatsApp clients today to ensure funds are available before their deduction date'});
+  else{const nxtP=PAYMENT_DATES.map(pd=>{let rd=new Date(now.getFullYear(),now.getMonth(),pd-1);if(rd<now)rd=new Date(now.getFullYear(),now.getMonth()+1,pd-1);return{d:pd,dl:Math.round((rd-now)/86400000)};}).sort((a,b)=>a.dl-b.dl)[0];if(nxtP)items.push({p:'info',t:nxtP.d+(nxtP.d===1?'st':'th'),i:'💳',a:'Next pay date: '+(nxtP.d===1?'1st':nxtP.d+'th')+' — in '+nxtP.dl+' day'+(nxtP.dl!==1?'s':''),d:'Send WhatsApp reminder the day before for affected clients'});}}
+  // NTU critical
+  const critNtu=getTracker('ntu').filter(r=>r.lapseDate&&(120-daysFrom(r.lapseDate))>=0&&(120-daysFrom(r.lapseDate))<=30);
+  if(critNtu.length)items.push({p:'warn',t:'watch',i:'⏳',a:critNtu.length+' NTU/lapse case'+(critNtu.length>1?'s':'')+' in 30-day critical window',d:'Follow up on reinstatement — 120-day window closing soon. See NTU tracker below.'});
+  // HR open
+  const hrOpen=getTracker('hr').filter(r=>r.status!=='Cleared');
+  if(hrOpen.length)items.push({p:'info',t:'watch',i:'🏦',a:hrOpen.length+' HR engagement'+(hrOpen.length>1?'s':'')+' open',d:'PERSAL cases blocked — follow up with HR and Zuki on clearing status'});
+  if(!items.length){el.innerHTML='<div style="color:#9ca3af;font-size:13px;text-align:center;padding:1rem 0;">All clear — no urgent items right now.</div>';return;}
+  el.innerHTML=items.map(item=>{
+    const bg=item.p==='urgent'?'#fef2f2':item.p==='warn'?'#fffbeb':item.p==='done'?'#f0fdf4':'#f0f7ff';
+    const bd=item.p==='urgent'?'#fca5a5':item.p==='warn'?'#fde68a':item.p==='done'?'#86efac':'#bfdbfe';
+    const tc=item.p==='urgent'?'#dc2626':item.p==='warn'?'#d97706':item.p==='done'?'#16a34a':'#3b82f6';
+    return`<div style="display:flex;gap:12px;padding:11px 14px;background:${bg};border:1px solid ${bd};border-radius:10px;margin-bottom:8px;align-items:flex-start;"><div style="font-size:17px;flex-shrink:0;margin-top:1px;">${item.i}</div><div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:700;color:#0d1f3c;line-height:1.3;margin-bottom:3px;">${item.a}</div><div style="font-size:11px;color:#6b7280;line-height:1.4;">${item.d}</div></div><div style="font-size:10px;font-weight:700;color:${tc};flex-shrink:0;text-align:right;min-width:40px;padding-top:2px;">${item.t}</div></div>`;
+  }).join('');
+}
+
+function renderNextQlink(){
+  const el=document.getElementById('nextQlinkCard');if(!el)return;
+  const ts=todayStr();let isQday=false;
+  Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===ts)isQday=true;}));
+  const up=[];Object.entries(QLINK_DATES).forEach(([,runs])=>runs.forEach(r=>{const d=daysUntil(r.d);if(d>=0)up.push({date:r.d,d});}));up.sort((a,b)=>a.d-b.d);
+  if(isQday){
+    const now=new Date(),qlLeft=13*60-now.getHours()*60-now.getMinutes();
+    el.innerHTML=`<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:10px;"><div style="font-size:9px;font-weight:700;color:#991b1b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">⚡ TODAY IS A RUN DAY</div><div style="font-size:22px;font-weight:800;color:#dc2626;line-height:1;">${qlLeft>0?Math.floor(qlLeft/60)+'h '+(qlLeft%60)+'m left':'Cut-off passed'}</div><div style="font-size:11px;color:#991b1b;margin-top:4px;">Submit PERSAL amendments before 13:00</div></div>${up.slice(1,4).map(r=>`<div class="qlink-row"><span class="qlink-date">${r.date}</span><span class="qlink-label ${r.d<=3?'soon':'fine'}">In ${r.d} days</span></div>`).join('')}`;
+    return;
+  }
+  const nxt=up[0];
+  if(!nxt){el.innerHTML='<div style="color:#9ca3af;font-size:12px;">No upcoming runs scheduled</div>';return;}
+  const col=nxt.d<=1?'#dc2626':nxt.d<=3?'#d97706':'#0d1f3c';
+  el.innerHTML=`<div style="margin-bottom:10px;"><div style="font-size:28px;font-weight:800;color:${col};line-height:1;">${nxt.d===0?'Today':nxt.d===1?'Tomorrow':'In '+nxt.d+' days'}</div><div style="font-size:12px;color:#6b7280;margin-top:4px;">${nxt.date} — submit by 13:00</div>${nxt.d<=3?'<div style="font-size:11px;color:#d97706;margin-top:5px;font-weight:600;">Prepare PERSAL submissions now</div>':''}</div><div style="border-top:1px solid #f4f2ed;padding-top:8px;">${up.slice(1,4).map(r=>`<div class="qlink-row"><span class="qlink-date">${r.date}</span><span class="qlink-label ${r.d<=3?'soon':'fine'}">${r.d===1?'Tomorrow':'In '+r.d+' days'}</span></div>`).join('')}</div>`;
 }
 
 function renderProdCountdown(){
@@ -6638,12 +6694,16 @@ function renderPaydayList(){
 
 function renderPrecanTracker(){
   const rows=getTracker('precan'),tbody=document.getElementById('precanBody');
+  const sumEl=document.getElementById('precanSummary');
+  if(sumEl){if(!rows.length)sumEl.textContent='No cases logged yet';else{const sv=rows.filter(r=>r.status==='Saved').length,ns=rows.filter(r=>r.status==='Not saved').length,pd=rows.filter(r=>r.status==='Pending'||r.status==='No response').length;sumEl.innerHTML=rows.length+' total · <span style="color:#16a34a;font-weight:600;">'+sv+' saved</span> · <span style="color:#dc2626;font-weight:600;">'+ns+' not saved</span> · <span style="color:#d97706;font-weight:600;">'+pd+' pending</span>';}}
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="7" style="color:#9ca3af;text-align:center;padding:1.25rem;font-size:12px;">No pre-cancellation cases logged today — click "+ Add case" to start tracking</td></tr>`;return;}
   tbody.innerHTML=rows.map((r,i)=>`<tr><td>${r.advisor||'—'}</td><td>${r.client||'—'}</td><td style="font-family:monospace;font-size:11px;">${r.policy||'—'}</td><td>${r.risk||'—'}</td><td><span class="status-badge ${r.status==='Saved'?'sb-saved':r.status==='Not saved'?'sb-notsaved':'sb-pending'}">${r.status||'Pending'}</span></td><td style="font-size:11px;color:#6b7280;">${r.submitted||'—'}</td><td><button class="del-btn" onclick="delRow('precan',${i})">✕</button></td></tr>`).join('');
 }
 
 function renderNtuTracker(){
   const rows=getTracker('ntu'),tbody=document.getElementById('ntuBody');
+  const sumEl=document.getElementById('ntuSummary');
+  if(sumEl){if(!rows.length)sumEl.textContent='No cases tracked';else{const crit=rows.filter(r=>{if(!r.lapseDate)return false;const dl=120-daysFrom(r.lapseDate);return dl>=0&&dl<=30;}).length;sumEl.innerHTML=rows.length+' case'+(rows.length>1?'s':'')+' tracked'+(crit?` · <span style="color:#dc2626;font-weight:600;">${crit} in critical window</span>`:'');}}
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="8" style="color:#9ca3af;text-align:center;padding:1.25rem;font-size:12px;">No NTU / lapse cases tracked — click "+ Add case" to monitor 120-day windows</td></tr>`;return;}
   tbody.innerHTML=rows.map((r,i)=>{
     const dl=r.lapseDate?Math.max(0,120-daysFrom(r.lapseDate)):null;
@@ -6654,6 +6714,8 @@ function renderNtuTracker(){
 
 function renderHrTracker(){
   const rows=getTracker('hr'),tbody=document.getElementById('hrBody');
+  const sumEl=document.getElementById('hrSummary');
+  if(sumEl){if(!rows.length)sumEl.textContent='No engagements tracked';else{const open=rows.filter(r=>r.status!=='Cleared').length;sumEl.innerHTML=rows.length+' case'+(rows.length>1?'s':'')+' · <span style="'+(open?'color:#d97706;':'color:#16a34a;')+'font-weight:600;">'+(open?open+' open':'all cleared')+'</span>';}}
   if(!rows.length){tbody.innerHTML=`<tr><td colspan="9" style="color:#9ca3af;text-align:center;padding:1.25rem;font-size:12px;">No HR engagements tracked — click "+ Add case" when a Qlink fails due to a blocking PERSAL policy</td></tr>`;return;}
   tbody.innerHTML=rows.map((r,i)=>`<tr><td>${r.advisor||'—'}</td><td>${r.client||'—'}</td><td>${r.employer||'—'}</td><td style="font-size:11px;">${r.blockingPolicy||'—'}</td><td style="font-size:11px;color:#6b7280;">${r.proofDate||'—'}</td><td style="font-size:11px;color:#6b7280;">${r.hrSentDate||'—'}</td><td><span class="status-badge ${r.persalCleared==='Yes'?'sb-cleared':'sb-inprog'}">${r.persalCleared||'Pending'}</span></td><td><span class="status-badge ${r.status==='Cleared'?'sb-saved':r.status==='In progress'?'sb-inprog':'sb-pending'}">${r.status||'Pending'}</span></td><td><button class="del-btn" onclick="delRow('hr',${i})">✕</button></td></tr>`).join('');
 }
