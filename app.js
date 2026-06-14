@@ -695,12 +695,16 @@ function updateNtuHubAlert(){
 function updateCpdsSection(){
   const el=document.getElementById('cpdsHubSection');if(!el||!currentUser)return;
   if(!['SKA310889','PURSHIVILLE'].includes(currentUser.code)){el.style.display='none';return;}
-  const _now=new Date();const _mo=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
-  const key='tl_cpds_done_'+_mo;const done=localStorage.getItem(key)==='1';
-  // Disappears once ticked for the month; reappears fresh each new production month
+  // Production month runs 23rd→22nd. On/after the 23rd we've entered the next production month.
+  const _now=new Date();let _yr=_now.getFullYear();let _mo=_now.getMonth()+1;
+  if(_now.getDate()>=23){_mo+=1;if(_mo>12){_mo=1;_yr+=1;}}
+  const _prodMo=_yr+'-'+String(_mo).padStart(2,'0');
+  const key='tl_cpds_prod_'+_prodMo;const done=localStorage.getItem(key)==='1';
   if(done){el.style.display='none';return;}
   el.style.display='block';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,#fefce8,#fffdf5);border:1.5px solid #fde68a;border-left:4px solid #d97706;border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" onchange="(function(cb){const k='tl_cpds_done_${_mo}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:#92400e;">CPD ${_mo} — hours not yet logged</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Log your CPD hours on FA News · Tick once done for this month</div></div></label></div>`;
+  const MONTH_NAMES=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const _label=MONTH_NAMES[_mo-1]+' '+_yr;
+  el.innerHTML=`<div style="background:linear-gradient(135deg,#fefce8,#fffdf5);border:1.5px solid #fde68a;border-left:4px solid #d97706;border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" onchange="(function(cb){const k='tl_cpds_prod_${_prodMo}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:#92400e;">CPD — ${_label} production month</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Log your CPD hours on FA News · Tick once done for this period</div></div></label></div>`;
 }
 
 function updateWelcomeBar(){
