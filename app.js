@@ -356,11 +356,11 @@ const FP_CATEGORIES=[
     {id:'q1',label:'Matric / Grade 12 certificate',desc:'Minimum NQF Level 4'},
     {id:'q2',label:'Relevant financial services qualification',desc:'e.g. NQF Level 4 Short Course in Long-Term Insurance'},
   ]},
-  {id:'re_exams',icon:'📝',title:'RE exams (RE1 & RE5)',info:'RE5 is required for all representatives. RE1 is optional for representatives and does not affect your compliance percentage.',items:[
+  {id:'re_exams',icon:'📝',title:'RE exams (RE1 & RE5)',info:'RE5 is required for all representatives. RE1 is optional for representatives and does not affect your compliance percentage.',link:'https://www.moonstone.co.za/regulatory-examination/',linkLabel:'Register on Moonstone',items:[
     {id:'re5',label:'RE5 passed',desc:'Mandatory for all advisors — must pass within 2 years of appointment'},
     {id:'re1',label:'RE1 passed (optional)',desc:'Required for Key Individuals only — does not affect your % as an advisor',optional:true},
   ]},
-  {id:'cpd',icon:'📚',title:'CPD (Continuing Professional Development)',info:'Minimum 6 CPD hours per rolling 12-month cycle. At least 3 must be structured (formal) activities.',managerOnly:true,items:[
+  {id:'cpd',icon:'📚',title:'CPD (Continuing Professional Development)',info:'Minimum 6 CPD hours per rolling 12-month cycle. At least 3 must be structured (formal) activities.',link:'https://www.fanews.co.za/login',linkLabel:'Log hours on FA News',managerOnly:true,items:[
     {id:'cpd1',label:'Minimum 6 CPD hours completed this cycle',desc:'Per rolling 12-month period'},
     {id:'cpd2',label:'At least 3 structured CPD hours',desc:'Formal: accredited courses, webinars, workshops'},
     {id:'cpd3',label:'CPD relevant to your product subcategory',desc:'Must relate to products you advise on'},
@@ -371,7 +371,7 @@ const FP_CATEGORIES=[
   {id:'experience',icon:'🏆',title:'Experience requirements',info:'Minimum 1 year relevant experience required for Long-Term Insurance (Cat B1/B2). New entrants operate under supervision until this is met.',items:[
     {id:'ex1',label:'Minimum 1 year relevant experience',desc:'Must relate to the product subcategory you advise on'},
   ]},
-  {id:'cob',icon:'📂',title:'Class of business training',info:'COB training is required for each class of business you advise on. Complete all modules relevant to your product range on Santech.',items:[
+  {id:'cob',icon:'📂',title:'Class of business training',info:'COB training is required for each class of business you advise on. Complete all modules relevant to your product range on Santech.',link:'https://santech.sanlam.co.za/elearning/course/index.php?categoryid=39',linkLabel:'Open COB on Moodle',items:[
     {id:'cob_all',label:'All COB modules completed',desc:'Tick this to mark all modules below as complete',selectAll:true},
     {id:'cob_overview',label:'COB — Overview Module',desc:'Overview Module: COB Overview Modules'},
     {id:'cob_st1',label:'COB 1 — Short Term Insurance: Personal Lines',desc:'Short-term Insurance category'},
@@ -379,7 +379,7 @@ const FP_CATEGORIES=[
     {id:'cob_lt3',label:'COB 3 — Long Term Insurance',desc:'Long Term Insurance category — required for funeral and life products'},
     {id:'cob_inv7',label:'COB 7 — Investments',desc:'Investments category'},
   ]},
-  {id:'product',icon:'🛡️',title:'Product specific training (PST)',info:'PST required for each Sanlam Sky product you sell. Completed on Santech. Must be done before advising on any product.',items:[
+  {id:'product',icon:'🛡️',title:'Product specific training (PST)',info:'PST required for each Sanlam Sky product you sell. Completed on Santech. Must be done before advising on any product.',link:'https://santech.sanlam.co.za/elearning/course/index.php?categoryid=12',linkLabel:'Open PST on Moodle',items:[
     {id:'pst_vfp',label:'Value Funeral Plan — PST completed',desc:'Entry-level funeral cover product'},
     {id:'pst_epfp',label:'Enhanced Priority Funeral Plan — PST completed',desc:'Triple accident, cash back, paid-up at 75'},
     {id:'pst_aio',label:'All-in-One Plan (standalone) — PST completed',desc:'Flagship funeral + life cover product'},
@@ -6961,7 +6961,8 @@ function renderFpPage(){
     tile.className='fp-tile'+(catPct===100?' completed':'');
     tile.id='fpTile_'+cat.id;
     tile.onclick=()=>openFpDetail(cat.id);
-    tile.innerHTML=`${catPct===100?'<span class="fp-tile-done-badge">✅</span>':''}<span class="fp-tile-icon">${cat.icon}</span><div class="fp-tile-name">${cat.title}</div><div class="fp-tile-sub" id="fpCatSub_${cat.id}">${catDone} of ${countable.length} done</div><div class="fp-tile-bar-wrap"><div class="fp-tile-bar" id="fpTileBar_${cat.id}" style="width:${catPct}%;background:${tileColor};"></div></div><div class="fp-tile-pct" id="fpCatPct_${cat.id}" style="color:${tileColor};">${catPct}%</div>`;
+    const _tileLink=cat.link?`<div onclick="event.stopPropagation();window.open('${cat.link}','_blank')" style="margin-top:8px;display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#c9922a;background:#fdf6ed;border:1px solid #f5c87a;border-radius:8px;padding:3px 8px;cursor:pointer;">↗ ${cat.linkLabel||'Open'}</div>`:'';
+    tile.innerHTML=`${catPct===100?'<span class="fp-tile-done-badge">✅</span>':''}<span class="fp-tile-icon">${cat.icon}</span><div class="fp-tile-name">${cat.title}</div><div class="fp-tile-sub" id="fpCatSub_${cat.id}">${catDone} of ${countable.length} done</div><div class="fp-tile-bar-wrap"><div class="fp-tile-bar" id="fpTileBar_${cat.id}" style="width:${catPct}%;background:${tileColor};"></div></div><div class="fp-tile-pct" id="fpCatPct_${cat.id}" style="color:${tileColor};">${catPct}%</div>${_tileLink}`;
     grid.appendChild(tile);
   });
   container.appendChild(grid);
@@ -6986,7 +6987,8 @@ function openFpDetail(catId){
     const isOpt=!!item.optional;
     return`<div class="fp-item"><div class="fp-checkbox ${checks[item.id]?'checked':''}" id="fpchk_${item.id}" onclick="toggleCheck('${item.id}')"></div><div><div class="fp-item-label">${item.label}${isOpt?' <span style="font-size:9px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:10px;font-weight:600;margin-left:4px;">Optional</span>':''}</div><div class="fp-item-desc">${item.desc}</div></div></div>`;
   }).join('');
-  document.getElementById('fpDetailBody').innerHTML=`<div class="fp-info-box">${cat.info}</div><div class="fp-checklist">${itemsHtml}</div>`;
+  const _detLink=cat.link?`<a href="${cat.link}" target="_blank" style="display:flex;align-items:center;justify-content:space-between;gap:10px;background:linear-gradient(135deg,#fdf6ed,#fff9f0);border:1.5px solid #f5c87a;border-left:4px solid #c9922a;border-radius:12px;padding:11px 14px;margin-bottom:12px;text-decoration:none;"><div><div style="font-size:12px;font-weight:700;color:#92400e;">↗ ${cat.linkLabel||'Open resource'}</div><div style="font-size:10px;color:#a16207;margin-top:1px;">${cat.link}</div></div><span style="font-size:16px;color:#c9922a;">›</span></a>`:'';
+  document.getElementById('fpDetailBody').innerHTML=`<div class="fp-info-box">${cat.info}</div>${_detLink}<div class="fp-checklist">${itemsHtml}</div>`;
   document.getElementById('fpDetailOverlay').classList.add('open');
   document.getElementById('fpDetailPanel').classList.add('open');
 }
