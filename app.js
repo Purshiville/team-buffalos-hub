@@ -723,6 +723,7 @@ function enterHub(user){
   const tmTab=document.getElementById('teamTab');if(tmTab)tmTab.style.display=(user.isManager||user.isOps)?'inline-block':'none';
   // More dropdown role-aware items
   const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
+  const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=(user.isManager||user.isOps)?'flex':'none';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
