@@ -639,19 +639,65 @@ function updatePrecanHubAlert(){
           <label style="display:flex;align-items:center;gap:6px;cursor:pointer;background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:6px 10px;white-space:nowrap;" onclick="event.stopPropagation()"><input type="checkbox" onchange="if(this.checked){localStorage.setItem('${doneKey}','1');updatePrecanHubAlert();}"/><span style="font-size:11px;font-weight:700;color:#dc2626;">All done today</span></label>
         </div>`;
       } else {
-        el.style.cursor='pointer';
-        el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
-        el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;">
-          <span style="font-size:22px;">⚠️</span>
-          <div>
-            <div style="font-size:13px;font-weight:700;color:#dc2626;">Pre-Cancellations — Check if you're on the list</div>
-            <div style="font-size:11px;color:#991b1b;margin-top:2px;">Tap to open the Pavlov sheet · Deadline 12:00</div>
-          </div>
-          <span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span>
-        </div>`;
+        const _pcRows=getTracker('precan');
+        const _fn=(currentUser.name.split(' ')[0]).toLowerCase();
+        const _myCase=_pcRows.find(r=>r.advisor&&r.advisor.toLowerCase().includes(_fn));
+        if(_myCase){
+          el.style.background='linear-gradient(135deg,#fef2f2,#fff5f5)';el.style.border='1.5px solid #fca5a5';el.style.borderLeft='4px solid #dc2626';el.style.animation='glow 2s infinite';el.style.cursor='pointer';
+          el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
+          el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">🚨</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">You are on today's pre-cancellation list!</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">${_myCase.client||'Check the sheet'}${_myCase.product?' — '+_myCase.product:''} · Contact your client before 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
+        } else if(_pcRows.length>0){
+          el.style.background='linear-gradient(135deg,#f0fdf4,#f8fff8)';el.style.border='1.5px solid #86efac';el.style.animation='none';el.style.cursor='default';el.onclick=null;
+          el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">✅</span><div><div style="font-size:13px;font-weight:700;color:#166534;">You're not on today's pre-can list</div><div style="font-size:11px;color:#15803d;margin-top:2px;">No cases logged against your name — keep it up</div></div></div>`;
+        } else {
+          el.style.cursor='pointer';
+          el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
+          el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚠️</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">Pre-Cancellations — Check if you're on the list</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">Tap to open the Pavlov sheet · Deadline 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
+        }
       }
     }
   }
+}
+
+function updateQlinkHubAlert(){
+  const el=document.getElementById('qlinkHubAlert');if(!el)return;
+  const tk=new Date().toISOString().slice(0,10);
+  let isQday=false;
+  Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===tk)isQday=true;}));
+  if(!isQday){el.style.display='none';return;}
+  el.style.display='block';
+  el.style.background='linear-gradient(135deg,#fff7ed,#fffbf5)';
+  el.style.border='1.5px solid #fdba74';
+  el.style.borderLeft='4px solid #ea580c';
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚡</span><div><div style="font-size:13px;font-weight:700;color:#9a3412;">Today is a Qlink run day</div><div style="font-size:11px;color:#7c2d12;margin-top:2px;">All PERSAL submissions must be captured before 13:00 cut-off</div></div></div>`;
+}
+
+function updateNtuHubAlert(){
+  const el=document.getElementById('ntuHubAlert');if(!el||!currentUser)return;
+  if(currentUser.isOps||currentUser.isManager){el.style.display='none';return;}
+  const stats=window._currentPeriodStats;
+  if(!stats){el.style.display='none';return;}
+  const my=stats.advisors&&stats.advisors[currentUser.code];
+  if(!my||my.ntu4Month==null){el.style.display='none';return;}
+  const ntu=my.ntu4Month;
+  el.style.display='block';
+  if(ntu>=15){
+    el.style.background='linear-gradient(135deg,#fef2f2,#fff5f5)';el.style.border='1.5px solid #fca5a5';el.style.borderLeft='4px solid #dc2626';
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">📉</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">Your 4-month NTU is ${ntu}% — above the 15% threshold</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">Follow up on all pending cases urgently to prevent further NTU</div></div></div>`;
+  } else if(ntu>=10){
+    el.style.background='linear-gradient(135deg,#fffbeb,#fefce8)';el.style.border='1.5px solid #fde68a';el.style.borderLeft='4px solid #d97706';
+    el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚠️</span><div><div style="font-size:13px;font-weight:700;color:#92400e;">Your 4-month NTU is ${ntu}% — approaching threshold</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Keep following up on pending cases — target is below 15%</div></div></div>`;
+  } else {
+    el.style.display='none';
+  }
+}
+
+function updateCpdsSection(){
+  const el=document.getElementById('cpdsHubSection');if(!el||!currentUser)return;
+  if(!['SKA310889','PURSHIVILLE'].includes(currentUser.code)){el.style.display='none';return;}
+  const yr=new Date().getFullYear();const key='tl_cpds_done_'+yr;const done=localStorage.getItem(key)==='1';
+  el.style.display='block';
+  el.innerHTML=`<div style="background:${done?'linear-gradient(135deg,#f0fdf4,#f8fff8)':'linear-gradient(135deg,#fefce8,#fffdf5)'};border:1.5px solid ${done?'#86efac':'#fde68a'};border-left:4px solid ${done?'#16a34a':'#d97706'};border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" ${done?'checked':''} onchange="(function(cb){const k='tl_cpds_done_${yr}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:${done?'#166534':'#92400e'};">CPDS ${yr} — ${done?'completed ✓':'not yet completed'}</div><div style="font-size:11px;color:${done?'#15803d':'#78350f'};margin-top:2px;">${done?'Your CPD submission for '+yr+' is marked complete':'Mark as complete once you have submitted your CPD hours'}</div></div></label></div>`;
 }
 
 function updateWelcomeBar(){
@@ -787,6 +833,7 @@ function enterHub(user){
   showPage(_restorePage);
   updateWelcomeBar();
   updatePrecanHubAlert();
+  updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();
   renderBibleVerse();
   renderHubCountdown();
   renderHubPaymentReminder();
@@ -1091,6 +1138,7 @@ function renderProdStats(data,period){
   teamEl.innerHTML=
     `<div class="team-stats-card" style="margin-bottom:10px;"><div class="team-stats-hd"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">💰 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Premiums</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>vs Target</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📋 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Cases</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th><th>vs Target</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
+  if(typeof updateNtuHubAlert==='function')updateNtuHubAlert();
 }
 function renderStatsManagerPreview(data){
   const el=document.getElementById('statsManagerPreview');
@@ -2402,7 +2450,7 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
@@ -6670,8 +6718,8 @@ function renderPrecanTracker(){
   const rows=getTracker('precan'),tbody=document.getElementById('precanBody');
   const sumEl=document.getElementById('precanSummary');
   if(sumEl){if(!rows.length)sumEl.textContent='No cases logged yet';else{const sv=rows.filter(r=>r.status==='Saved').length,ns=rows.filter(r=>r.status==='Not saved').length,pd=rows.filter(r=>r.status==='Pending'||r.status==='No response').length;sumEl.innerHTML=rows.length+' total · <span style="color:#16a34a;font-weight:600;">'+sv+' saved</span> · <span style="color:#dc2626;font-weight:600;">'+ns+' not saved</span> · <span style="color:#d97706;font-weight:600;">'+pd+' pending</span>';}}
-  if(!rows.length){tbody.innerHTML=`<tr><td colspan="7" style="color:#9ca3af;text-align:center;padding:1.25rem;font-size:12px;">No pre-cancellation cases logged today — click "+ Add case" to start tracking</td></tr>`;return;}
-  tbody.innerHTML=rows.map((r,i)=>`<tr><td>${r.advisor||'—'}</td><td>${r.client||'—'}</td><td style="font-family:monospace;font-size:11px;">${r.policy||'—'}</td><td>${r.risk||'—'}</td><td><span class="status-badge ${r.status==='Saved'?'sb-saved':r.status==='Not saved'?'sb-notsaved':'sb-pending'}">${r.status||'Pending'}</span></td><td style="font-size:11px;color:#6b7280;">${r.submitted||'—'}</td><td><button class="del-btn" onclick="delRow('precan',${i})">✕</button></td></tr>`).join('');
+  if(!rows.length){tbody.innerHTML=`<tr><td colspan="9" style="color:#9ca3af;text-align:center;padding:1.25rem;font-size:12px;">No pre-cancellation cases logged today — click "+ Add case" to start tracking</td></tr>`;return;}
+  tbody.innerHTML=rows.map((r,i)=>`<tr><td>${r.advisor||'—'}</td><td>${r.client||'—'}</td><td style="font-family:monospace;font-size:11px;">${r.policy||'—'}</td><td style="font-size:11px;">${r.product||'—'}</td><td>${r.risk||'—'}</td><td><span class="status-badge ${r.status==='Saved'?'sb-saved':r.status==='Not saved'?'sb-notsaved':'sb-pending'}">${r.status||'Pending'}</span></td><td style="font-size:11px;color:#6b7280;">${r.submitted||'—'}</td><td style="text-align:center;">${r.cpds?'<span style="color:#16a34a;font-weight:700;font-size:15px;">✓</span>':'<span style="color:#e5e7eb;">○</span>'}</td><td><button class="del-btn" onclick="delRow('precan',${i})">✕</button></td></tr>`).join('');
 }
 
 function renderNtuTracker(){
@@ -6751,7 +6799,7 @@ function openModal(type){
   currentModal=type;
   const overlay=document.getElementById('modalOverlay'),content=document.getElementById('modalContent');
   let html='';
-  if(type==='precan'){html=`<h3>Add pre-cancellation case</h3><div class="field"><label>Advisor</label><input id="m_advisor" placeholder="e.g. Carlo"/></div><div class="field"><label>Client name</label><input id="m_client" placeholder="Full name"/></div><div class="field"><label>Policy number</label><input id="m_policy" placeholder="e.g. IP31523389"/></div><div class="field"><label>Risk type</label><input id="m_risk" placeholder="e.g. Non-payment, DebiCheck stopped"/></div><div class="field"><label>Status</label><select id="m_status"><option>Pending</option><option>Saved</option><option>Not saved</option><option>No response</option></select></div><div class="field"><label>Letter submitted at</label><input id="m_submitted" placeholder="e.g. 10:45am — before 12:00pm"/></div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveModal()">Save case</button></div>`;}
+  if(type==='precan'){const _advOpts=ADVISOR_LIST.map(a=>`<option value="${a.name}">${a.name}</option>`).join('');html=`<h3>Add pre-cancellation case</h3><div class="field"><label>Advisor</label><select id="m_advisor"><option value="">— Select advisor —</option>${_advOpts}</select></div><div class="field"><label>Client name</label><input id="m_client" placeholder="Full name"/></div><div class="field"><label>Policy number</label><input id="m_policy" placeholder="e.g. IP31523389"/></div><div class="field"><label>Product being cancelled</label><select id="m_product"><option value="">— Select product —</option><option>AIO Standalone</option><option>AIO Consolidation</option><option>Value Plan</option><option>Enhanced Priority Plan</option></select></div><div class="field"><label>Risk type</label><input id="m_risk" placeholder="e.g. Non-payment, DebiCheck stopped"/></div><div class="field"><label>Status</label><select id="m_status"><option>Pending</option><option>Saved</option><option>Not saved</option><option>No response</option></select></div><div class="field"><label>Letter submitted at</label><input id="m_submitted" placeholder="e.g. 10:45am — before 12:00pm"/></div><div class="field" style="display:flex;align-items:center;gap:10px;padding:6px 0;"><input type="checkbox" id="m_cpds" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><label for="m_cpds" style="font-weight:700;font-size:13px;color:#0d1f3c;cursor:pointer;margin:0;">CPDS completed</label></div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveModal()">Save case</button></div>`;}
   else if(type==='ntu'){html=`<h3>Add NTU / lapse case</h3><div class="field"><label>Advisor</label><input id="m_advisor" placeholder="e.g. Carlo"/></div><div class="field"><label>Client name</label><input id="m_client" placeholder="Full name"/></div><div class="field"><label>Policy number</label><input id="m_policy" placeholder="e.g. IP31523389"/></div><div class="field"><label>Type</label><select id="m_type"><option>NTU</option><option>Lapse</option><option>Termination</option></select></div><div class="field"><label>Lapse / NTU date</label><input type="date" id="m_lapseDate"/></div><div class="field"><label>Status</label><select id="m_status"><option>Pending</option><option>In progress</option><option>Reinstated</option></select></div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveModal()">Save case</button></div>`;}
   else if(type==='hr'){html=`<h3>Add HR engagement case</h3><div class="field"><label>Advisor</label><input id="m_advisor" placeholder="e.g. Carlo"/></div><div class="field"><label>Client name</label><input id="m_client" placeholder="Full name"/></div><div class="field"><label>Employer</label><input id="m_employer" placeholder="e.g. Dept of Education Mthatha"/></div><div class="field"><label>Blocking policy (insurer + policy no.)</label><input id="m_blockingPolicy" placeholder="e.g. Metropolitan — MP98765"/></div><div class="field"><label>Proof received from Zuki (date)</label><input type="date" id="m_proofDate"/></div><div class="field"><label>HR letter sent (date)</label><input type="date" id="m_hrSentDate"/></div><div class="field"><label>PERSAL cleared?</label><select id="m_persalCleared"><option>Pending</option><option>Yes</option></select></div><div class="field"><label>Overall status</label><select id="m_status"><option>Pending</option><option>In progress</option><option>Cleared</option></select></div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveModal()">Save case</button></div>`;}
   else if(type==='meeting'){html=`<h3>Set monthly team meeting</h3><div class="field"><label>Meeting date</label><input type="date" id="m_date"/></div><div class="field"><label>Start time</label><input id="m_time" placeholder="e.g. 09:00"/></div><div class="field"><label>Boardroom booked?</label><select id="m_booked"><option>No</option><option>Yes</option></select></div><div class="field"><label>Notes (agenda, location, any other details)</label><textarea id="m_notes" placeholder="e.g. Month-end review agenda..."></textarea></div><div class="modal-btns"><button class="btn-cancel" onclick="closeModal()">Cancel</button><button class="btn-save" onclick="saveModal()">Save meeting</button></div>`;}
@@ -6761,7 +6809,7 @@ function openModal(type){
 function closeModal(){document.getElementById('modalOverlay').style.display='none';currentModal=null;}
 function saveModal(){
   const v=id=>document.getElementById(id)?document.getElementById(id).value:'';
-  if(currentModal==='precan'){const rows=getTracker('precan');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted')});saveTracker('precan',rows);closeModal();renderPrecanTracker();renderDeadlineAlerts();}
+  if(currentModal==='precan'){const rows=getTracker('precan');const _cpdsEl=document.getElementById('m_cpds');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted'),cpds:_cpdsEl?_cpdsEl.checked:false});saveTracker('precan',rows);closeModal();renderPrecanTracker();renderDeadlineAlerts();updatePrecanHubAlert();}
   else if(currentModal==='ntu'){const rows=getTracker('ntu');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),type:v('m_type'),lapseDate:v('m_lapseDate'),status:v('m_status')});saveTracker('ntu',rows);closeModal();renderNtuTracker();renderDeadlineAlerts();}
   else if(currentModal==='hr'){const rows=getTracker('hr');rows.push({advisor:v('m_advisor'),client:v('m_client'),employer:v('m_employer'),blockingPolicy:v('m_blockingPolicy'),proofDate:v('m_proofDate'),hrSentDate:v('m_hrSentDate'),persalCleared:v('m_persalCleared'),status:v('m_status')});saveTracker('hr',rows);closeModal();renderHrTracker();}
   else if(currentModal==='meeting'){
@@ -8157,6 +8205,13 @@ function refDelete(id){
   if(!confirm('Remove this referral?'))return;
   saveReferrals(getReferrals().filter(x=>x.id!==id));renderReferrals();
 }
+function _refAge(r){
+  if(!r.createdAt||r.status==='converted'||r.status==='lost')return'';
+  const days=Math.floor((Date.now()-new Date(r.createdAt).getTime())/86400000);
+  if(days<7)return'';
+  const warn=days>=14;
+  return`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:${warn?'#fef2f2':'#fffbeb'};color:${warn?'#dc2626':'#d97706'};border:1px solid ${warn?'#fca5a5':'#fde68a'};margin-left:6px;">${days}d in pipeline</span>`;
+}
 function renderReferrals(){
   const isOps=currentUser&&(currentUser.isOps||currentUser.isManager);
   let refs=getReferrals();
@@ -8184,7 +8239,7 @@ function renderReferrals(){
       </div>
       ${list.map(r=>`<div style="padding:10px 16px;border-top:1px solid #f4f2ed;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-          <div><div style="font-size:13px;font-weight:700;color:#0d1f3c;">${r.name}</div><div style="font-size:11px;color:#6b7280;">${r.facility} · ${r.relation}</div></div>
+          <div><div style="font-size:13px;font-weight:700;color:#0d1f3c;">${r.name}${_refAge(r)}</div><div style="font-size:11px;color:#6b7280;">${r.facility} · ${r.relation}</div></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <select onchange="refSetStatus('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;background:#f9f9f9;">
               ${Object.entries(REF_STATUS_LABELS).map(([v,l])=>`<option value="${v}"${r.status===v?' selected':''}>${l}</option>`).join('')}
