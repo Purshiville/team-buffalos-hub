@@ -695,11 +695,12 @@ function updateNtuHubAlert(){
 function updateCpdsSection(){
   const el=document.getElementById('cpdsHubSection');if(!el||!currentUser)return;
   if(!['SKA310889','PURSHIVILLE'].includes(currentUser.code)){el.style.display='none';return;}
-  const yr=new Date().getFullYear();const key='tl_cpds_done_'+yr;const done=localStorage.getItem(key)==='1';
-  // Only show when CPD is not yet completed for the year
+  const _now=new Date();const _mo=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0');
+  const key='tl_cpds_done_'+_mo;const done=localStorage.getItem(key)==='1';
+  // Disappears once ticked for the month; reappears fresh each new production month
   if(done){el.style.display='none';return;}
   el.style.display='block';
-  el.innerHTML=`<div style="background:linear-gradient(135deg,#fefce8,#fffdf5);border:1.5px solid #fde68a;border-left:4px solid #d97706;border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" onchange="(function(cb){const k='tl_cpds_done_${yr}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:#92400e;">CPD ${yr} — hours not yet submitted</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Minimum 6 hours required (3 structured) · Log via FA News · Tick once submitted</div></div></label></div>`;
+  el.innerHTML=`<div style="background:linear-gradient(135deg,#fefce8,#fffdf5);border:1.5px solid #fde68a;border-left:4px solid #d97706;border-radius:14px;padding:12px 16px;margin-bottom:12px;"><label style="display:flex;align-items:center;gap:12px;cursor:pointer;"><input type="checkbox" onchange="(function(cb){const k='tl_cpds_done_${_mo}';cb.checked?localStorage.setItem(k,'1'):localStorage.removeItem(k);updateCpdsSection();})(this)" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;"/><div><div style="font-size:13px;font-weight:700;color:#92400e;">CPD ${_mo} — hours not yet logged</div><div style="font-size:11px;color:#78350f;margin-top:2px;">Log your CPD hours on FA News · Tick once done for this month</div></div></label></div>`;
 }
 
 function updateWelcomeBar(){
