@@ -4845,10 +4845,12 @@ function renderOpsLand(){
   const mins=now.getHours()*60+now.getMinutes();
   const alerts=[];
 
-  // Pre-cancellation deadline
-  const precanLeft=12*60-mins;
-  if(precanLeft>0&&precanLeft<=240)alerts.push('🚨 Pre-can deadline in '+Math.floor(precanLeft/60)+'h '+( precanLeft%60)+'m');
-  else if(precanLeft<=0&&precanLeft>-60)alerts.push('⏰ Pre-cancellation deadline passed today');
+  // Pre-cancellation deadline — weekdays only, not public holidays
+  if(diaryIsWorkingDay(now)){
+    const precanLeft=12*60-mins;
+    if(precanLeft>0&&precanLeft<=240)alerts.push('🚨 Pre-can deadline in '+Math.floor(precanLeft/60)+'h '+( precanLeft%60)+'m');
+    else if(precanLeft<=0&&precanLeft>-60)alerts.push('⏰ Pre-cancellation deadline passed today');
+  }
 
   // Payment date check
   const d=now.getDate();
@@ -6575,13 +6577,15 @@ function renderTodayFocus(targetId){
   const el=document.getElementById(targetId||'todayFocus');if(!el)return;
   const now=new Date(),mins=now.getHours()*60+now.getMinutes(),d=now.getDate();
   const items=[];
-  // Pre-can
-  const precanLeft=12*60-mins;
-  const precanRows=getTracker('precan');
-  const precanPending=precanRows.filter(r=>r.status==='Pending'||r.status==='No response');
-  if(precanLeft>0&&precanLeft<=240)items.push({p:'urgent',t:'12:00',i:'⚠️',a:'Pre-cancellations — '+Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m until 12:00 deadline',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' on today\'s list — '+precanPending.length+' still pending':'No cases logged yet — check Pavlov report'});
-  else if(precanLeft>240)items.push({p:'info',t:'12:00',i:'📋',a:'Pre-cancellations — deadline at 12:00',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' logged — '+precanPending.length+' pending feedback':'Log cases when Pavlov report arrives (08:00–09:00)'});
-  else items.push({p:'done',t:'12:00',i:'✓',a:'Pre-can deadline passed',d:precanRows.filter(r=>r.status==='Saved').length+' saved · '+precanRows.filter(r=>r.status==='Not saved').length+' not saved · '+precanPending.length+' no response'});
+  // Pre-can — weekdays only, not public holidays
+  if(diaryIsWorkingDay(now)){
+    const precanLeft=12*60-mins;
+    const precanRows=getTracker('precan');
+    const precanPending=precanRows.filter(r=>r.status==='Pending'||r.status==='No response');
+    if(precanLeft>0&&precanLeft<=240)items.push({p:'urgent',t:'12:00',i:'⚠️',a:'Pre-cancellations — '+Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m until 12:00 deadline',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' on today\'s list — '+precanPending.length+' still pending':'No cases logged yet — check Pavlov report'});
+    else if(precanLeft>240)items.push({p:'info',t:'12:00',i:'📋',a:'Pre-cancellations — deadline at 12:00',d:precanRows.length?precanRows.length+' case'+(precanRows.length>1?'s':'')+' logged — '+precanPending.length+' pending feedback':'Log cases when Pavlov report arrives (08:00–09:00)'});
+    else items.push({p:'done',t:'12:00',i:'✓',a:'Pre-can deadline passed',d:precanRows.filter(r=>r.status==='Saved').length+' saved · '+precanRows.filter(r=>r.status==='Not saved').length+' not saved · '+precanPending.length+' no response'});
+  }
   // Qlink
   const ts=todayStr();let isQday=false;
   Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===ts)isQday=true;}));
