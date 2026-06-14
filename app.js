@@ -4882,39 +4882,8 @@ function renderOpsLand(){
     if(dailyBadge)dailyBadge.style.display='none';
   }
 
-  // Today snapshot — rich morning briefing
-  const snap=document.getElementById('opsTodayContent');
-  if(snap){
-    const dayNames=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-    const precanRows=getTracker('precan');
-    const precanPending=precanRows.filter(r=>r.status==='Pending'||r.status==='No response');
-    const precanIcon=precanLeft<=0?'✓':precanLeft<=240?'🚨':'📋';
-    const precanText=precanLeft>0
-      ?'<b>Pre-can:</b> '+precanRows.length+' case'+(precanRows.length!==1?'s':'')+' — '+precanPending.length+' pending — deadline '+(precanLeft<=240?Math.floor(precanLeft/60)+'h '+(precanLeft%60)+'m away':'at 12:00')
-      :'<b>Pre-can:</b> Deadline passed — '+precanRows.filter(r=>r.status==='Saved').length+' saved / '+precanRows.filter(r=>r.status==='Not saved').length+' not saved';
-    let qlText='';const ts2=todayStr();let isQday2=false;
-    Object.values(QLINK_DATES).forEach(runs=>runs.forEach(r=>{if(r.d===ts2)isQday2=true;}));
-    if(isQday2){const qlLeft2=13*60-mins;qlText=qlLeft2>0?'⚡ <b>Qlink run day</b> — submit before 13:00 ('+Math.floor(qlLeft2/60)+'h '+(qlLeft2%60)+'m)':'⚡ Qlink cut-off passed today';}
-    else{const up2=[];Object.entries(QLINK_DATES).forEach(([,runs])=>runs.forEach(r=>{const d3=daysUntil(r.d);if(d3>=0)up2.push({date:r.d,d:d3});}));up2.sort((a,b)=>a.d-b.d);const nxt2=up2[0];if(nxt2)qlText='⚡ <b>Next Qlink:</b> '+(nxt2.d===0?'today':nxt2.d===1?'tomorrow':'in '+nxt2.d+' days')+' ('+nxt2.date+')';}
-    let payText='';
-    if(PAYMENT_DATES.includes(d)){payText='💳 <b>'+(d===1?'1st':d+'th')+' pay date today</b> — confirm client deductions';}
-    else{const td2=new Date(now.getFullYear(),now.getMonth(),d+1);if(PAYMENT_DATES.includes(td2.getDate()))payText='💳 Pay date tomorrow ('+td2.getDate()+'th) — <b>send reminders today</b>';}
-    const prodEntry2=PROD_CUTOFFS.find(p=>ts2>=p.opens&&ts2<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>ts2);
-    const prodDays2=prodEntry2?daysUntil(prodEntry2.cutoff):null;
-    const prodText2=prodEntry2?'📊 <b>Production cut-off:</b> '+(prodDays2===0?'<span style="color:#dc2626;">TODAY</span>':'in '+prodDays2+' days')+' ('+prodEntry2.cutoff+')':'';
-    const critNtu2=getTracker('ntu').filter(r=>r.lapseDate&&(120-daysFrom(r.lapseDate))>=0&&(120-daysFrom(r.lapseDate))<=30);
-    const hrOpen2=getTracker('hr').filter(r=>r.status!=='Cleared');
-    const rows2=[
-      precanIcon+' '+precanText,
-      qlText,
-      payText,
-      prodText2,
-      critNtu2.length?'⏳ <b>NTU watch:</b> '+critNtu2.length+' case'+(critNtu2.length>1?'s':'')+' in 30-day critical window':'',
-      hrOpen2.length?'🏦 <b>HR:</b> '+hrOpen2.length+' PERSAL engagement'+(hrOpen2.length>1?'s':'')+' open':'',
-    ].filter(Boolean);
-    snap.innerHTML='<div style="font-size:13px;font-weight:700;color:#0d1f3c;padding-bottom:8px;border-bottom:1px solid #f4f2ed;margin-bottom:8px;">'+dayNames[now.getDay()]+', '+now.getDate()+' '+monthNames[now.getMonth()]+' '+now.getFullYear()+'</div><div style="display:flex;flex-direction:column;gap:7px;">'+rows2.map(r=>'<div style="font-size:12px;color:#374151;line-height:1.4;">'+r+'</div>').join('')+'</div>';
-  }
+  // Today's Actions — reuse the same smart renderTodayFocus panel on opsland
+  renderTodayFocus('todayFocusLand');
 
   // Update ops tile desc
   const desc=document.getElementById('opsTileDesc');
@@ -6602,8 +6571,8 @@ function copyWaTemplate(idx){
 
 function renderDeadlineAlerts(){renderTodayFocus();}
 
-function renderTodayFocus(){
-  const el=document.getElementById('todayFocus');if(!el)return;
+function renderTodayFocus(targetId){
+  const el=document.getElementById(targetId||'todayFocus');if(!el)return;
   const now=new Date(),mins=now.getHours()*60+now.getMinutes(),d=now.getDate();
   const items=[];
   // Pre-can
