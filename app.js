@@ -897,6 +897,7 @@ function enterHub(user){
     startSentListener();
     startChatListListener();
     window.startDocListener();
+    startPrecanListener();
   } else {
     document.addEventListener('fb-ready',()=>{
       Promise.all([syncUsersFromFirebase(),syncSchedulesFromFirebase(),syncDocsFromFirebase()])
@@ -907,6 +908,7 @@ function enterHub(user){
       startSentListener();
       startChatListListener();
       window.startDocListener();
+      startPrecanListener();
     },{once:true});
     renderNoticeBoard();
   }
@@ -1019,6 +1021,7 @@ function doLogout(reason){
   if(_inboxUnsub){_inboxUnsub();_inboxUnsub=null;}
   if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
   if(_chatThreadUnsub){_chatThreadUnsub();_chatThreadUnsub=null;}
+  if(_precanUnsub){_precanUnsub();_precanUnsub=null;}
   const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='none';
   const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='none';
   window._inboxMsgs=[];window._myChats=[];
@@ -1424,12 +1427,21 @@ function _renderYTDTop3Inner(els){
 }
 // ── END PRODUCTION STATS ──────────────────────────────────────────────
 // ── INBOX & CHAT ─────────────────────────────────────────────────────────
-let _inboxUnsub=null, _sentUnsub=null, _chatListUnsub=null, _chatThreadUnsub=null;
+let _inboxUnsub=null, _sentUnsub=null, _chatListUnsub=null, _chatThreadUnsub=null, _precanUnsub=null;
 let _sentMsgs=[];
 let _currentChatId=null, _currentChatPartner=null;
 const CHAT_COLORS=['#0d1f3c','#1b4f8a','#c9922a','#059669','#7c3aed','#be185d','#0891b2','#dc2626'];
 function chatColor(code){let h=0;for(let i=0;i<code.length;i++)h=(h*31+code.charCodeAt(i))%CHAT_COLORS.length;return CHAT_COLORS[h];}
 
+function startPrecanListener(){
+  if(!window.FB_READY||!window.FB.onPrecanCases)return;
+  if(_precanUnsub)_precanUnsub();
+  _precanUnsub=window.FB.onPrecanCases(cases=>{
+    saveTracker('precan',cases);
+    if(typeof renderPrecanTracker==='function')renderPrecanTracker();
+    if(typeof updatePrecanHubAlert==='function')updatePrecanHubAlert();
+  });
+}
 function startInboxListener(){
   if(!window.FB_READY||!currentUser)return;
   if(_inboxUnsub)_inboxUnsub();
@@ -6931,7 +6943,7 @@ function renderMinutes(){
 function toggleMinutes(idx){const minutes=getTracker('minutes');minutes[idx].isOpen=!minutes[idx].isOpen;saveTracker('minutes',minutes);renderMinutes();}
 function toggleAction(mIdx,aIdx){const minutes=getTracker('minutes');minutes[mIdx].actions[aIdx].done=!minutes[mIdx].actions[aIdx].done;saveTracker('minutes',minutes);renderMinutes();}
 
-function delRow(tracker,idx){const rows=getTracker(tracker);rows.splice(idx,1);saveTracker(tracker,rows);if(tracker==='precan')renderPrecanTracker();else if(tracker==='ntu'){renderNtuTracker();renderDeadlineAlerts();}else if(tracker==='hr')renderHrTracker();else if(tracker==='meeting')renderMeetingCard();else if(tracker==='minutes')renderMinutes();}
+function delRow(tracker,idx){const rows=getTracker(tracker);const _fsId=rows[idx]&&rows[idx]._id;rows.splice(idx,1);saveTracker(tracker,rows);if(tracker==='precan'){if(_fsId&&window.FB_READY&&window.FB.deletePrecanCase)window.FB.deletePrecanCase(_fsId).catch(()=>{});renderPrecanTracker();}else if(tracker==='ntu'){renderNtuTracker();renderDeadlineAlerts();}else if(tracker==='hr')renderHrTracker();else if(tracker==='meeting')renderMeetingCard();else if(tracker==='minutes')renderMinutes();}
 
 function openModal(type){
   currentModal=type;
@@ -6947,7 +6959,18 @@ function openModal(type){
 function closeModal(){document.getElementById('modalOverlay').style.display='none';currentModal=null;}
 function saveModal(){
   const v=id=>document.getElementById(id)?document.getElementById(id).value:'';
-  if(currentModal==='precan'){const rows=getTracker('precan');const _pr={advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted')};rows.push(_pr);saveTracker('precan',rows);logActivity('PRECAN_ADD',`Added pre-can case: ${_pr.client||'?'} (${_pr.advisor||'?'}) — ${_pr.product||'?'}`);closeModal();renderPrecanTracker();renderDeadlineAlerts();updatePrecanHubAlert();}
+  if(currentModal==='precan'){
+    const rows=getTracker('precan');
+    const _id='precan_'+Date.now();
+    const _pr={_id,advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted')};
+    rows.push(_pr);
+    saveTracker('precan',rows);
+    if(window.FB_READY&&window.FB.savePrecanCase)window.FB.savePrecanCase(_id,_pr).catch(()=>{});
+    const _advRow=ADVISOR_LIST.find(a=>a.name===_pr.advisor);
+    if(_advRow&&window.FB_READY&&window.FB.sendInbox)window.FB.sendInbox({to:_advRow.code,from:currentUser?.code||'SYSTEM',fromName:currentUser?.name||'Manager',title:'Pre-cancellation: '+(_pr.client||'Client'),body:`${_pr.product||'Policy'} is at risk of cancellation. Please contact your client before 12:00 today.`,type:'precan'}).catch(()=>{});
+    logActivity('PRECAN_ADD',`Added pre-can case: ${_pr.client||'?'} (${_pr.advisor||'?'}) — ${_pr.product||'?'}`);
+    closeModal();renderPrecanTracker();renderDeadlineAlerts();updatePrecanHubAlert();
+  }
   else if(currentModal==='ntu'){const rows=getTracker('ntu');rows.push({advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),type:v('m_type'),lapseDate:v('m_lapseDate'),status:v('m_status')});saveTracker('ntu',rows);closeModal();renderNtuTracker();renderDeadlineAlerts();}
   else if(currentModal==='hr'){const rows=getTracker('hr');rows.push({advisor:v('m_advisor'),client:v('m_client'),employer:v('m_employer'),blockingPolicy:v('m_blockingPolicy'),proofDate:v('m_proofDate'),hrSentDate:v('m_hrSentDate'),persalCleared:v('m_persalCleared'),status:v('m_status')});saveTracker('hr',rows);closeModal();renderHrTracker();}
   else if(currentModal==='meeting'){
