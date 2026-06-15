@@ -7292,13 +7292,12 @@ function adminToggleSuspend(code){
   renderTeamPage();
   showAlert(users[code].isSuspended?'Access suspended.':'Access restored.','success');
 }
-function adminDeleteUser(code){
-  if(code){
-    if(!confirm('Remove '+code+'? This cannot be undone.'))return;
-    const users=getUsers();delete users[code];saveUsers(users);
-    if(window.FB_READY&&window.FB.deleteUser)window.FB.deleteUser(code).catch(()=>{});
-    renderTeamPage();showAlert('Advisor removed.','success');return;
-  }
+async function adminDeleteUser(code){
+  if(!code)return;
+  if(!confirm('Remove '+code+'? This cannot be undone.'))return;
+  const users=getUsers();delete users[code];saveUsers(users);
+  if(window.FB_READY&&window.FB.deleteUser){try{await window.FB.deleteUser(code);}catch(e){}}
+  _renderManagerDashInner();showAlert('Advisor removed.','success');
 }
 function adminConfirmDelete(){
   const code=document.getElementById('admin_code').value;
