@@ -12127,6 +12127,18 @@ async function claimBuild(){
     btn.textContent='Build Claim Pack';btn.style.opacity='1';btn.style.pointerEvents='auto';
   }
 }
+function claimCopyMsg(){
+  const el=document.getElementById('claimMsg');
+  const btn=document.getElementById('claimCopyBtn');
+  if(!el||!btn)return;
+  navigator.clipboard.writeText(el.innerText).then(()=>{
+    btn.textContent='✅ Copied!';
+    setTimeout(()=>{btn.textContent='📋 Copy message';},2200);
+  }).catch(()=>{
+    const ta=document.createElement('textarea');ta.value=el.innerText;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+    btn.textContent='✅ Copied!';setTimeout(()=>{btn.textContent='📋 Copy message';},2200);
+  });
+}
 // ── END CLAIM PACK BUILDER ────────────────────────────────────────────────────
 
 // ── UNLOCK PDF ────────────────────────────────────────────────────────────────
