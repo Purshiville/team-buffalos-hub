@@ -7138,7 +7138,7 @@ function renderManagerDash(){renderNoticeManage();
   }
 }
 function _renderManagerDashInner(){
-  const users=getUsers(),all=Object.values(users);
+  const users=getUsers(),all=Object.entries(users).map(([k,v])=>({...v,code:v.code||k}));
   const total=all.length,active=all.filter(u=>u.lastActive&&(Date.now()-new Date(u.lastActive))<86400000).length,compliant=all.filter(u=>(u.fpPct||0)===100).length;
   document.getElementById('statRow').innerHTML=`<div class="stat-card"><div class="s-label">Total registered</div><div class="s-val">${total}</div></div><div class="stat-card"><div class="s-label">Active today</div><div class="s-val">${active}</div></div><div class="stat-card"><div class="s-label">Fully compliant</div><div class="s-val">${compliant}</div></div>`;
   const wb=all.filter(u=>u.dob&&!REVOKED_CODES.has(u.code)).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
@@ -7296,6 +7296,7 @@ function adminDeleteUser(code){
   if(code){
     if(!confirm('Remove '+code+'? This cannot be undone.'))return;
     const users=getUsers();delete users[code];saveUsers(users);
+    if(window.FB_READY&&window.FB.deleteUser)window.FB.deleteUser(code).catch(()=>{});
     renderTeamPage();showAlert('Advisor removed.','success');return;
   }
 }
