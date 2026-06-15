@@ -12006,20 +12006,40 @@ const _claimReplacementSlots=[
   {id:'clPrevCover',  label:'Proof of previous cover (policy schedule)', icon:'📄', note:'Policy schedule of the replaced cover'},
   {id:'clPrevCancel', label:'Proof of cancellation of replaced cover',   icon:'🗑️', note:'Cancellation letter or confirmation'},
 ];
+const _claimUnnatSlots=[
+  {id:'clPoliceReport',  label:'Police investigation report',              icon:'🚔', note:'Report from the investigating police station'},
+  {id:'clOfficerReport', label:'Signed report — investigating officer',    icon:'✍️', note:'Additional report signed by the investigating officer'},
+];
 let _claimFiles={};
 let _claimIsReplacement=false;
+let _claimIsUnnatural=false;
+
+function _claimRenderExtraSlots(containerId,slots,borderColor){
+  const container=document.getElementById(containerId);
+  if(!container)return;
+  container.innerHTML=slots.map(s=>`
+    <div id="clslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid ${borderColor};border-radius:10px;padding:10px 12px;transition:border-color .2s;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+        <div id="clst_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+      </div>
+      <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        Upload
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="claimFileAdded('${s.id}',this)">
+      </label>
+    </div>`).join('');
+}
 
 function claimInit(){
   const container=document.getElementById('claimSlotList');
   if(!container)return;
   _claimFiles={};
   _claimIsReplacement=false;
-  const repToggle=document.getElementById('claimRepToggle');
-  if(repToggle)repToggle.checked=false;
-  const repSlots=document.getElementById('claimRepSlots');
-  if(repSlots)repSlots.style.display='none';
-  const allSlots=[..._claimSlots];
-  container.innerHTML=allSlots.map(s=>`
+  _claimIsUnnatural=false;
+  ['claimRepToggle','claimUnnatToggle'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+  ['claimRepSlots','claimUnnatSlots'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  container.innerHTML=_claimSlots.map(s=>`
     <div id="clslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
       <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
       <div style="flex:1;min-width:0;">
@@ -12031,21 +12051,8 @@ function claimInit(){
         <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="claimFileAdded('${s.id}',this)">
       </label>
     </div>`).join('');
-  const repContainer=document.getElementById('claimRepSlotList');
-  if(repContainer){
-    repContainer.innerHTML=_claimReplacementSlots.map(s=>`
-      <div id="clslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
-        <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
-        <div style="flex:1;min-width:0;">
-          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
-          <div id="clst_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
-        </div>
-        <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
-          Upload
-          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="claimFileAdded('${s.id}',this)">
-        </label>
-      </div>`).join('');
-  }
+  _claimRenderExtraSlots('claimRepSlotList',_claimReplacementSlots,'#fed7aa');
+  _claimRenderExtraSlots('claimUnnatSlotList',_claimUnnatSlots,'#fca5a5');
   const btn=document.getElementById('claimBuildBtn');
   if(btn){btn.textContent='Build Claim Pack';btn.style.opacity='0.45';btn.style.pointerEvents='none';}
   const st=document.getElementById('claimStatus');if(st)st.innerHTML='';
@@ -12066,6 +12073,21 @@ function claimToggleReplacement(cb){
   }
   claimCheckReady();
 }
+function claimToggleUnnatural(cb){
+  _claimIsUnnatural=cb.checked;
+  const unnatSlots=document.getElementById('claimUnnatSlots');
+  if(unnatSlots)unnatSlots.style.display=_claimIsUnnatural?'block':'none';
+  if(!_claimIsUnnatural){
+    _claimUnnatSlots.forEach(s=>{
+      delete _claimFiles[s.id];
+      const stEl=document.getElementById('clst_'+s.id);
+      const slotEl=document.getElementById('clslot_'+s.id);
+      if(stEl){stEl.textContent=s.note;stEl.style.color='#9ca3af';}
+      if(slotEl)slotEl.style.borderColor='#fca5a5';
+    });
+  }
+  claimCheckReady();
+}
 function claimFileAdded(slotId,input){
   const file=input.files[0];if(!file)return;
   _claimFiles[slotId]=file;
@@ -12078,8 +12100,9 @@ function claimFileAdded(slotId,input){
 function claimCheckReady(){
   const baseReady=_claimSlots.every(s=>_claimFiles[s.id]);
   const repReady=!_claimIsReplacement||_claimReplacementSlots.every(s=>_claimFiles[s.id]);
+  const unnatReady=!_claimIsUnnatural||_claimUnnatSlots.every(s=>_claimFiles[s.id]);
   const btn=document.getElementById('claimBuildBtn');
-  if(btn){btn.style.opacity=(baseReady&&repReady)?'1':'0.45';btn.style.pointerEvents=(baseReady&&repReady)?'auto':'none';}
+  if(btn){btn.style.opacity=(baseReady&&repReady&&unnatReady)?'1':'0.45';btn.style.pointerEvents=(baseReady&&repReady&&unnatReady)?'auto':'none';}
 }
 async function claimBuild(){
   const PL=window.PDFLib;
@@ -12093,7 +12116,7 @@ async function claimBuild(){
   if(statusEl)statusEl.innerHTML='';
   try{
     const merged=await PL.PDFDocument.create();
-    const activeSlots=[..._claimSlots,...(_claimIsReplacement?_claimReplacementSlots:[])];
+    const activeSlots=[..._claimSlots,...(_claimIsReplacement?_claimReplacementSlots:[]),...(_claimIsUnnatural?_claimUnnatSlots:[])];
     for(const s of activeSlots){
       const file=_claimFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
