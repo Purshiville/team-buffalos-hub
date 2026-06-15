@@ -1003,10 +1003,12 @@ function legalOnCheck(cb){
 function legalAccept(){
   if(!currentUser)return;
   try{localStorage.setItem('tl_legal_'+LEGAL_VERSION+'_'+currentUser.code,JSON.stringify({accepted:true,at:new Date().toISOString(),code:currentUser.code}));}catch(e){}
+  logActivity('LEGAL_ACCEPTED','Accepted Terms of Use, Privacy Policy & POPIA — '+LEGAL_VERSION);
   const el=document.getElementById('legalOverlay');
   if(el)el.style.display='none';
 }
 function legalDecline(){
+  logActivity('LEGAL_DECLINED','Declined Terms of Use, Privacy Policy & POPIA — '+LEGAL_VERSION);
   doLogout('legal_declined');
 }
 // ── END LEGAL AGREEMENT ───────────────────────────────────────────────────────
