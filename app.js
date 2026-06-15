@@ -442,6 +442,11 @@ window.addEventListener('load',()=>{
     },0);
   },{once:true});
 });
+
+// Security: sign out immediately if connection drops — user must re-enter credentials
+window.addEventListener('offline',()=>{
+  if(currentUser)doLogout('connection_lost');
+});
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
 const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
@@ -1007,7 +1012,7 @@ function legalDecline(){
 // ── END LEGAL AGREEMENT ───────────────────────────────────────────────────────
 
 function doLogout(reason){
-  logActivity(reason==='inactivity'?'INACTIVITY_LOGOUT':'LOGOUT',reason==='inactivity'?'Auto-logged out after 30 min inactivity':'Signed out');
+  logActivity(reason==='inactivity'?'INACTIVITY_LOGOUT':reason==='connection_lost'?'CONNECTION_LOGOUT':'LOGOUT',reason==='inactivity'?'Auto-logged out after 30 min inactivity':reason==='connection_lost'?'Signed out — connection lost':'Signed out');
   stopInactivityTimer();
   if(_inboxUnsub){_inboxUnsub();_inboxUnsub=null;}
   if(_chatListUnsub){_chatListUnsub();_chatListUnsub=null;}
@@ -1022,6 +1027,7 @@ function doLogout(reason){
   clearAlert();
   document.getElementById('loginCode').value='';
   document.getElementById('loginPass').value='';
+  if(reason==='connection_lost')showAlert('You were signed out because the connection was lost. Please sign in again.','warning');
   showPage('hub');
 }
 
