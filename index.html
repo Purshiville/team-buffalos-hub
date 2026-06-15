@@ -1062,6 +1062,13 @@
         <span style="font-size:8px;font-weight:700;background:#fee2e2;color:#991b1b;border-radius:4px;padding:1px 5px;margin-top:3px;display:inline-block;">NEW</span>
       </div>
 
+      <div class="tool-card" onclick="showPage('claimpack')" style="border-top-color:#7c3aed;">
+        <div class="tc-icon">🤝</div>
+        <div class="tc-name" style="color:#7c3aed;">Claim Pack Builder</div>
+        <div class="tc-desc">Be there when it matters most — claims guide &amp; pack merger</div>
+        <span style="font-size:8px;font-weight:700;background:#ede9fe;color:#5b21b6;border-radius:4px;padding:1px 5px;margin-top:3px;display:inline-block;">NEW</span>
+      </div>
+
       <a class="tool-card" href="https://purshiville.github.io/team-buffalos-intel" target="_blank">
         <div class="tc-icon">📋</div>
         <div class="tc-name">Beyond Enemy Lines</div>
@@ -1854,7 +1861,7 @@
       <div class="full-card-header">
         <div class="full-card-title">Monthly team meeting</div>
         <div style="display:flex;gap:8px;">
-          <button class="add-btn" onclick="openModal('meeting')">Set meeting</button>
+          <button class="add-btn" onclick="window.open('https://book.heygoldie.com/Izulu-Wealth-fda2cab6fd57','_blank')">Set meeting</button>
           <button class="add-btn" onclick="openModal('minutes')" style="background:#0d1f3c;color:#fff;">+ Add minutes</button>
         </div>
       </div>
@@ -4135,6 +4142,135 @@ Please send your Proof of Payment to your advisor once done.</div>
       </div>
       <button id="cpBuildBtn" onclick="cpBuild()" style="background:#dc2626;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;opacity:0.45;pointer-events:none;">Build Cancellation Pack</button>
       <div id="cpStatus" style="margin-top:10px;"></div>
+    </div>
+
+  </div>
+
+  <div class="page" id="page-claimpack">
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:14px;padding:12px 16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div style="color:#fff;font-size:14px;font-weight:700;">🤝 Claim Pack Builder</div>
+      <button onclick="showPage('guides')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Resources</button>
+    </div>
+
+    <!-- PROMISE BANNER -->
+    <div style="background:linear-gradient(135deg,#5b21b6,#7c3aed);border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:26px;margin-bottom:6px;">🙏🏼</div>
+      <div style="color:#f5d98b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">The #1 Promise of a Financial Advisor</div>
+      <div style="color:#fff;font-size:17px;font-weight:800;line-height:1.3;">Be there when it matters most.</div>
+      <div style="color:#c4b5fd;font-size:12px;margin-top:6px;line-height:1.5;">A claim is not a transaction — it is the moment your client discovers whether you kept your promise. Handle it with care, urgency, and compassion.</div>
+    </div>
+
+    <!-- CONDOLENCE NOTE -->
+    <div style="background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:12px;padding:14px 16px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:#0d1f3c;margin-bottom:6px;">💬 What to say first</div>
+      <div style="font-size:13px;color:#374151;font-style:italic;line-height:1.7;background:#fff;border-radius:8px;padding:10px 14px;border:1px solid #e5e7eb;">"I'm sorry for your loss. 🙏🏼 Please know that I'm here to walk through this with you. You don't have to do this alone — let's take it one step at a time."</div>
+      <div style="font-size:11px;color:#6b7280;margin-top:8px;">Lead with empathy. The admin comes second. A family in grief doesn't need to be rushed.</div>
+    </div>
+
+    <!-- CLAIM STAGES -->
+    <div class="full-card" style="margin-bottom:14px;">
+      <div class="full-card-header"><div class="full-card-title">🔢 Claim stages — step by step</div></div>
+      <div style="display:flex;flex-direction:column;gap:10px;padding-top:4px;">
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">1</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Contact the family</strong> — reach out as soon as you hear of the passing. Show up first.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">2</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Explain the documents needed</strong> — walk them through the checklist below with patience.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">3</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Complete the claim form</strong> (BL1663 / BI-1663) together with the family. You fill in the advisor section.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">4</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Build the claim pack below</strong> — merge all documents into one PDF using the pack builder.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">5</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Submit to Zuki (back office)</strong> — hand her the completed pack. She handles the submission to the insurer.</div>
+        </div>
+        <div style="display:flex;gap:12px;align-items:flex-start;">
+          <div style="width:24px;height:24px;border-radius:50%;background:#7c3aed;color:#f5d98b;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;">6</div>
+          <div style="font-size:13px;color:#374151;line-height:1.5;padding-top:2px;"><strong>Follow up</strong> — don't disappear after submission. Check in with the family on progress.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REQUIRED DOCUMENTS -->
+    <div class="full-card" style="margin-bottom:14px;">
+      <div class="full-card-header"><div class="full-card-title">📋 Required documents — every claim</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px;">
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">🪪</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">Claimant ID (certified copy)</div><div style="font-size:11px;color:#6b7280;">Person receiving the payout</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">🪪</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">Deceased ID (certified copy)</div><div style="font-size:11px;color:#6b7280;">The life assured / person who passed</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">📜</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">Death certificate</div><div style="font-size:11px;color:#6b7280;">Original or certified copy</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">📋</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">BL1663 (BI-1663) form</div><div style="font-size:11px;color:#6b7280;">Completed claim form — advisor fills in their section</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">🏦</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">Bank statement (not older than 3 months)</div><div style="font-size:11px;color:#6b7280;">Claimant's bank account — for payout</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:9px 12px;">
+          <span style="font-size:14px;">✍️</span>
+          <div><div style="font-size:13px;font-weight:700;color:#166534;">Completed claim form</div><div style="font-size:11px;color:#6b7280;">Signed by the advisor on behalf of the family</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPLACEMENT CASE ALERT -->
+    <div style="background:#fff7ed;border:1.5px solid #fed7aa;border-radius:12px;padding:12px 14px;margin-bottom:14px;display:flex;gap:10px;align-items:flex-start;">
+      <div style="font-size:18px;flex-shrink:0;">⚠️</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:3px;">Replacement case younger than 6 months?</div>
+        <div style="font-size:12px;color:#78350f;line-height:1.6;">If the claim is on a policy that <strong>replaced</strong> previous cover and the new policy is <strong>less than 6 months old</strong>, you must also include:<br>• <strong>Proof of previous cover</strong> (original policy schedule)<br>• <strong>Proof of cancellation</strong> of the replaced cover</div>
+        <div style="margin-top:8px;font-size:11px;color:#92400e;">Enable the toggle in the Pack Builder below to add these extra document slots.</div>
+      </div>
+    </div>
+
+    <!-- PACK BUILDER -->
+    <div class="full-card" style="margin-bottom:14px;">
+      <div class="full-card-header"><div class="full-card-title">📦 Claim Pack Builder</div></div>
+      <div style="font-size:12px;color:#6b7280;margin-bottom:12px;">Upload each document below. When all are ready, tap <strong>Build Claim Pack</strong> to merge them into one PDF.</div>
+
+      <div id="claimSlotList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;"></div>
+
+      <!-- Replacement toggle -->
+      <div style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px 14px;margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;">
+          <input type="checkbox" id="claimRepToggle" onchange="claimToggleReplacement(this)" style="width:18px;height:18px;accent-color:#7c3aed;cursor:pointer;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#92400e;">Replacement case &lt; 6 months</div>
+            <div style="font-size:11px;color:#78350f;margin-top:1px;">Adds 2 extra document slots for proof of previous cover &amp; cancellation</div>
+          </div>
+        </label>
+      </div>
+
+      <div id="claimRepSlots" style="display:none;margin-bottom:12px;">
+        <div style="font-size:11px;font-weight:700;color:#92400e;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;">Additional documents — replacement case</div>
+        <div id="claimRepSlotList" style="display:flex;flex-direction:column;gap:8px;"></div>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:5px;">Save file as</label>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="text" id="claimFileName" value="claim-pack" placeholder="claim-pack" style="flex:1;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#fff;color:#0d1f3c;"/>
+          <span style="font-size:12px;color:#9ca3af;flex-shrink:0;font-weight:600;">.pdf</span>
+        </div>
+      </div>
+      <button id="claimBuildBtn" onclick="claimBuild()" style="background:#7c3aed;color:#fff;border:none;border-radius:10px;padding:12px;width:100%;font-size:13px;font-weight:700;cursor:pointer;margin-top:4px;opacity:0.45;pointer-events:none;">Build Claim Pack</button>
+      <div id="claimStatus" style="margin-top:10px;"></div>
     </div>
 
   </div>

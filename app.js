@@ -2555,6 +2555,7 @@ function showPage(p){
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
+  if(p==='claimpack'){claimInit();}
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   // fitproper page renders itself — no explicit call needed
@@ -5017,6 +5018,9 @@ function renderOpsLand(){
   // Today's Actions — reuse the same smart renderTodayFocus panel on opsland
   renderTodayFocus('todayFocusLand');
 
+  // Render all ops trackers
+  renderPrecanTracker();renderNtuTracker();renderHrTracker();renderMeetingCard();renderMinutes();
+
   // Update ops tile desc
   const desc=document.getElementById('opsTileDesc');
   if(desc)desc.textContent=alerts.length?alerts.length+' alert'+(alerts.length>1?'s':'')+' — tap to manage':'Manage your team & tasks';
@@ -6908,6 +6912,8 @@ function saveModal(){
       const diaryEvs=diaryGetEvents().filter(e=>!(e.id&&e.id.startsWith('mtg_diary_')&&e.date===mDate));
       diaryEvs.push({id:'mtg_diary_'+mDate,date:mDate,title:'Team Meeting',startTime:mTime||'',notes:mNotes||''+(mBooked==='Yes'?' (Boardroom booked)':''),type:'meeting',advisorCode:'ALL',system:true});
       diarySaveEvents(diaryEvs);
+      const _mtgEv=diaryEvs[diaryEvs.length-1];
+      if(window.FB_READY&&window.FB.saveCalEvent)window.FB.saveCalEvent(_mtgEv.id,_mtgEv).catch(()=>{});
     }
     closeModal();renderMeetingCard();
   }
@@ -11987,6 +11993,142 @@ async function cpBuild(){
   }
 }
 // ── END CANCELLATION PACK BUILDER ─────────────────────────────────────────────
+
+// ── CLAIM PACK BUILDER ────────────────────────────────────────────────────────
+const _claimSlots=[
+  {id:'clID',      label:'Claimant ID (certified copy)',          icon:'🪪', note:'Clear, certified copy of claimant\'s ID'},
+  {id:'clDecID',   label:'Deceased ID (certified copy)',          icon:'🪪', note:'Certified copy of the deceased\'s ID'},
+  {id:'clDeath',   label:'Death certificate',                     icon:'📜', note:'Original or certified copy'},
+  {id:'clBL1663',  label:'BL1663 form',                           icon:'📋', note:'Completed claim form (BI-1663)'},
+  {id:'clBank',    label:'Bank statement (not older than 3 months)', icon:'🏦', note:'Claimant\'s bank account'},
+  {id:'clForm',    label:'Completed claim form',                  icon:'✍️', note:'Completed and signed by the advisor'},
+];
+const _claimReplacementSlots=[
+  {id:'clPrevCover',  label:'Proof of previous cover (policy schedule)', icon:'📄', note:'Policy schedule of the replaced cover'},
+  {id:'clPrevCancel', label:'Proof of cancellation of replaced cover',   icon:'🗑️', note:'Cancellation letter or confirmation'},
+];
+let _claimFiles={};
+let _claimIsReplacement=false;
+
+function claimInit(){
+  const container=document.getElementById('claimSlotList');
+  if(!container)return;
+  _claimFiles={};
+  _claimIsReplacement=false;
+  const repToggle=document.getElementById('claimRepToggle');
+  if(repToggle)repToggle.checked=false;
+  const repSlots=document.getElementById('claimRepSlots');
+  if(repSlots)repSlots.style.display='none';
+  const allSlots=[..._claimSlots];
+  container.innerHTML=allSlots.map(s=>`
+    <div id="clslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+        <div id="clst_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+      </div>
+      <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        Upload
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="claimFileAdded('${s.id}',this)">
+      </label>
+    </div>`).join('');
+  const repContainer=document.getElementById('claimRepSlotList');
+  if(repContainer){
+    repContainer.innerHTML=_claimReplacementSlots.map(s=>`
+      <div id="clslot_${s.id}" style="display:flex;align-items:center;gap:10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
+        <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+          <div id="clst_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+        </div>
+        <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+          Upload
+          <input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="claimFileAdded('${s.id}',this)">
+        </label>
+      </div>`).join('');
+  }
+  const btn=document.getElementById('claimBuildBtn');
+  if(btn){btn.textContent='Build Claim Pack';btn.style.opacity='0.45';btn.style.pointerEvents='none';}
+  const st=document.getElementById('claimStatus');if(st)st.innerHTML='';
+  claimCheckReady();
+}
+function claimToggleReplacement(cb){
+  _claimIsReplacement=cb.checked;
+  const repSlots=document.getElementById('claimRepSlots');
+  if(repSlots)repSlots.style.display=_claimIsReplacement?'block':'none';
+  if(!_claimIsReplacement){
+    _claimReplacementSlots.forEach(s=>{
+      delete _claimFiles[s.id];
+      const stEl=document.getElementById('clst_'+s.id);
+      const slotEl=document.getElementById('clslot_'+s.id);
+      if(stEl){stEl.textContent=s.note;stEl.style.color='#9ca3af';}
+      if(slotEl)slotEl.style.borderColor='#fed7aa';
+    });
+  }
+  claimCheckReady();
+}
+function claimFileAdded(slotId,input){
+  const file=input.files[0];if(!file)return;
+  _claimFiles[slotId]=file;
+  const stEl=document.getElementById('clst_'+slotId);
+  const slotEl=document.getElementById('clslot_'+slotId);
+  if(stEl){stEl.textContent='✅ '+file.name;stEl.style.color='#16a34a';}
+  if(slotEl)slotEl.style.borderColor='#86efac';
+  claimCheckReady();
+}
+function claimCheckReady(){
+  const baseReady=_claimSlots.every(s=>_claimFiles[s.id]);
+  const repReady=!_claimIsReplacement||_claimReplacementSlots.every(s=>_claimFiles[s.id]);
+  const btn=document.getElementById('claimBuildBtn');
+  if(btn){btn.style.opacity=(baseReady&&repReady)?'1':'0.45';btn.style.pointerEvents=(baseReady&&repReady)?'auto':'none';}
+}
+async function claimBuild(){
+  const PL=window.PDFLib;
+  const statusEl=document.getElementById('claimStatus');
+  const btn=document.getElementById('claimBuildBtn');
+  if(!PL||!PL.PDFDocument){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;font-weight:700;">⚠️ PDF library not loaded — check your internet connection and try again.</div>';
+    return;
+  }
+  btn.textContent='Building…';btn.style.opacity='0.7';btn.style.pointerEvents='none';
+  if(statusEl)statusEl.innerHTML='';
+  try{
+    const merged=await PL.PDFDocument.create();
+    const activeSlots=[..._claimSlots,...(_claimIsReplacement?_claimReplacementSlots:[])];
+    for(const s of activeSlots){
+      const file=_claimFiles[s.id];if(!file)continue;
+      const buf=await file.arrayBuffer();
+      if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
+        const pages=await merged.copyPages(src,src.getPageIndices());
+        pages.forEach(p=>merged.addPage(p));
+      } else {
+        const pg=merged.addPage([595,842]);
+        let img;
+        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){
+          img=await merged.embedPng(buf);
+        } else {
+          img=await merged.embedJpg(buf);
+        }
+        const scaled=img.scaleToFit(555,802);
+        pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
+      }
+    }
+    const bytes=await merged.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const name=(document.getElementById('claimFileName')?.value||'claim-pack').replace(/\.pdf$/i,'');
+    a.href=url;a.download=name+'.pdf';a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+    if(statusEl)statusEl.innerHTML='<div style="color:#16a34a;font-size:12px;font-weight:700;margin-top:4px;">✅ Claim pack saved to your Downloads folder.</div>';
+    btn.textContent='✅ Pack Downloaded';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;">Error: '+e.message+'</div>';
+    btn.textContent='Build Claim Pack';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }
+}
+// ── END CLAIM PACK BUILDER ────────────────────────────────────────────────────
 
 // ── UNLOCK PDF ────────────────────────────────────────────────────────────────
 let _updfFile=null,_updfBytes=null;
