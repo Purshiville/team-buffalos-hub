@@ -12007,8 +12007,8 @@ const _claimReplacementSlots=[
   {id:'clPrevCancel', label:'Proof of cancellation of replaced cover',   icon:'🗑️', note:'Cancellation letter or confirmation'},
 ];
 const _claimUnnatSlots=[
-  {id:'clPoliceReport',  label:'Police investigation report',              icon:'🚔', note:'Report from the investigating police station'},
-  {id:'clOfficerReport', label:'Signed report — investigating officer',    icon:'✍️', note:'Additional report signed by the investigating officer'},
+  {id:'clPoliceReport',  label:'Police report',              icon:'🚔', note:'Report from the investigating police station'},
+  {id:'clSanlamForm',    label:'Sanlam police report form',  icon:'📋', note:'Sanlam\'s own form for unnatural death claims'},
 ];
 let _claimFiles={};
 let _claimIsReplacement=false;
