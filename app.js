@@ -11996,12 +11996,11 @@ async function cpBuild(){
 
 // ── CLAIM PACK BUILDER ────────────────────────────────────────────────────────
 const _claimSlots=[
-  {id:'clID',      label:'Claimant ID (certified copy)',          icon:'🪪', note:'Clear, certified copy of claimant\'s ID'},
-  {id:'clDecID',   label:'Deceased ID (certified copy)',          icon:'🪪', note:'Certified copy of the deceased\'s ID'},
-  {id:'clDeath',   label:'Death certificate',                     icon:'📜', note:'Original or certified copy'},
-  {id:'clBL1663',  label:'BL1663 form',                           icon:'📋', note:'Completed claim form (BI-1663)'},
-  {id:'clBank',    label:'Bank statement (not older than 3 months)', icon:'🏦', note:'Claimant\'s bank account'},
-  {id:'clForm',    label:'Completed claim form',                  icon:'✍️', note:'Completed and signed by the advisor'},
+  {id:'clID',      label:'Claimant ID (certified copy)',             icon:'🪪', note:'Certified copy of the person receiving the payout'},
+  {id:'clDecID',   label:'Deceased ID (certified copy)',             icon:'🪪', note:'Certified copy of the life assured who passed'},
+  {id:'clDeathDocs',label:'Death documents (from funeral parlour)',  icon:'📜', note:'Death cert, notice of death, BI-1663 etc. — provided by the funeral parlour'},
+  {id:'clBank',    label:'Bank statement (not older than 3 months)', icon:'🏦', note:'Claimant\'s bank account — for payout'},
+  {id:'clForm',    label:'Completed claim form',                     icon:'✍️', note:'Sanlam Sky form or the external company\'s claim form'},
 ];
 const _claimReplacementSlots=[
   {id:'clPrevCover',  label:'Proof of previous cover (policy schedule)', icon:'📄', note:'Policy schedule of the replaced cover'},
