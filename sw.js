@@ -1,6 +1,6 @@
 // Team Buffalos — Service Worker
 // UPDATE BUILD on every deploy to trigger auto-reload for all users
-const BUILD = '20260615-58';
+const BUILD = '20260615-59';
 const CACHE = 'tb-' + BUILD;
 
 // Install: activate immediately, don't wait for old tabs to close
@@ -18,10 +18,10 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
-  // HTML navigation: bypass HTTP cache entirely so users always get fresh HTML
+  // HTML navigation: no-cache forces CDN to revalidate so users always get fresh HTML
   if (e.request.mode === 'navigate') {
     e.respondWith(
-      fetch(e.request, {cache: 'no-store'}).catch(() => caches.match(e.request))
+      fetch(e.request, {cache: 'no-cache'}).catch(() => caches.match(e.request))
     );
     return;
   }
