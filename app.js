@@ -1188,20 +1188,30 @@ function renderProdStats(data,period){
 
   // Most Premiums
   const byPrem=[...advisors].sort((a,b)=>(b.actualPremium||0)-(a.actualPremium||0));
+  const totalPrem=byPrem.reduce((s,a)=>s+(a.actualPremium||0),0);
+  const totalAPI=totalPrem*12;
   const premRows=byPrem.map((a,i)=>{
     const pp=a.targetPremium?Math.min(Math.round(a.actualPremium/a.targetPremium*100),100):0;
     const pc=pp>=100?'#16a34a':pp>=70?'#c9922a':'#dc2626';
     const isMe=a.code===currentUser.code;
+    const api=(a.actualPremium||0)*12;
     return`<tr style="${isMe?'background:#fdf6ed;font-weight:700;':''}">`+
       `<td style="padding:8px 10px;font-size:13px;text-align:center;">${medals[i]||i+1}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:${isMe?700:600};color:#0d1f3c;">${_advisorNameMap[a.code]||a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td>`+
       `<td style="padding:8px 10px;font-size:12px;font-weight:700;color:${pc};">R${(a.actualPremium||0).toLocaleString()}</td>`+
+      `<td style="padding:8px 10px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td>`+
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${pp}%</td>`+
       `</tr>`;
   }).join('');
+  const premTotalRow=`<tr style="background:#f4f2ed;border-top:2px solid #e5e7eb;">`+
+    `<td colspan="2" style="padding:8px 10px;font-size:11px;font-weight:700;color:#0d1f3c;text-align:right;">TOTAL</td>`+
+    `<td style="padding:8px 10px;font-size:12px;font-weight:800;color:#c9922a;">R${totalPrem.toLocaleString()}</td>`+
+    `<td style="padding:8px 10px;font-size:12px;font-weight:800;color:#7c3aed;">R${totalAPI.toLocaleString()}</td>`+
+    `<td></td></tr>`;
 
   // Most Cases
   const byCases=[...advisors].sort((a,b)=>(b.actualCases||0)-(a.actualCases||0));
+  const totalCases=byCases.reduce((s,a)=>s+(a.actualCases||0),0);
   const caseRows=byCases.map((a,i)=>{
     const cp=a.targetCases?Math.min(Math.round(a.actualCases/a.targetCases*100),100):0;
     const cc=cp>=100?'#16a34a':cp>=70?'#c9922a':'#dc2626';
@@ -1213,10 +1223,14 @@ function renderProdStats(data,period){
       `<td style="padding:8px 10px;font-size:11px;color:#6b7280;">${cp}%</td>`+
       `</tr>`;
   }).join('');
+  const caseTotalRow=`<tr style="background:#f4f2ed;border-top:2px solid #e5e7eb;">`+
+    `<td colspan="2" style="padding:8px 10px;font-size:11px;font-weight:700;color:#0d1f3c;text-align:right;">TOTAL</td>`+
+    `<td style="padding:8px 10px;font-size:12px;font-weight:800;color:#16a34a;">${totalCases}</td>`+
+    `<td></td></tr>`;
 
   teamEl.innerHTML=
-    `<div class="team-stats-card" style="margin-bottom:10px;"><div class="team-stats-hd"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">💰 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Premiums</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>vs Target</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
-    `<div class="team-stats-card"><div class="team-stats-hd"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📋 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Cases</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th><th>vs Target</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
+    `<div class="team-stats-card" style="margin-bottom:10px;"><div class="team-stats-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">💰 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${totalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${totalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th><th>vs Target</th></tr></thead><tbody>${premRows}${premTotalRow}</tbody></table></div></div>`+
+    `<div class="team-stats-card"><div class="team-stats-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📋 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Cases</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">${totalCases} cases</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th><th>vs Target</th></tr></thead><tbody>${caseRows}${caseTotalRow}</tbody></table></div></div>`;
   if(typeof updateNtuHubAlert==='function')updateNtuHubAlert();
 }
 function renderStatsManagerPreview(data){
@@ -1304,11 +1318,16 @@ function _renderYTDStatsInner(el){
     <div style="width:1px;background:#f4f2ed;margin:0 4px;"></div>
     <div style="flex:1;text-align:center;padding:0 8px;"><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">YTD Premium</div><div style="font-size:20px;font-weight:800;color:#c9922a;">R${my.premium.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;">#${myRankPrem} of ${n}</div></div>
   </div>`:'' ;
-  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td></tr>`;}).join('');
+  const ytdTotalPrem=byPrem.reduce((s,a)=>s+a.premium,0);
+  const ytdTotalAPI=ytdTotalPrem*12;
+  const ytdTotalCases=byCases.reduce((s,a)=>s+a.cases,0);
+  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;const api=a.premium*12;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td><td style="padding:7px 8px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td></tr>`;}).join('');
+  const ytdPremTotalRow=`<tr style="background:#f4f2ed;border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:7px 8px;font-size:11px;font-weight:700;color:#0d1f3c;text-align:right;">TOTAL</td><td style="padding:7px 8px;font-size:12px;font-weight:800;color:#c9922a;">R${ytdTotalPrem.toLocaleString()}</td><td style="padding:7px 8px;font-size:12px;font-weight:800;color:#7c3aed;">R${ytdTotalAPI.toLocaleString()}</td></tr>`;
   const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
+  const ytdCaseTotalRow=`<tr style="background:#f4f2ed;border-top:2px solid #e5e7eb;"><td colspan="2" style="padding:7px 8px;font-size:11px;font-weight:700;color:#0d1f3c;text-align:right;">TOTAL</td><td style="padding:7px 8px;font-size:12px;font-weight:800;color:#16a34a;">${ytdTotalCases}</td></tr>`;
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📅 ${yr} Year-to-Date</div>`+myCard+
-    `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
-    `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;"><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
+    `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${ytdTotalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${ytdTotalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th></tr></thead><tbody>${premRows}${ytdPremTotalRow}</tbody></table></div></div>`+
+    `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">${ytdTotalCases} cases</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}${ytdCaseTotalRow}</tbody></table></div></div>`;
   renderYTDTop3();
 }
 function renderYTDTop3(){
