@@ -830,6 +830,7 @@ function enterHub(user){
   try{localStorage.setItem('tl_session',JSON.stringify({code:user.code,pass:user.pass}));}catch(e){}
   document.getElementById('authScreen').classList.remove('active');
   document.getElementById('hubMain').style.display='flex';
+  if(!checkLegalAcceptance(user.code))showLegalOverlay();
   const unEl=document.getElementById('userName');if(unEl)unEl.textContent=user.name.split(' ')[0];
   const uaEl=document.getElementById('userAvatar');if(uaEl)uaEl.textContent=user.name.charAt(0).toUpperCase();
   // managerTab removed — Team is inside opsland
@@ -968,6 +969,42 @@ function stopInactivityTimer(){
   const warn = document.getElementById('inactivityWarning');
   if(warn) warn.style.display = 'none';
 }
+
+// ── LEGAL AGREEMENT ───────────────────────────────────────────────────────────
+const LEGAL_VERSION='v1';
+function checkLegalAcceptance(code){
+  try{return!!JSON.parse(localStorage.getItem('tl_legal_'+LEGAL_VERSION+'_'+code));}catch(e){return false;}
+}
+function showLegalOverlay(){
+  const el=document.getElementById('legalOverlay');
+  if(el){el.style.display='flex';}
+}
+function legalToggleSection(n){
+  const sec=document.getElementById('legalSec'+n);
+  const chev=document.getElementById('legalChev'+n);
+  if(!sec)return;
+  const open=sec.style.display!=='none';
+  sec.style.display=open?'none':'block';
+  if(chev){chev.textContent=open?'›':'⌄';chev.style.transform=open?'':'rotate(0deg)';}
+}
+function legalOnCheck(cb){
+  const btn=document.getElementById('legalAcceptBtn');
+  if(!btn)return;
+  btn.disabled=!cb.checked;
+  btn.style.background=cb.checked?'#0d1f3c':'#e5e7eb';
+  btn.style.color=cb.checked?'#fff':'#9ca3af';
+  btn.style.cursor=cb.checked?'pointer':'not-allowed';
+}
+function legalAccept(){
+  if(!currentUser)return;
+  try{localStorage.setItem('tl_legal_'+LEGAL_VERSION+'_'+currentUser.code,JSON.stringify({accepted:true,at:new Date().toISOString(),code:currentUser.code}));}catch(e){}
+  const el=document.getElementById('legalOverlay');
+  if(el)el.style.display='none';
+}
+function legalDecline(){
+  doLogout('legal_declined');
+}
+// ── END LEGAL AGREEMENT ───────────────────────────────────────────────────────
 
 function doLogout(reason){
   logActivity(reason==='inactivity'?'INACTIVITY_LOGOUT':'LOGOUT',reason==='inactivity'?'Auto-logged out after 30 min inactivity':'Signed out');
