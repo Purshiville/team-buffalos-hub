@@ -3540,36 +3540,192 @@ Please send your Proof of Payment to your advisor once done.</div>
       <button onclick="showPage('guides')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Resources</button>
     </div>
 
-    <!-- Notes input -->
-    <div class="full-card" style="margin-bottom:12px;">
-      <div class="full-card-header">
-        <div class="full-card-title">📝 Ongoing Notes</div>
-        <button onclick="agendaClearNotes()" style="font-size:10px;background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;">Clear all</button>
-      </div>
-      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Add points as they come up during the month. These will be used to generate the agenda.</div>
-      <div id="agendaNotesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;min-height:10px;"></div>
-      <div style="display:flex;gap:8px;">
-        <input id="agendaNoteInput" type="text" placeholder="Add a note or agenda point..." onkeydown="if(event.key==='Enter')agendaAddNote()" style="flex:1;padding:8px 12px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;"/>
-        <button onclick="agendaAddNote()" style="padding:8px 14px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Add</button>
-      </div>
-    </div>
-
     <!-- Meeting details -->
-    <div class="full-card" style="margin-bottom:12px;">
+    <div class="full-card" style="margin-bottom:12px;overflow:visible;">
       <div class="full-card-title" style="margin-bottom:10px;">📅 Meeting Details</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Meeting Type</div>
+          <select id="agendaMeetingType" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;">
+            <option value="Team Buffalos">🦬 Team Buffalos</option>
+            <option value="Izulu Lions">🦁 Izulu Lions</option>
+            <option value="GQ">📋 GQ Meeting</option>
+          </select>
+        </div>
         <div>
           <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Date</div>
           <input id="agendaDate" type="date" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
         </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div>
           <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Venue</div>
           <input id="agendaVenue" type="text" placeholder="e.g. Izulu Boardroom" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
         </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Time</div>
+          <input id="agendaTime" type="time" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
+        </div>
       </div>
-      <div>
-        <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Additional context for AI (optional)</div>
-        <textarea id="agendaContext" rows="3" placeholder="e.g. This month's focus is production, Litha and Lutho joined the team, incentive launched..." style="width:100%;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;resize:vertical;box-sizing:border-box;"></textarea>
+    </div>
+
+    <!-- Quick-add topic categories -->
+    <div class="full-card" style="margin-bottom:12px;">
+      <div class="full-card-header">
+        <div class="full-card-title">⚡ Quick-Add Topics</div>
+        <span style="font-size:10px;color:#9ca3af;">Tap to add to your list</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+
+        <!-- Production -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catProd')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>📊 Production & Stats</span><span id="catProdArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catProd" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Total API & cases — review this month\'s production figures')" class="agenda-chip">Total API & cases</button>
+            <button onclick="agendaQuickAdd('Izulu standings — where does the team rank this month?')" class="agenda-chip">Izulu standings</button>
+            <button onclick="agendaQuickAdd('Top 3 performers — recognition and leaderboard')" class="agenda-chip">Top 3 performers</button>
+            <button onclick="agendaQuickAdd('Figures countdown — days remaining and cases needed to hit target')" class="agenda-chip">Figures countdown</button>
+            <button onclick="agendaQuickAdd('Pack / individual targets — review vs actuals')" class="agenda-chip">Targets vs actuals</button>
+            <button onclick="agendaQuickAdd('5-week month coming — plan early submissions')" class="agenda-chip">5-week month</button>
+          </div>
+        </div>
+
+        <!-- Team updates -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catTeam')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>👥 Team Updates</span><span id="catTeamArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catTeam" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Welcome new advisor/s — introduction to the team')" class="agenda-chip">Welcome new advisor</button>
+            <button onclick="agendaQuickAdd('Farewell — advisor exit and handover process')" class="agenda-chip">Farewell / exit</button>
+            <button onclick="agendaQuickAdd('Promotions and demotions — performance-based changes')" class="agenda-chip">Promotions / demotions</button>
+            <button onclick="agendaQuickAdd('Attendance is compulsory — meeting and office expectations')" class="agenda-chip">Attendance reminder</button>
+            <button onclick="agendaQuickAdd('Other teams\' performance — benchmarking against Izulu')" class="agenda-chip">Other teams' performance</button>
+            <button onclick="agendaQuickAdd('Experience / story of the month — share a memorable client interaction')" class="agenda-chip">Experience of the month</button>
+          </div>
+        </div>
+
+        <!-- Compliance & Metrics -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catComp')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>📉 Compliance & Metrics</span><span id="catCompArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catComp" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Persistency review — threshold 65% minimum, identify problem cases')" class="agenda-chip">Persistency (65% threshold)</button>
+            <button onclick="agendaQuickAdd('NTU review — threshold 15% maximum, identify and address')" class="agenda-chip">NTU (15% threshold)</button>
+            <button onclick="agendaQuickAdd('Lapse review — production vs lapses, 20% lapse threshold')" class="agenda-chip">Lapse review</button>
+            <button onclick="agendaQuickAdd('Validation stats — 3-case and 12-case validation percentages')" class="agenda-chip">Validation stats</button>
+            <button onclick="agendaQuickAdd('Problem advisors — performance agreements and off-boarding process')" class="agenda-chip">Problem advisors</button>
+            <button onclick="agendaQuickAdd('Pre-cancellation attack — review Pavlov list and action plan')" class="agenda-chip">Pre-cxl attack plan</button>
+            <button onclick="agendaQuickAdd('Repudiated claims — upload all schedules as supporting docs before approval')" class="agenda-chip">Repudiated claims</button>
+          </div>
+        </div>
+
+        <!-- Process & Systems -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catSys')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>🔧 Process & Systems</span><span id="catSysArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catSys" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('IMP updates — all schedules and FICA docs to be uploaded before approval')" class="agenda-chip">IMP uploads & approvals</button>
+            <button onclick="agendaQuickAdd('Qlink — importance of accurate Qlink calculation at point of sale')" class="agenda-chip">Qlink calculation</button>
+            <button onclick="agendaQuickAdd('Monday.com — timely feedback, tagging, tab management updates')" class="agenda-chip">Monday.com updates</button>
+            <button onclick="agendaQuickAdd('Stop order mandates — all conversions older than 4 months and new clients')" class="agenda-chip">Stop order mandates</button>
+            <button onclick="agendaQuickAdd('Spotcheck process — manager call, SMS from Sanlam, prepare client')" class="agenda-chip">Spotcheck process</button>
+            <button onclick="agendaQuickAdd('Commission queries — combine payslip + comm statement in one PDF, submit')" class="agenda-chip">Commission queries</button>
+            <button onclick="agendaQuickAdd('Signed CXL mandates on IMP — sign 1 document, rest via OTP')" class="agenda-chip">Signed CXL mandates</button>
+            <button onclick="agendaQuickAdd('Case splitting — split every policy to maximum within reason this month')" class="agenda-chip">Case splitting</button>
+            <button onclick="agendaQuickAdd('ROA quality — review examples, ensure notes and activity are read on IMP')" class="agenda-chip">ROA quality</button>
+          </div>
+        </div>
+
+        <!-- Incentives -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catInc')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>🏆 Incentives & Recognition</span><span id="catIncArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catInc" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Current incentive update — progress, standings, deadline')" class="agenda-chip">Incentive update</button>
+            <button onclick="agendaQuickAdd('New incentive announcement — target, reward, and period')" class="agenda-chip">New incentive</button>
+            <button onclick="agendaQuickAdd('Life cover incentive — focus on risk premium targets')" class="agenda-chip">Life cover incentive</button>
+            <button onclick="agendaQuickAdd('Beat your best — % growth incentive, winners announced Friday')" class="agenda-chip">Beat your best</button>
+            <button onclick="agendaQuickAdd('Recognition and shoutouts — celebrate individual achievements')" class="agenda-chip">Recognition / shoutout</button>
+          </div>
+        </div>
+
+        <!-- Training -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catTrain')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>📚 Training & Development</span><span id="catTrainArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catTrain" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Replacement training — scheduled for Monday & Tuesday')" class="agenda-chip">Replacement training</button>
+            <button onclick="agendaQuickAdd('COB reminder — all advisors must complete their class of business')" class="agenda-chip">COB reminder</button>
+            <button onclick="agendaQuickAdd('RE reminder — registration and study plan')" class="agenda-chip">RE reminder</button>
+            <button onclick="agendaQuickAdd('Junior & Senior advisor guide — roles, expectations, mentorship')" class="agenda-chip">Jnr & Snr guide</button>
+            <button onclick="agendaQuickAdd('All advisors present through servicing — present at point of client contact')" class="agenda-chip">Present through servicing</button>
+            <button onclick="agendaQuickAdd('In-field training — prioritise this above all else for quality improvement')" class="agenda-chip">In-field training</button>
+          </div>
+        </div>
+
+        <!-- Cancellations -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catCxl')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>❌ Cancellations & Replacements</span><span id="catCxlArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catCxl" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Cancellation pack review — ensure all packs are complete before submission')" class="agenda-chip">CXL pack review</button>
+            <button onclick="agendaQuickAdd('Prepping clients for CXL process — what to expect, double deductions, refunds')" class="agenda-chip">Prepping clients for CXL</button>
+            <button onclick="agendaQuickAdd('Garnishee orders on payslip — how to identify and handle')" class="agenda-chip">Garnishee orders</button>
+            <button onclick="agendaQuickAdd('Know your enemy — competitor comparison and replacement triggers')" class="agenda-chip">Know your competitors</button>
+            <button onclick="agendaQuickAdd('Internal replacement triggers — reinstatement process and email Michael at Sanlam Sky')" class="agenda-chip">Internal replacements</button>
+          </div>
+        </div>
+
+        <!-- Recruitment -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catRecruit')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>🔍 Recruitment</span><span id="catRecruitArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catRecruit" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('Recruitment update — current pipeline and new joiners')" class="agenda-chip">Recruitment update</button>
+            <button onclick="agendaQuickAdd('Word-of-mouth recruitment — advisors to refer strong candidates from their network')" class="agenda-chip">Word-of-mouth referrals</button>
+            <button onclick="agendaQuickAdd('Headhunting — LinkedIn and social media sourcing')" class="agenda-chip">Headhunting / socials</button>
+            <button onclick="agendaQuickAdd('Advisor retention — hopes, dreams and qualification planning')" class="agenda-chip">Advisor retention</button>
+          </div>
+        </div>
+
+        <!-- Targets & Next steps -->
+        <div style="border:1px solid #e5e7eb;border-radius:10px;overflow:hidden;">
+          <button onclick="agendaToggleCat('catTargets')" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:#f9fafb;border:none;cursor:pointer;font-size:12px;font-weight:700;color:#0d1f3c;">
+            <span>🎯 Targets & Next Steps</span><span id="catTargetsArrow" style="font-size:10px;color:#9ca3af;">▾</span>
+          </button>
+          <div id="catTargets" style="display:none;padding:8px;display:flex;flex-wrap:wrap;gap:6px;">
+            <button onclick="agendaQuickAdd('New monthly targets — API and case count for next month')" class="agenda-chip">New targets</button>
+            <button onclick="agendaQuickAdd('Next cut-off date — ensure early submissions for last week')" class="agenda-chip">Next cut-off date</button>
+            <button onclick="agendaQuickAdd('Area planning — geographic focus per advisor for next month')" class="agenda-chip">Area planning</button>
+            <button onclick="agendaQuickAdd('Financial planning — individual advisor budget and goal review')" class="agenda-chip">Financial planning</button>
+            <button onclick="agendaQuickAdd('Next meeting date — confirm and send invite')" class="agenda-chip">Next meeting date</button>
+            <button onclick="agendaQuickAdd('Action items from today — summarise homework and deadlines')" class="agenda-chip">Action items / homework</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Custom notes input -->
+    <div class="full-card" style="margin-bottom:12px;overflow:visible;">
+      <div class="full-card-header">
+        <div class="full-card-title">📝 Your Notes</div>
+        <button onclick="agendaClearNotes()" style="font-size:10px;background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;">Clear all</button>
+      </div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">All added points appear here. Tap ✕ to remove any.</div>
+      <div id="agendaNotesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;min-height:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="agendaNoteInput" type="text" placeholder="Add a custom note..." onkeydown="if(event.key==='Enter')agendaAddNote()" style="flex:1;padding:8px 12px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;"/>
+        <button onclick="agendaAddNote()" style="padding:8px 14px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Add</button>
       </div>
     </div>
 
@@ -3581,7 +3737,10 @@ Please send your Proof of Payment to your advisor once done.</div>
       <div class="full-card">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div class="full-card-title">📋 Generated Agenda</div>
-          <button onclick="agendaCopyOutput()" style="font-size:10px;font-weight:700;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;color:#374151;">Copy</button>
+          <div style="display:flex;gap:6px;">
+            <button onclick="agendaCopyOutput()" style="font-size:10px;font-weight:700;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;color:#374151;">Copy</button>
+            <button onclick="agendaClearOutput()" style="font-size:10px;font-weight:700;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;cursor:pointer;color:#991b1b;">Clear</button>
+          </div>
         </div>
         <div id="agendaOutputText" style="font-size:12px;color:#374151;line-height:1.8;white-space:pre-wrap;"></div>
       </div>

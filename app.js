@@ -12875,12 +12875,26 @@ function agendaRenderNotes(){
   const notes=agendaGetNotes();
   const list=document.getElementById('agendaNotesList');
   if(!list)return;
-  if(!notes.length){list.innerHTML='<div style="font-size:11px;color:#9ca3af;font-style:italic;">No notes yet — add points above as they come up during the month.</div>';return;}
+  if(!notes.length){list.innerHTML='<div style="font-size:11px;color:#9ca3af;font-style:italic;">No notes yet — tap quick-add chips above or type a custom note.</div>';return;}
   list.innerHTML=notes.map((n,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
     <span style="font-size:11px;color:#6b7280;margin-top:1px;flex-shrink:0;">${i+1}.</span>
     <span style="flex:1;font-size:12px;color:#0d1f3c;line-height:1.5;">${n}</span>
-    <button onclick="agendaDeleteNote(${i})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:13px;flex-shrink:0;padding:0;">✕</button>
+    <button onclick="agendaDeleteNote(${i})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:13px;flex-shrink:0;padding:0;">&#x2715;</button>
   </div>`).join('');
+}
+function agendaToggleCat(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const open=el.style.display==='flex';
+  el.style.display=open?'none':'flex';
+  const arrow=document.getElementById(id+'Arrow');
+  if(arrow)arrow.textContent=open?'▾':'▴';
+}
+function agendaQuickAdd(text){
+  const notes=agendaGetNotes();
+  if(notes.includes(text)){showAlert('Already added','info');return;}
+  notes.push(text);agendaSaveNotes(notes);agendaRenderNotes();
+  showAlert('Added','success');
 }
 function agendaAddNote(){
   const inp=document.getElementById('agendaNoteInput');
@@ -12893,41 +12907,51 @@ function agendaClearNotes(){if(confirm('Clear all notes for this month?')){agend
 async function agendaGenerate(){
   const notes=agendaGetNotes();
   if(!notes.length)return showAlert('Add at least one note before generating.','error');
+  const meetingType=document.getElementById('agendaMeetingType')?.value||'Team Buffalos';
   const date=document.getElementById('agendaDate')?.value||'';
+  const time=document.getElementById('agendaTime')?.value||'';
   const venue=document.getElementById('agendaVenue')?.value||'Izulu Boardroom';
-  const context=document.getElementById('agendaContext')?.value||'';
   const btn=document.getElementById('agendaGenerateBtn');
   if(btn){btn.disabled=true;btn.textContent='Generating…';}
-  const prompt=`You are creating a professional monthly team meeting agenda for Team Buffalos, a Sanlam Sky financial advisory team managed by Purshiville Nortje.
+  let dateStr='To be confirmed';
+  if(date){const dp=date.split('-');dateStr=dp[2]+'/'+dp[1]+'/'+dp[0];}
+  const timeStr=time||'TBC';
+  const prompt=`You are creating a professional monthly meeting agenda for the "${meetingType}" team meeting. This is a Sanlam Sky financial advisory team (Izulu region, Eastern Cape) managed by Purshiville Nortje (Key Individual).
 
 Meeting details:
-- Date: ${date||'To be confirmed'}
+- Meeting: ${meetingType} Monthly Meeting
+- Date: ${dateStr}
+- Time: ${timeStr}
 - Venue: ${venue}
-- Team: Financial advisors and key individual
 
-Notes and points gathered this month:
+Points and notes gathered this month to discuss:
 ${notes.map((n,i)=>`${i+1}. ${n}`).join('\n')}
-${context?'\nAdditional context:\n'+context:''}
 
-Generate a structured, professional meeting agenda. Format it clearly with:
-1. Meeting heading (Team Buffalos Monthly Team Meeting)
-2. Date, time (TBC if not provided), venue
-3. Numbered agenda items with estimated time allocations
-4. A closing / next steps section
-5. Keep it professional but warm — Team Buffalos culture is motivational and team-focused
-
-Return plain text only — no markdown, no asterisks. Use numbered sections and clean formatting suitable for copying and sharing.`;
+Instructions:
+- Group related points under clear section headings (e.g. Production, Team Updates, Compliance, Process, Incentives, Training, Cancellations, Targets)
+- Assign realistic time allocations to each section (e.g. 5 min, 10 min, 15 min)
+- Start with a welcome / opening, end with action items and next meeting date
+- Keep the tone professional but motivational — this team has a buffalo culture (persistent, collective, powerful)
+- Format for easy reading at the meeting — use numbered items and clear section breaks
+- Return plain text only — no markdown symbols, no asterisks, no hashtags. Use UPPERCASE for section headings.`;
   try{
     const result=await callClaudeVision([],prompt,2048);
     const out=document.getElementById('agendaOutput');
     const txt=document.getElementById('agendaOutputText');
     if(out)out.style.display='block';
     if(txt)txt.textContent=result;
+    if(out)out.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){showAlert('Could not generate agenda — please try again.','error');}
   finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate Agenda';}}
 }
 function agendaCopyOutput(){
   const txt=document.getElementById('agendaOutputText')?.textContent||'';
   navigator.clipboard.writeText(txt).then(()=>showAlert('Agenda copied to clipboard','success')).catch(()=>showAlert('Copy failed','error'));
+}
+function agendaClearOutput(){
+  const out=document.getElementById('agendaOutput');
+  const txt=document.getElementById('agendaOutputText');
+  if(out)out.style.display='none';
+  if(txt)txt.textContent='';
 }
 // ── END MEETING AGENDA BUILDER ────────────────────────────────────────────────
