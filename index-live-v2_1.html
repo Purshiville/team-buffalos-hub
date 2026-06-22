@@ -415,7 +415,7 @@
     <div id="hubTop3" style="margin-bottom:12px;"></div>
     <!-- Notice Board compose (manager/Arlene only) -->
     <div id="hubQuickNotice" style="display:none;margin-bottom:12px;">
-      <div class="full-card" style="margin-bottom:0;">
+      <div class="full-card" style="margin-bottom:0;overflow:visible;">
         <div class="full-card-header">
           <div>
             <div class="full-card-title">📌 Notice Board</div>
@@ -1107,6 +1107,11 @@
           <div class="tc-icon">📘</div>
           <div class="tc-name" style="color:#059669;">Replacement Guide</div>
           <div class="tc-desc">Training guide &amp; case forms</div>
+        </div>
+        <div class="tool-card" onclick="showPage('meetingagenda')" style="border-top-color:#7c3aed;">
+          <div class="tc-icon">📋</div>
+          <div class="tc-name" style="color:#7c3aed;">Meeting Agenda Builder</div>
+          <div class="tc-desc">Generate agenda from monthly notes</div>
         </div>
       </div>
     </div>
@@ -2628,6 +2633,16 @@ Please send your Proof of Payment to your advisor once done.</div>
       <button onclick="showPage('guides')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Training</button>
     </div>
 
+    <!-- Presentation shortcut -->
+    <div onclick="showPage('replpresentation')" style="display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:12px;padding:12px 16px;margin-bottom:14px;cursor:pointer;">
+      <span style="font-size:24px;">📊</span>
+      <div>
+        <div style="color:#fff;font-size:13px;font-weight:700;">New Advisor Presentation</div>
+        <div style="color:rgba(255,255,255,0.7);font-size:11px;margin-top:2px;">Slideshow presentation for training new advisors on replacements</div>
+      </div>
+      <span style="margin-left:auto;color:#c4b5fd;font-size:18px;">›</span>
+    </div>
+
     <!-- Section Nav Pills -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;">
       <a href="#rg-s1" style="font-size:10px;font-weight:700;background:#f0fdf4;color:#065f46;border:1px solid #bbf7d0;border-radius:20px;padding:4px 10px;text-decoration:none;">§1 Win-Win</a>
@@ -3492,6 +3507,87 @@ Please send your Proof of Payment to your advisor once done.</div>
   </div>
 
 
+  <!-- REPLACEMENT PRESENTATION -->
+  <div class="page" id="page-replpresentation">
+    <div style="background:linear-gradient(135deg,#4c1d95,#6d28d9);border-radius:20px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#c4b5fd;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📊 Manager Guide</div>
+        <div style="color:#fff;font-size:16px;font-weight:700;">Replacement Training — New Advisor Presentation</div>
+      </div>
+      <button onclick="showPage('replguide')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Guide</button>
+    </div>
+
+    <!-- Slide deck -->
+    <div id="replSlideContainer">
+      <div id="replSlideTrack" style="overflow:hidden;border-radius:14px;margin-bottom:12px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <button onclick="replSlide(-1)" style="flex:1;padding:10px;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:10px;font-size:13px;font-weight:700;color:#374151;cursor:pointer;">← Prev</button>
+        <div id="replSlideDots" style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:center;"></div>
+        <button onclick="replSlide(1)" style="flex:1;padding:10px;background:#6d28d9;border:none;border-radius:10px;font-size:13px;font-weight:700;color:#fff;cursor:pointer;">Next →</button>
+      </div>
+      <div id="replSlideCounter" style="text-align:center;font-size:11px;color:#9ca3af;margin-top:8px;"></div>
+    </div>
+  </div>
+
+  <!-- MEETING AGENDA BUILDER -->
+  <div class="page" id="page-meetingagenda">
+    <div style="background:linear-gradient(135deg,#3b0764,#6d28d9);border-radius:20px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#c4b5fd;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">🔐 Manager Only</div>
+        <div style="color:#fff;font-size:16px;font-weight:700;">Meeting Agenda Builder</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:3px;">Log notes throughout the month — generate the agenda when ready</div>
+      </div>
+      <button onclick="showPage('guides')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Resources</button>
+    </div>
+
+    <!-- Notes input -->
+    <div class="full-card" style="margin-bottom:12px;">
+      <div class="full-card-header">
+        <div class="full-card-title">📝 Ongoing Notes</div>
+        <button onclick="agendaClearNotes()" style="font-size:10px;background:none;border:none;color:#9ca3af;cursor:pointer;padding:0;">Clear all</button>
+      </div>
+      <div style="font-size:11px;color:#6b7280;margin-bottom:8px;">Add points as they come up during the month. These will be used to generate the agenda.</div>
+      <div id="agendaNotesList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;min-height:10px;"></div>
+      <div style="display:flex;gap:8px;">
+        <input id="agendaNoteInput" type="text" placeholder="Add a note or agenda point..." onkeydown="if(event.key==='Enter')agendaAddNote()" style="flex:1;padding:8px 12px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;"/>
+        <button onclick="agendaAddNote()" style="padding:8px 14px;background:#6d28d9;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Add</button>
+      </div>
+    </div>
+
+    <!-- Meeting details -->
+    <div class="full-card" style="margin-bottom:12px;">
+      <div class="full-card-title" style="margin-bottom:10px;">📅 Meeting Details</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Date</div>
+          <input id="agendaDate" type="date" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
+        </div>
+        <div>
+          <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Venue</div>
+          <input id="agendaVenue" type="text" placeholder="e.g. Izulu Boardroom" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Additional context for AI (optional)</div>
+        <textarea id="agendaContext" rows="3" placeholder="e.g. This month's focus is production, Litha and Lutho joined the team, incentive launched..." style="width:100%;padding:8px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;resize:vertical;box-sizing:border-box;"></textarea>
+      </div>
+    </div>
+
+    <!-- Generate button -->
+    <button id="agendaGenerateBtn" onclick="agendaGenerate()" style="width:100%;padding:14px;background:linear-gradient(135deg,#6d28d9,#4c1d95);color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;">✨ Generate Agenda</button>
+
+    <!-- Output -->
+    <div id="agendaOutput" style="display:none;">
+      <div class="full-card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div class="full-card-title">📋 Generated Agenda</div>
+          <button onclick="agendaCopyOutput()" style="font-size:10px;font-weight:700;background:#f3f4f6;border:1px solid #e5e7eb;border-radius:6px;padding:4px 10px;cursor:pointer;color:#374151;">Copy</button>
+        </div>
+        <div id="agendaOutputText" style="font-size:12px;color:#374151;line-height:1.8;white-space:pre-wrap;"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- FAMILY TREE -->
   <div class="page" id="page-familytree">
 
@@ -4313,7 +4409,7 @@ Please don't hesitate to reach out if you need any guidance — I'm here to help
     <div class="full-card" style="margin-bottom:14px;">
       <div class="full-card-header"><div class="full-card-title">📄 Claim Forms</div></div>
       <div style="font-size:13px;color:#374151;line-height:1.6;margin-bottom:12px;">Search Google Drive for the correct claim form. Use the company name to find their form — e.g. "Old Mutual claim form", "Momentum claim form".</div>
-      <a href="https://drive.google.com/drive/folders/10pIaDU-3RIQheqH3iDWNL-5ObitnuCFD" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#0d1f3c;color:#fff;text-decoration:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;">
+      <a href="https://drive.google.com/drive/folders/1_kE2Ygj3LXj-KUy4MZsR1wL-SpMU9tbn?usp=drive_link" target="_blank" style="display:flex;align-items:center;justify-content:center;gap:8px;background:#0d1f3c;color:#fff;text-decoration:none;border-radius:10px;padding:12px;font-size:13px;font-weight:700;">
         <span style="font-size:16px;">📁</span> Find Claim Forms on Drive
       </a>
     </div>
@@ -4441,7 +4537,7 @@ Please don't hesitate to reach out if you need any guidance — I'm here to help
       <button onclick="showPage('opsland')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Operations</button>
     </div>
     <!-- NOTICE BOARD COMPOSE -->
-    <div class="full-card" style="margin-bottom:16px;">
+    <div class="full-card" style="margin-bottom:16px;overflow:visible;">
       <div class="full-card-header">
         <div>
           <div class="full-card-title">📌 Notice Board</div>

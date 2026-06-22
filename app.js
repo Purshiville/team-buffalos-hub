@@ -468,6 +468,8 @@ const APPROVED_CODES = new Set([
   'SKA313936', // Brian Steve Boucher
   'SKA315109', // Roger Pretorius
   'SKA315568', // Stefan Barnard
+  'SKA315496', // Litha Qashani
+  'SKA315759', // Lutho Mphahlele
   'PURSHIVILLE',
   'ARLENE',
 ]);
@@ -485,6 +487,8 @@ const ADVISOR_LIST = [
   {code:'SKA315109', name:'Roger Pretorius'},
   {code:'SKA315568', name:'Stefan Barnard'},
   {code:'SKA313383', name:'Kevin Kruger'},
+  {code:'SKA315496', name:'Litha Qashani'},
+  {code:'SKA315759', name:'Lutho Mphahlele'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
 const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
 
@@ -2624,6 +2628,8 @@ function showPage(p){
   if(p==='claimpack'){claimInit();}
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
+  if(p==='replpresentation'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');replPresentationInit();}
+  if(p==='meetingagenda'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');agendaRenderNotes();}
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -12779,3 +12785,149 @@ ${d.roaText?`<div class="sec"><div class="sec-hd" style="background:#92400e;">Re
 </body></html>`;
 }
 // ── END REPLACEMENT CASE FORM ─────────────────────────────────────────────────
+
+// ── REPLACEMENT PRESENTATION ──────────────────────────────────────────────────
+const REPL_SLIDES = [
+  {
+    bg:'#064e3b', accent:'#6ee7b7', title:'Smart Replacement Strategy',
+    subtitle:'Moving Beyond Like-for-Like',
+    body:'A replacement is not just swapping one policy for another.\nIt is an opportunity to build the right policy for the client\'s current life — compliantly, profitably, and with full protection for both of you.'
+  },
+  {
+    bg:'#1e3a5f', accent:'#93c5fd', title:'Why Do It Right?',
+    subtitle:'3 Reasons That Protect Your Career',
+    bullets:['Unlock higher, compliant commission by finding unallocated budget','Eradicate clawbacks — the signed Affordability Declaration keeps policies on the books','Your signed file dismisses complaints instantly — zero liability exposure']
+  },
+  {
+    bg:'#3b0764', accent:'#c4b5fd', title:'The Affordability Declaration',
+    subtitle:'Your Most Important Document',
+    body:'Always ask: "What is the maximum you are comfortable paying each month for this cover?"\n\nDo NOT just mirror the old premium. This single question opens the door to legitimate upselling AND protects the client from a policy they cannot sustain.'
+  },
+  {
+    bg:'#065f46', accent:'#a7f3d0', title:'The Biological Line Rule',
+    subtitle:'Only Insurable Interests Qualify',
+    body:'Only add family members within the direct biological or legal line:\n• Main member\n• Spouse / life partner\n• Biological / legally adopted children\n• Biological / legally adopted parents\n• Siblings (product-dependent)\n\nNo cousins, aunts, in-laws on the main member\'s policy unless the product specifically allows it.'
+  },
+  {
+    bg:'#7c2d12', accent:'#fdba74', title:'The 6-Month Waiting Period',
+    subtitle:'Pre-existing Conditions & The Critical Gap',
+    body:'New Sanlam Sky policies have a 6-month waiting period for pre-existing conditions.\n\nAlways advise the client to:\n1. Keep the old policy active until the new one is firmly in force\n2. Store proof of the old policy cancellation safely\n3. Never cancel before the new policy\'s first collection clears'
+  },
+  {
+    bg:'#1e1b4b', accent:'#a5b4fc', title:'Never Replace These',
+    subtitle:'Absolute No-Replace List',
+    bullets:['Sanlam Sky — any plan (add to IMP review with 0 cover only)','Assupol — any plan including Prosperity/MHA','Hollard (Odin products)','Any policy the client cannot afford to lose waiting period cover on']
+  },
+  {
+    bg:'#064e3b', accent:'#6ee7b7', title:'The ROA — Your Legal Shield',
+    subtitle:'Record of Advice — Non-Negotiable',
+    body:'Every replacement MUST have a completed ROA on file in IMP.\n\nThe ROA must reflect:\n• WHY the replacement is in the client\'s best interest\n• The old policy details\n• The new policy details\n• The affordability assessment\n• The client\'s signed acknowledgement'
+  },
+  {
+    bg:'#0c4a6e', accent:'#7dd3fc', title:'Checklist Before You Submit',
+    subtitle:'All 4 must be in the file',
+    bullets:['✅ Completed Replacement ROA (uploaded to IMP)', '✅ Signed Affordability Declaration', '✅ Client Needs Sheet / budget discussion documented', '✅ Old policy cancellation letter / proof of replacement — to be stored by client']
+  },
+  {
+    bg:'#14532d', accent:'#86efac', title:'Remember',
+    subtitle:'The Buffalo Way',
+    body:'A correctly processed replacement:\n• Earns you more commission legally\n• Keeps policies on the books longer\n• Protects your client from claim rejection\n• Makes you a financial professional — not an order-taker\n\n🦬 Stay ready. Do it right. Every time.'
+  }
+];
+
+let _replSlideIdx=0;
+function replPresentationInit(){
+  _replSlideIdx=0;
+  replRenderSlide();
+}
+function replRenderSlide(){
+  const slides=REPL_SLIDES;
+  const s=slides[_replSlideIdx];
+  const track=document.getElementById('replSlideTrack');
+  if(!track)return;
+  const bulletsHtml=s.bullets?`<ul style="margin:0;padding:0 0 0 18px;list-style:none;display:flex;flex-direction:column;gap:10px;">${s.bullets.map(b=>`<li style="font-size:13px;color:#fff;line-height:1.6;padding-left:4px;">${b}</li>`).join('')}</ul>`:'';
+  const bodyHtml=s.body?`<div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.8;white-space:pre-wrap;">${s.body}</div>`:'';
+  track.innerHTML=`<div style="background:${s.bg};padding:28px 22px;min-height:320px;display:flex;flex-direction:column;justify-content:space-between;">
+    <div>
+      <div style="font-size:10px;font-weight:700;color:${s.accent};text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">${s.subtitle}</div>
+      <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:16px;line-height:1.3;">${s.title}</div>
+      ${bodyHtml}${bulletsHtml}
+    </div>
+    <div style="margin-top:18px;font-size:10px;color:rgba(255,255,255,0.35);text-align:right;">Slide ${_replSlideIdx+1} / ${slides.length}</div>
+  </div>`;
+  // dots
+  const dots=document.getElementById('replSlideDots');
+  if(dots)dots.innerHTML=slides.map((_,i)=>`<div onclick="replGoSlide(${i})" style="width:${i===_replSlideIdx?'18px':'7px'};height:7px;border-radius:10px;background:${i===_replSlideIdx?'#6d28d9':'#d1d5db'};cursor:pointer;transition:all .2s;"></div>`).join('');
+  const counter=document.getElementById('replSlideCounter');
+  if(counter)counter.textContent=(_replSlideIdx+1)+' of '+slides.length;
+}
+function replSlide(dir){_replSlideIdx=Math.max(0,Math.min(REPL_SLIDES.length-1,_replSlideIdx+dir));replRenderSlide();}
+function replGoSlide(i){_replSlideIdx=i;replRenderSlide();}
+// ── END REPLACEMENT PRESENTATION ──────────────────────────────────────────────
+
+// ── MEETING AGENDA BUILDER ────────────────────────────────────────────────────
+function _agendaKey(){
+  const d=new Date();return'tl_agenda_notes_'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0');
+}
+function agendaGetNotes(){try{return JSON.parse(localStorage.getItem(_agendaKey())||'[]');}catch(e){return[];}}
+function agendaSaveNotes(notes){try{localStorage.setItem(_agendaKey(),JSON.stringify(notes));}catch(e){}}
+function agendaRenderNotes(){
+  const notes=agendaGetNotes();
+  const list=document.getElementById('agendaNotesList');
+  if(!list)return;
+  if(!notes.length){list.innerHTML='<div style="font-size:11px;color:#9ca3af;font-style:italic;">No notes yet — add points above as they come up during the month.</div>';return;}
+  list.innerHTML=notes.map((n,i)=>`<div style="display:flex;align-items:flex-start;gap:8px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:8px 10px;">
+    <span style="font-size:11px;color:#6b7280;margin-top:1px;flex-shrink:0;">${i+1}.</span>
+    <span style="flex:1;font-size:12px;color:#0d1f3c;line-height:1.5;">${n}</span>
+    <button onclick="agendaDeleteNote(${i})" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:13px;flex-shrink:0;padding:0;">✕</button>
+  </div>`).join('');
+}
+function agendaAddNote(){
+  const inp=document.getElementById('agendaNoteInput');
+  if(!inp||!inp.value.trim())return;
+  const notes=agendaGetNotes();notes.push(inp.value.trim());agendaSaveNotes(notes);
+  inp.value='';agendaRenderNotes();
+}
+function agendaDeleteNote(i){const notes=agendaGetNotes();notes.splice(i,1);agendaSaveNotes(notes);agendaRenderNotes();}
+function agendaClearNotes(){if(confirm('Clear all notes for this month?')){agendaSaveNotes([]);agendaRenderNotes();}}
+async function agendaGenerate(){
+  const notes=agendaGetNotes();
+  if(!notes.length)return showAlert('Add at least one note before generating.','error');
+  const date=document.getElementById('agendaDate')?.value||'';
+  const venue=document.getElementById('agendaVenue')?.value||'Izulu Boardroom';
+  const context=document.getElementById('agendaContext')?.value||'';
+  const btn=document.getElementById('agendaGenerateBtn');
+  if(btn){btn.disabled=true;btn.textContent='Generating…';}
+  const prompt=`You are creating a professional monthly team meeting agenda for Team Buffalos, a Sanlam Sky financial advisory team managed by Purshiville Nortje.
+
+Meeting details:
+- Date: ${date||'To be confirmed'}
+- Venue: ${venue}
+- Team: Financial advisors and key individual
+
+Notes and points gathered this month:
+${notes.map((n,i)=>`${i+1}. ${n}`).join('\n')}
+${context?'\nAdditional context:\n'+context:''}
+
+Generate a structured, professional meeting agenda. Format it clearly with:
+1. Meeting heading (Team Buffalos Monthly Team Meeting)
+2. Date, time (TBC if not provided), venue
+3. Numbered agenda items with estimated time allocations
+4. A closing / next steps section
+5. Keep it professional but warm — Team Buffalos culture is motivational and team-focused
+
+Return plain text only — no markdown, no asterisks. Use numbered sections and clean formatting suitable for copying and sharing.`;
+  try{
+    const result=await callClaudeVision([],prompt,2048);
+    const out=document.getElementById('agendaOutput');
+    const txt=document.getElementById('agendaOutputText');
+    if(out)out.style.display='block';
+    if(txt)txt.textContent=result;
+  }catch(e){showAlert('Could not generate agenda — please try again.','error');}
+  finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate Agenda';}}
+}
+function agendaCopyOutput(){
+  const txt=document.getElementById('agendaOutputText')?.textContent||'';
+  navigator.clipboard.writeText(txt).then(()=>showAlert('Agenda copied to clipboard','success')).catch(()=>showAlert('Copy failed','error'));
+}
+// ── END MEETING AGENDA BUILDER ────────────────────────────────────────────────
