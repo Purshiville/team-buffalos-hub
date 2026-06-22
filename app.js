@@ -12955,7 +12955,7 @@ Instructions:
 - Format for easy reading at the meeting — use numbered items and clear section breaks
 - Return plain text only — no markdown symbols, no asterisks, no hashtags. Use UPPERCASE for section headings.`;
   try{
-    const result=await callClaudeVision([],prompt,2048);
+    const result=await callClaudeVisionMulti([],prompt,2048);
     const out=document.getElementById('agendaOutput');
     const txt=document.getElementById('agendaOutputText');
     if(out)out.style.display='block';
