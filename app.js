@@ -7425,6 +7425,26 @@ function adminConfirmDelete(){
   closeAdminModal();renderManagerDash();showAlert('Advisor removed.','success');
 }
 function askQ(q){const popup=document.getElementById('aiPopup');popup.style.display='flex';document.getElementById('aiUnread').style.display='none';document.getElementById('chatInput').value=q;document.getElementById('chatPills').style.display='none';loadGuideForAI().then(()=>sendChat());}
+
+// ── VOICE INPUT ───────────────────────────────────────────────────────────────
+let _micRecognition=null,_micActive=false;
+function toggleVoiceInput(){
+  if(_micActive){_micRecognition&&_micRecognition.stop();return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){showAlert("Voice input is not supported on this browser. Use Chrome or Safari.","error");return;}
+  _micRecognition=new SR();
+  _micRecognition.continuous=false;
+  _micRecognition.interimResults=true;
+  _micRecognition.lang="en-ZA";
+  const btn=document.getElementById("micBtn");
+  const inp=document.getElementById("chatInput");
+  _micRecognition.onstart=()=>{_micActive=true;if(btn){btn.textContent="🔴";btn.classList.add("listening");}if(inp)inp.placeholder="Listening…";};
+  _micRecognition.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join("");if(inp)inp.value=t;};
+  _micRecognition.onend=()=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";const v=document.getElementById("chatInput")?.value.trim();if(v)sendChat();};
+  _micRecognition.onerror=e=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";if(e.error!=="no-speech"&&e.error!=="aborted")showAlert("Voice error: "+e.error,"error");};
+  _micRecognition.start();
+}
+// ── END VOICE INPUT ───────────────────────────────────────────────────────────
 function clearAIChat(){
   chatHistory=[];
   const msgs=document.getElementById('chatMessages');if(!msgs)return;

@@ -1010,3 +1010,7 @@ body::before {
 .rf-chk{width:16px;height:16px;accent-color:#059669;flex-shrink:0;margin-top:1px;cursor:pointer;}
 .agenda-chip{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:20px;padding:5px 10px;font-size:11px;font-weight:600;color:#3730a3;cursor:pointer;white-space:nowrap;}
 .agenda-chip:active{background:#e0e7ff;}
+.mic-btn{background:#f3f4f6;border:1px solid #e5e7eb;border-radius:8px;padding:0 11px;font-size:15px;cursor:pointer;flex-shrink:0;transition:background .15s;}
+.mic-btn:hover{background:#e5e7eb;}
+.mic-btn.listening{background:#fee2e2;border-color:#fca5a5;animation:micPulse 1s ease-in-out infinite;}
+@keyframes micPulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(1.15);opacity:.75;}}
