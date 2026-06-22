@@ -4619,7 +4619,7 @@ function renderTop3(){
   const record=(curRec&&curRec.first?curRec:null)||(prevRec&&prevRec.first?prevRec:null);
   if(!record){el.innerHTML='';return;}
   const usedKey=data[periodKey]?periodKey:currentKey;
-  const [yr,mo]=usedKey.split('-');
+  const [yr,mo]=currentKey.split('-');
   const label=MONTHS[parseInt(mo)-1]+' '+yr;
   const _ring={gold:'border:3px solid #f59e0b;box-shadow:0 0 0 2px #fef9c3,0 0 10px rgba(245,158,11,0.45);',silver:'border:3px solid #9ca3af;box-shadow:0 0 0 2px #f1f5f9,0 0 10px rgba(156,163,175,0.4);',bronze:'border:3px solid #cd7f32;box-shadow:0 0 0 2px #fff7ed,0 0 10px rgba(180,83,9,0.35);'};
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
