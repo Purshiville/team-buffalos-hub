@@ -12974,6 +12974,30 @@ function agendaClearOutput(){
   if(out)out.style.display='none';
   if(txt)txt.value='';
 }
+function agendaExportPDF(){
+  const txt=document.getElementById('agendaOutputText')?.value||'';
+  if(!txt.trim())return showAlert('Generate an agenda first.','error');
+  const meetingType=document.getElementById('agendaMeetingType')?.value||'Meeting';
+  const date=document.getElementById('agendaDate')?.value||'';
+  let dateStr='';
+  if(date){const dp=date.split('-');dateStr=dp[2]+'/'+dp[1]+'/'+dp[0];}
+  const docTitle=`${meetingType} Agenda${dateStr?' — '+dateStr:''}`;
+  const win=window.open('','_blank');
+  if(!win)return showAlert('Pop-up blocked — please allow pop-ups and try again.','error');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docTitle}</title><style>
+    body{font-family:'Helvetica Neue',Arial,sans-serif;font-size:13px;color:#111;margin:40px 50px;line-height:1.8;}
+    h1{font-size:17px;font-weight:700;color:#0d1f3c;margin:0 0 4px;}
+    .sub{font-size:11px;color:#6b7280;margin-bottom:28px;}
+    pre{white-space:pre-wrap;word-wrap:break-word;font-family:inherit;font-size:13px;line-height:1.8;margin:0;}
+    @media print{body{margin:20px 30px;}@page{margin:15mm 20mm;}}
+  </style></head><body>
+    <h1>${docTitle}</h1>
+    <div class="sub">Team Buffalos — Sanlam Sky | Generated ${new Date().toLocaleDateString('en-ZA')}</div>
+    <pre>${txt.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>
+    <script>window.onload=function(){window.print();}<\/script>
+  </body></html>`);
+  win.document.close();
+}
 async function agendaScheduleMeeting(){
   const meetingType=document.getElementById('agendaMeetingType')?.value||'Team Buffalos';
   const date=document.getElementById('agendaDate')?.value||'';
