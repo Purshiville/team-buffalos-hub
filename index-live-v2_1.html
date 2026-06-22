@@ -3558,7 +3558,7 @@ Please send your Proof of Payment to your advisor once done.</div>
           <input id="agendaDate" type="date" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
         <div>
           <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;">Venue</div>
           <input id="agendaVenue" type="text" placeholder="e.g. Izulu Boardroom" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
@@ -3568,6 +3568,7 @@ Please send your Proof of Payment to your advisor once done.</div>
           <input id="agendaTime" type="time" style="width:100%;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;"/>
         </div>
       </div>
+      <button onclick="agendaScheduleMeeting()" style="width:100%;padding:10px;background:linear-gradient(135deg,#0d9488,#065f46);color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">📅 Schedule Meeting — Post Notice &amp; Add to Herd Calendar</button>
     </div>
 
     <!-- Quick-add topic categories -->
@@ -3743,7 +3744,7 @@ Please send your Proof of Payment to your advisor once done.</div>
             <button onclick="agendaClearOutput()" style="font-size:10px;font-weight:700;background:#fee2e2;border:1px solid #fca5a5;border-radius:6px;padding:4px 10px;cursor:pointer;color:#991b1b;">Clear</button>
           </div>
         </div>
-        <div id="agendaOutputText" style="font-size:12px;color:#374151;line-height:1.8;white-space:pre-wrap;"></div>
+        <textarea id="agendaOutputText" style="font-size:12px;color:#374151;line-height:1.8;white-space:pre-wrap;width:100%;min-height:300px;border:none;outline:none;resize:vertical;background:transparent;font-family:inherit;"></textarea>
       </div>
     </div>
   </div>

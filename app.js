@@ -12959,19 +12959,41 @@ Instructions:
     const out=document.getElementById('agendaOutput');
     const txt=document.getElementById('agendaOutputText');
     if(out)out.style.display='block';
-    if(txt)txt.textContent=result;
+    if(txt)txt.value=result;
     if(out)out.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){showAlert('Could not generate agenda — please try again.','error');}
   finally{if(btn){btn.disabled=false;btn.textContent='✨ Generate Agenda';}}
 }
 function agendaCopyOutput(){
-  const txt=document.getElementById('agendaOutputText')?.textContent||'';
+  const txt=document.getElementById('agendaOutputText')?.value||'';
   navigator.clipboard.writeText(txt).then(()=>showAlert('Agenda copied to clipboard','success')).catch(()=>showAlert('Copy failed','error'));
 }
 function agendaClearOutput(){
   const out=document.getElementById('agendaOutput');
   const txt=document.getElementById('agendaOutputText');
   if(out)out.style.display='none';
-  if(txt)txt.textContent='';
+  if(txt)txt.value='';
+}
+async function agendaScheduleMeeting(){
+  const meetingType=document.getElementById('agendaMeetingType')?.value||'Team Buffalos';
+  const date=document.getElementById('agendaDate')?.value||'';
+  const time=document.getElementById('agendaTime')?.value||'';
+  const venue=document.getElementById('agendaVenue')?.value||'Izulu Boardroom';
+  if(!date)return showAlert('Please set a meeting date first.','error');
+  const dp=date.split('-');
+  const dateStr=dp[2]+'/'+dp[1]+'/'+dp[0];
+  const timeStr=time||'TBC';
+  const venueStr=venue||'Izulu Boardroom';
+  const title=`${meetingType} Monthly Meeting`;
+  const body=`Date: ${dateStr}\nTime: ${timeStr}\nVenue: ${venueStr}\n\nAll advisors are expected to attend. Please diarise accordingly.`;
+  // Post notice to all advisors
+  await postNotice('info',title,body,'ALL','');
+  // Add to Herd Calendar
+  const id='mtg_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+  const newEv={id,advisorCode:'ALL',advisorName:'All advisors',title,date,startTime:time||'',endTime:'',type:'meeting',location:venueStr,notes:'Scheduled from Meeting Agenda Builder',status:'confirmed',reminderSent:[]};
+  const events=diaryGetEvents();events.push(newEv);diarySaveEvents(events);
+  if(window.FB_READY)window.FB.saveCalEvent(id,newEv).catch(()=>{});
+  logActivity('CALENDAR_ADD',`Meeting scheduled: "${title}" on ${date}`);
+  showAlert(`Meeting scheduled — notice sent to all advisors and added to Herd Calendar.`,'success');
 }
 // ── END MEETING AGENDA BUILDER ────────────────────────────────────────────────
