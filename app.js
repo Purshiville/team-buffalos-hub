@@ -718,7 +718,8 @@ function updateCpdsSection(){
 }
 
 // ── ACTIVITY LOG ──────────────────────────────────────────────────────────────
-const ACT_LABELS={LOGIN:'🔐 Login',LOGOUT:'🚪 Logout',INACTIVITY_LOGOUT:'⏱️ Inactivity logout',PASSWORD_CHANGED:'🔑 Password changed',CALENDAR_ADD:'📅 Calendar — added',CALENDAR_EDIT:'📅 Calendar — edited',CALENDAR_DELETE:'🗑️ Calendar — deleted',COMPLIANCE_TICK:'✅ Compliance tick',PRECAN_ADD:'🚨 Pre-can case added'};
+const ACT_LABELS={LOGIN:'🔐 Login',LOGOUT:'🚪 Logout',INACTIVITY_LOGOUT:'⏱️ Inactivity logout',PASSWORD_CHANGED:'🔑 Password changed',CALENDAR_ADD:'📅 Calendar — added',CALENDAR_EDIT:'📅 Calendar — edited',CALENDAR_DELETE:'🗑️ Calendar — deleted',COMPLIANCE_TICK:'✅ Compliance tick',PRECAN_ADD:'🚨 Pre-can case added',ROA_GENERATED:'📝 ROA copied',QLINK_CALC:'🔢 QLink calculated',NOTICE_POSTED:'📢 Notice posted',CASE_PDF:'📄 Case form exported',AGENDA_PDF:'📅 Agenda exported'};
+let _qlinkLogTimer=null;
 function logActivity(action,detail){
   if(!currentUser)return;
   const entry={userCode:currentUser.code,userName:currentUser.name,action,detail:detail||'',localTs:new Date().toISOString()};
@@ -807,30 +808,74 @@ function startActivityLogListener(){
 }
 function renderActivityLog(){
   if(!currentUser||(!currentUser.isOps&&!currentUser.isManager))return;
-  // Inactive users section
+  const allUsers=Object.values(getUsers()).filter(u=>!REVOKED_CODES.has(u.code)&&!EXCLUDED_NAMES.has(u.name)&&u.code!=='PURSHIVILLE'&&u.code!=='ARLENE');
+  const now=Date.now();
+  const todayStr=_todayStr();
+  const allEntries=window._activityLog||[];
+  const todayEntries=allEntries.filter(e=>(e.localTs||'').startsWith(todayStr));
+
+  // ── TODAY AT A GLANCE ──
+  const statsEl=document.getElementById('actTodayStats');
+  if(statsEl){
+    const activeToday=allUsers.filter(u=>u.lastActive&&u.lastActive.startsWith(todayStr)).length;
+    const onlineNow=allUsers.filter(u=>u.lastActive&&(now-new Date(u.lastActive).getTime())<15*60*1000).length;
+    const actionsToday=todayEntries.length;
+    const stat=(icon,val,label,col)=>`<div style="flex:1;min-width:80px;background:#fff;border:1px solid #e8e4db;border-radius:14px;padding:12px 10px;text-align:center;"><div style="font-size:22px;font-weight:800;color:${col};">${val}</div><div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-top:2px;">${icon} ${label}</div></div>`;
+    statsEl.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:16px;">${stat('',''+onlineNow,'Online now','#16a34a')}${stat('',''+activeToday,'Active today','#c9922a')}${stat('',''+actionsToday,'Actions today','#0d1f3c')}</div>`;
+  }
+
+  // ── INACTIVE USERS ──
   const inactEl=document.getElementById('activityInactiveUsers');
   if(inactEl){
-    const users=Object.values(getUsers()).filter(u=>!REVOKED_CODES.has(u.code)&&!EXCLUDED_NAMES.has(u.name)&&u.code!=='PURSHIVILLE'&&u.code!=='ARLENE');
-    const cutoff=Date.now()-24*60*60*1000;
-    const inactive=users.filter(u=>{
-      const ls=u.lastActive;if(!ls)return true;
-      return new Date(ls).getTime()<cutoff;
-    });
+    const cutoff=now-24*60*60*1000;
+    const inactive=allUsers.filter(u=>{const ls=u.lastActive;if(!ls)return true;return new Date(ls).getTime()<cutoff;});
     if(inactive.length){
-      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#fef2f2,#fff5f5);border:1.5px solid #fca5a5;border-left:4px solid #dc2626;border-radius:14px;padding:12px 16px;"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px;">⚠️ Inactive advisors (24h+)</div>${inactive.map(u=>{const la=u.lastActive?new Date(u.lastActive):null;const ago=la?Math.floor((Date.now()-la.getTime())/3600000):null;return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid #fca5a530;font-size:11px;"><span style="font-weight:600;color:#0d1f3c;">${u.name}</span><span style="color:#dc2626;">${ago?ago+'h ago':'Never logged in'}</span></div>`;}).join('')}</div>`;
+      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#fef2f2,#fff5f5);border:1.5px solid #fca5a5;border-left:4px solid #dc2626;border-radius:14px;padding:12px 16px;margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:#dc2626;margin-bottom:8px;">⚠️ Inactive advisors (24h+)</div>${inactive.map(u=>{const la=u.lastActive?new Date(u.lastActive):null;const ago=la?Math.floor((now-la.getTime())/3600000):null;return`<div style="display:flex;justify-content:space-between;padding:5px 0;border-top:1px solid #fca5a530;font-size:11px;"><span style="font-weight:600;color:#0d1f3c;">${u.name}</span><span style="color:#dc2626;">${ago!==null?ago+'h ago':'Never logged in'}</span></div>`;}).join('')}</div>`;
     }else{
-      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#f0fdf4,#f8fff8);border:1.5px solid #86efac;border-left:4px solid #16a34a;border-radius:14px;padding:10px 16px;font-size:12px;font-weight:700;color:#166534;">✅ All advisors active within 24 hours</div>`;
+      inactEl.innerHTML=`<div style="background:linear-gradient(135deg,#f0fdf4,#f8fff8);border:1.5px solid #86efac;border-left:4px solid #16a34a;border-radius:14px;padding:10px 16px;font-size:12px;font-weight:700;color:#166534;margin-bottom:16px;">✅ All advisors active within 24 hours</div>`;
     }
   }
-  // Populate user filter
+
+  // ── TODAY'S ENGAGEMENT TABLE ──
+  const engEl=document.getElementById('actEngagementTable');
+  if(engEl){
+    const sorted=[...allUsers].sort((a,b)=>_getTimeSecs(b)-_getTimeSecs(a));
+    const statusChip=(la)=>{if(!la)return`<span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Never</span>`;const ms=now-new Date(la).getTime();if(ms<15*60*1000)return`<span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">● Online</span>`;if(ms<60*60*1000)return`<span style="background:#fef9ec;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Away</span>`;return`<span style="background:#f3f4f6;color:#6b7280;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;">Offline</span>`;};
+    const lastSeenStr=(la)=>{if(!la)return'—';const ms=now-new Date(la).getTime();if(ms<60000)return'Just now';if(ms<3600000)return Math.floor(ms/60000)+'m ago';if(ms<86400000)return Math.floor(ms/3600000)+'h ago';return Math.floor(ms/86400000)+'d ago';};
+    engEl.innerHTML=`<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Today's engagement</div><div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8f7f4;"><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Advisor</th><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Time today</th><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Last seen</th><th style="padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;">Status</th></tr></thead><tbody>${sorted.map((u,i)=>{const secs=_getTimeSecs(u);return`<tr style="border-top:1px solid #f4f2ed;${i%2===0?'':'background:#fafaf9;'}"><td style="padding:8px 12px;font-size:12px;font-weight:600;color:#0d1f3c;">${u.name}</td><td style="padding:8px 12px;font-size:12px;font-weight:700;color:${_timeColor(secs)};">${_fmtTime(secs)}</td><td style="padding:8px 12px;font-size:11px;color:#6b7280;">${lastSeenStr(u.lastActive)}</td><td style="padding:8px 12px;">${statusChip(u.lastActive)}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+  }
+
+  // ── TOOL USAGE LEADERBOARD ──
+  const lbEl=document.getElementById('actToolLeaderboard');
+  if(lbEl){
+    const TOOL_ACTIONS=['ROA_GENERATED','QLINK_CALC','NOTICE_POSTED','CASE_PDF','AGENDA_PDF','PRECAN_ADD'];
+    const toolEntries=allEntries.filter(e=>TOOL_ACTIONS.includes(e.action));
+    if(toolEntries.length){
+      const byUser={};
+      toolEntries.forEach(e=>{
+        const k=e.userName||e.userCode||'?';
+        if(!byUser[k])byUser[k]={};
+        byUser[k][e.action]=(byUser[k][e.action]||0)+1;
+      });
+      const users=Object.keys(byUser).sort((a,b)=>{const ta=Object.values(byUser[a]).reduce((s,v)=>s+v,0);const tb=Object.values(byUser[b]).reduce((s,v)=>s+v,0);return tb-ta;});
+      const chip=(action,count)=>`<span style="background:#f0f4ff;color:#1e40af;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-right:4px;">${ACT_LABELS[action]||action} ×${count}</span>`;
+      lbEl.innerHTML=`<div style="margin-bottom:16px;"><div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Tool usage</div><div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;overflow:hidden;">${users.map((u,i)=>`<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:${i?'1px solid #f4f2ed':'none'};${i%2===0?'':'background:#fafaf9;'}"><div style="font-size:12px;font-weight:700;color:#0d1f3c;min-width:130px;">${u}</div><div style="flex:1;flex-wrap:wrap;display:flex;gap:4px;">${Object.keys(byUser[u]).map(a=>chip(a,byUser[u][a])).join('')}</div></div>`).join('')}</div></div>`;
+    }else{
+      lbEl.innerHTML='';
+    }
+  }
+
+  // ── USER FILTER ──
   const uf=document.getElementById('actFilterUser');
   if(uf&&uf.options.length<=1){
     const users=Object.values(getUsers()).filter(u=>!REVOKED_CODES.has(u.code));
     users.sort((a,b)=>a.name.localeCompare(b.name));
     users.forEach(u=>{const o=document.createElement('option');o.value=u.code;o.textContent=u.name;uf.appendChild(o);});
   }
+
+  // ── AUDIT LOG TABLE ──
   const el=document.getElementById('activityLogList');if(!el)return;
-  let entries=window._activityLog||[];
+  let entries=[...allEntries];
   const fUser=document.getElementById('actFilterUser')?.value||'';
   const fAction=document.getElementById('actFilterAction')?.value||'';
   const fDate=document.getElementById('actFilterDate')?.value||'';
@@ -838,7 +883,7 @@ function renderActivityLog(){
   if(fAction)entries=entries.filter(e=>e.action===fAction);
   if(fDate)entries=entries.filter(e=>(e.localTs||'').startsWith(fDate));
   if(!entries.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:32px;font-size:13px;">No activity recorded yet.</div>';return;}
-  el.innerHTML=`<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8f7f4;"><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Date &amp; Time</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">User</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Action</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Detail</th></tr></thead><tbody>${entries.map((e,i)=>{const ts=e.localTs?new Date(e.localTs):null;const dateStr=ts?ts.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';const timeStr=ts?ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';return`<tr style="border-top:1px solid #f4f2ed;${i%2===0?'':'background:#fafaf9;'}"><td style="padding:9px 12px;white-space:nowrap;"><div style="font-size:11px;font-weight:700;color:#0d1f3c;">${dateStr}</div><div style="font-size:10px;color:#9ca3af;">${timeStr}</div></td><td style="padding:9px 12px;font-size:11px;font-weight:600;color:#374151;white-space:nowrap;">${e.userName||e.userCode||'—'}</td><td style="padding:9px 12px;font-size:11px;white-space:nowrap;">${ACT_LABELS[e.action]||e.action||'—'}</td><td style="padding:9px 12px;font-size:11px;color:#6b7280;max-width:200px;">${e.detail||''}</td></tr>`;}).join('')}</tbody></table></div>`;
+  el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Audit trail</div><div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;overflow:hidden;"><table style="width:100%;border-collapse:collapse;"><thead><tr style="background:#f8f7f4;"><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">Date &amp; Time</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">User</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Action</th><th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Detail</th></tr></thead><tbody>${entries.map((e,i)=>{const ts=e.localTs?new Date(e.localTs):null;const dateStr=ts?ts.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';const timeStr=ts?ts.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit',second:'2-digit'}):'';return`<tr style="border-top:1px solid #f4f2ed;${i%2===0?'':'background:#fafaf9;'}"><td style="padding:9px 12px;white-space:nowrap;"><div style="font-size:11px;font-weight:700;color:#0d1f3c;">${dateStr}</div><div style="font-size:10px;color:#9ca3af;">${timeStr}</div></td><td style="padding:9px 12px;font-size:11px;font-weight:600;color:#374151;white-space:nowrap;">${e.userName||e.userCode||'—'}</td><td style="padding:9px 12px;font-size:11px;white-space:nowrap;">${ACT_LABELS[e.action]||e.action||'—'}</td><td style="padding:9px 12px;font-size:11px;color:#6b7280;max-width:200px;">${e.detail||''}</td></tr>`;}).join('')}</tbody></table></div>`;
 }
 // ── END ACTIVITY LOG ──────────────────────────────────────────────────────────
 
@@ -3629,6 +3674,7 @@ async function postNotice(typeArg,titleArg,bodyArg,recipientArg,linkArg){
   if(recipient&&recipient!=='ALL')noticeData.recipientCode=recipient;
   if(link)noticeData.link=link;
   if(scheduledFrom)noticeData.scheduledFrom=new Date(scheduledFrom).toISOString();
+  logActivity('NOTICE_POSTED',`"${title}" → ${recipient==='ALL'?'All advisors':recipient}`);
   if(window.FB_READY){
     try{
       await window.FB.postNotice(noticeData);
@@ -5807,6 +5853,8 @@ function roaGenerate(){
 function roaCopy(){
   const out = document.getElementById('roaOutput');
   if(!out || !out.textContent)return;
+  const _rn=(document.getElementById('roa_rep_client')||document.getElementById('roa_client'))?.value?.trim()||'';
+  logActivity('ROA_GENERATED',_rn?'ROA for '+_rn:'ROA copied');
   navigator.clipboard.writeText(out.textContent).then(()=>{
     const btn = document.querySelector('#page-roa button[onclick="roaCopy()"]');
     if(btn){btn.textContent='✓ Copied!';setTimeout(()=>{btn.textContent='📋 Copy';},2000);}
@@ -6170,6 +6218,8 @@ function qlinkCalc(){
       <div style="font-size:12px;color:${colour};margin-top:2px;">${fits?`Total stop order: ${pct}% of basic salary.`:`Exceeds available space by ${fmt(Math.abs(afterNew))}. Move a policy to bank or debit order.`}</div>
       ${!fits?`<div style="font-size:11px;color:#991b1b;margin-top:6px;">A 3-month bank statement is required if switching to debit order.</div>`:''}
     </div>`;
+  if(_qlinkLogTimer)clearTimeout(_qlinkLogTimer);
+  _qlinkLogTimer=setTimeout(()=>{if(salary)logActivity('QLINK_CALC','Salary: R'+salary.toLocaleString()+' | '+(fits?'Passes':'Fails'));},5000);
 }
 
 async function handleQlinkPayslip(input){
@@ -12810,6 +12860,7 @@ async function rfDeleteCase(id){
 function rfExportPDF(){
   const d=rfReadForm();
   if(!d.clientName)return showToast('Please enter client name first.','error');
+  logActivity('CASE_PDF','Case form: '+d.clientName);
   const cv=document.getElementById('rfAdvisorSigCanvas');
   if(cv&&!_rfSigEmpty('rfAdvisorSigCanvas'))_rfState.advisorSig=cv.toDataURL('image/png');
   d.advisorSig=_rfState.advisorSig;d.clientSig=_rfState.clientSig;
@@ -13079,6 +13130,7 @@ function agendaClearOutput(){
 function agendaExportPDF(){
   const txt=document.getElementById('agendaOutputText')?.value||'';
   if(!txt.trim())return showAlert('Generate an agenda first.','error');
+  logActivity('AGENDA_PDF',(document.getElementById('agendaMeetingType')?.value||'Meeting')+' agenda exported');
   const meetingType=document.getElementById('agendaMeetingType')?.value||'Meeting';
   const date=document.getElementById('agendaDate')?.value||'';
   let dateStr='';
