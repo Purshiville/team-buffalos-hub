@@ -726,9 +726,12 @@ function logActivity(action,detail){
 }
 // ── DAILY TIME TRACKER ────────────────────────────────────────────────────────
 let _timeTrackInterval=null;
+let _teamRefreshInt=null;
 function _todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function _getTimeRec(code){try{return JSON.parse(localStorage.getItem('tl_time_'+code)||'null');}catch(e){return null;}}
-function _fmtTime(secs){if(!secs||secs<60)return secs>=30?'<1m':'—';const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);return h>0?h+'h '+m+'m':m+'m';}
+function _getTimeSecs(u){const r=_getTimeRec(u.code||u);const fromLocal=r&&r.date===_todayStr()?r.secs:null;const fromFb=u.timeTodayDate===_todayStr()?(u.timeToday||0):0;return fromLocal!==null?fromLocal:fromFb;}
+function _fmtTime(secs){if(!secs||secs<=0)return'—';if(secs<60)return'<1m';const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);return h>0?h+'h '+m+'m':m+'m';}
+function _timeColor(secs){return secs>=3600?'#16a34a':secs>=600?'#d97706':'#6b7280';}
 function _startTimeTracker(){
   if(_timeTrackInterval)clearInterval(_timeTrackInterval);
   _timeTrackInterval=setInterval(()=>{
@@ -743,8 +746,34 @@ function _startTimeTracker(){
       window.FB.saveUser(currentUser.code,{timeToday:rec.secs,timeTodayDate:today}).catch(()=>{});
       const lu=getUsers();if(lu[currentUser.code]){lu[currentUser.code].timeToday=rec.secs;lu[currentUser.code].timeTodayDate=today;saveUsers(lu);}
     }
+    // Live-update manager's own time cell when team page is open
+    if(document.getElementById('page-team')?.classList.contains('active')){
+      const tbody=document.getElementById('userTableBody');
+      if(tbody){tbody.querySelectorAll('tr').forEach(row=>{const codeEl=row.querySelector('div[style*="monospace"]');if(!codeEl)return;const code=codeEl.textContent.trim();if(code!==currentUser.code)return;const secs=_getTimeSecs({code,timeTodayDate:today,timeToday:rec.secs});const cell=row.cells[6];if(cell){cell.textContent=_fmtTime(secs);cell.style.color=_timeColor(secs);}});}
+    }
   },10000);
 }
+function _startTeamPageRefresh(){
+  _stopTeamPageRefresh();
+  // Refresh time cells every 30s — pulls fresh Firebase data for other advisors too
+  _teamRefreshInt=setInterval(()=>{
+    if(!document.getElementById('page-team')?.classList.contains('active'))return;
+    // Fast path: just update the time cells in place without re-rendering the whole table
+    const tbody=document.getElementById('userTableBody');
+    if(!tbody)return;
+    const users=getUsers();
+    tbody.querySelectorAll('tr').forEach(row=>{
+      const codeEl=row.querySelector('div[style*="monospace"]');
+      if(!codeEl)return;
+      const code=codeEl.textContent.trim();
+      const u=users[code]||{code};
+      const secs=_getTimeSecs(u);
+      const cell=row.cells[6];
+      if(cell){cell.textContent=_fmtTime(secs);cell.style.color=_timeColor(secs);}
+    });
+  },30000);
+}
+function _stopTeamPageRefresh(){if(_teamRefreshInt){clearInterval(_teamRefreshInt);_teamRefreshInt=null;}}
 function sendCpdNotifIfNeeded(){
   if(!currentUser||!['SKA310889','PURSHIVILLE'].includes(currentUser.code))return;
   const _n=new Date();let _yr=_n.getFullYear();let _mo=_n.getMonth()+1;
@@ -2638,7 +2667,7 @@ function showPage(p){
   else{stopScheduleListener();}
   if(p==='documents')renderDocs();
   if(p==='manager')renderManagerDash();
-  if(p==='team')renderTeamPage();
+  if(p==='team'){renderTeamPage();_startTeamPageRefresh();}else{_stopTeamPageRefresh();}
   if(p==='ops'||p==='dailyops')renderOpsPage();
   if(p==='opsland')renderOpsLand();
   if(p==='competitor')renderCompetitors('');
@@ -7325,7 +7354,7 @@ function _renderManagerDashInner(){
       <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;${replCls}">${replLbl}</span></td>
       <td>${u.isSuspended?'<span style="font-size:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:1px 7px;font-weight:700;">⏸ Suspended</span>':`<span class="status-dot ${isActive?'active':'offline'}"></span><span style="font-size:12px;">${isActive?'Active':'Offline'}</span>`}</td>
       <td style="font-size:12px;color:#6b7280;white-space:nowrap;">${lastSeenDsp}</td>
-      <td style="font-size:12px;font-weight:600;white-space:nowrap;color:${(()=>{const r=_getTimeRec(u.code);const t=(r&&r.date===_todayStr())?r.secs:(u.timeTodayDate===_todayStr()?u.timeToday||0:0);return t>=3600?'#16a34a':t>=600?'#d97706':'#9ca3af';})()}">${(()=>{const r=_getTimeRec(u.code);const t=(r&&r.date===_todayStr())?r.secs:(u.timeTodayDate===_todayStr()?u.timeToday||0:0);return _fmtTime(t);})()}</td>
+      <td style="font-size:12px;font-weight:600;white-space:nowrap;color:${_timeColor(_getTimeSecs(u))}">${_fmtTime(_getTimeSecs(u))}</td>
       <td><span class="fp-pill ${fpCls}">${fpLbl}</span></td>
       <td><div class="pass-cell"><span class="pass-val" id="pass_val_${u.code}">••••••</span><button class="pass-eye" id="pass_btn_${u.code}" onclick="adminTogglePassVis('${u.code}')" title="Show/hide password">👁️</button></div></td>
       <td style="white-space:nowrap;text-align:right;"><button class="user-act-btn edit" onclick="adminEditUser('${u.code}')" title="Edit">✏️</button> <button class="user-act-btn" onclick="adminToggleSuspend('${u.code}')" title="${u.isSuspended?'Restore':'Suspend'}" style="background:${u.isSuspended?'#d1fae5;color:#065f46':'#fef3c7;color:#92400e'};">${u.isSuspended?'▶':'⏸'}</button> <button class="user-act-btn del" onclick="adminDeleteUser('${u.code}')" title="Delete">🗑️</button></td>
