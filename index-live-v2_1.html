@@ -1114,6 +1114,11 @@
           <div class="tc-name" style="color:#7c3aed;">Meeting Agenda Builder</div>
           <div class="tc-desc">Generate agenda from monthly notes</div>
         </div>
+        <div class="tool-card" onclick="showPage('prodsnap')" style="border-top-color:#0ea5e9;">
+          <div class="tc-icon">📊</div>
+          <div class="tc-name" style="color:#0ea5e9;">Team Snapshot</div>
+          <div class="tc-desc">All advisors vs target</div>
+        </div>
       </div>
     </div>
 
@@ -3748,6 +3753,33 @@ Please send your Proof of Payment to your advisor once done.</div>
         <textarea id="agendaOutputText" style="font-size:12px;color:#374151;line-height:1.8;white-space:pre-wrap;width:100%;min-height:300px;border:none;outline:none;resize:vertical;background:transparent;font-family:inherit;"></textarea>
       </div>
     </div>
+  </div>
+
+  <!-- PRODUCTION SNAPSHOT -->
+  <div class="page" id="page-prodsnap">
+    <div style="background:linear-gradient(135deg,#0c4a6e,#0369a1);border-radius:20px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#bae6fd;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">🔐 Manager Only</div>
+        <div style="color:#fff;font-size:16px;font-weight:700;">Team Production Snapshot</div>
+        <div style="color:rgba(255,255,255,0.65);font-size:11px;margin-top:3px;">All advisors — actual vs target</div>
+      </div>
+      <button onclick="showPage('guides')" style="background:rgba(255,255,255,0.12);color:#fff;border:none;border-radius:10px;padding:7px 13px;font-size:12px;cursor:pointer;flex-shrink:0;">← Resources</button>
+    </div>
+    <div class="full-card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;">Period</span>
+        <select id="snapPeriodMonth" onchange="renderProdSnap()" style="padding:6px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;">
+          <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+          <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+        </select>
+        <select id="snapPeriodYear" onchange="renderProdSnap()" style="padding:6px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;">
+          <option value="2026">2026</option><option value="2025">2025</option>
+        </select>
+      </div>
+    </div>
+    <div id="prodSnapContent"></div>
   </div>
 
   <!-- FAMILY TREE -->

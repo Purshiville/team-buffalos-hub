@@ -2630,6 +2630,15 @@ function showPage(p){
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   if(p==='replpresentation'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');replPresentationInit();}
   if(p==='meetingagenda'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');agendaRenderNotes();}
+  if(p==='prodsnap'){
+    if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');
+    const now=new Date();
+    const mm=document.getElementById('snapPeriodMonth');
+    const yy=document.getElementById('snapPeriodYear');
+    if(mm&&!mm._init){mm.value=String(now.getMonth()+1).padStart(2,'0');mm._init=true;}
+    if(yy&&!yy._init){yy.value=String(now.getFullYear());yy._init=true;}
+    renderProdSnap();
+  }
   // fitproper page renders itself — no explicit call needed
   // Close More dropdown and sync active states
   closeMoreDropdown();
@@ -13019,5 +13028,81 @@ async function agendaScheduleMeeting(){
   if(window.FB_READY)window.FB.saveCalEvent(id,newEv).catch(()=>{});
   logActivity('CALENDAR_ADD',`Meeting scheduled: "${title}" on ${date}`);
   showAlert(`Meeting scheduled — notice sent to all advisors and added to Herd Calendar.`,'success');
+}
+// ── PRODUCTION SNAPSHOT ──────────────────────────────────────────────────────
+function _snapPeriod(){
+  const m=document.getElementById('snapPeriodMonth');
+  const y=document.getElementById('snapPeriodYear');
+  if(m&&y&&m.value&&y.value)return y.value+'-'+m.value;
+  const now=new Date();return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+}
+function renderProdSnap(){
+  const el=document.getElementById('prodSnapContent');if(!el)return;
+  const period=_snapPeriod();
+  let raw={advisors:{}};
+  // Prefer in-memory stats (Firebase-synced); fall back to localStorage
+  if(window._currentPeriodStats&&Object.keys(window._currentPeriodStats.advisors||{}).length&&getStatsPeriod()===period){
+    raw=window._currentPeriodStats;
+  } else {
+    try{raw=JSON.parse(localStorage.getItem('tl_prod_stats_'+period)||'{}');}catch(e){}
+  }
+  const adData=raw.advisors||{};
+  const advisors=ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code));
+  const pct=(a,b)=>b?Math.round(a/b*100):0;
+  const tl=(p)=>p>=100?'#16a34a':p>=80?'#d97706':'#dc2626';
+  const tlBg=(p)=>p>=100?'#dcfce7':p>=80?'#fef3c7':'#fee2e2';
+  const ntuCol=(v)=>v<=15?'#16a34a':v<=20?'#d97706':'#dc2626';
+  const persCol=(v)=>v>=65?'#16a34a':v>=55?'#d97706':'#dc2626';
+  let totC=0,totTC=0,totP=0,totTP=0;
+  advisors.forEach(a=>{const d=adData[a.code]||{};totC+=d.actualCases||0;totTC+=d.targetCases||0;totP+=d.actualPremium||0;totTP+=d.targetPremium||0;});
+  const teamCP=pct(totC,totTC);const teamPP=pct(totP,totTP);
+  const cards=advisors.map(a=>{
+    const d=adData[a.code];
+    if(!d||(!d.targetCases&&!d.targetPremium))return`<div style="padding:10px 14px;background:#f9fafb;border-radius:12px;border:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;opacity:.5;"><span style="font-size:13px;font-weight:600;color:#0d1f3c;">${a.name}</span><span style="font-size:10px;color:#9ca3af;">No stats</span></div>`;
+    const cp=pct(d.actualCases||0,d.targetCases||0);
+    const pp=pct(d.actualPremium||0,d.targetPremium||0);
+    const overall=Math.round((cp+pp)/2);
+    const chip=(label,val,color)=>`<span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;background:#f3f4f6;color:${color};">${label} ${val}%</span>`;
+    const metrics=[
+      d.ntu4Month!=null?chip('4M NTU',d.ntu4Month,ntuCol(d.ntu4Month)):'',
+      d.ntu15Month!=null?chip('15M NTU',d.ntu15Month,ntuCol(d.ntu15Month)):'',
+      d.persistency!=null?chip('Pers',d.persistency,persCol(d.persistency)):''
+    ].filter(Boolean).join('');
+    return`<div style="padding:12px 14px;background:#fff;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 1px 3px rgba(0,0,0,.04);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:13px;font-weight:700;color:#0d1f3c;">${a.name}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;background:${tlBg(overall)};color:${tl(overall)};">${overall}%</span>
+      </div>
+      <div style="margin-bottom:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:3px;"><span>Cases</span><span style="font-weight:700;color:${tl(cp)};">${d.actualCases||0} / ${d.targetCases||0}</span></div>
+        <div style="height:5px;background:#f3f4f6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(cp,100)}%;background:${tl(cp)};border-radius:3px;"></div></div>
+      </div>
+      <div style="margin-bottom:6px;">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:#6b7280;margin-bottom:3px;"><span>Monthly Premium</span><span style="font-weight:700;color:${tl(pp)};">R${(d.actualPremium||0).toLocaleString()} / R${(d.targetPremium||0).toLocaleString()}</span></div>
+        <div style="height:5px;background:#f3f4f6;border-radius:3px;overflow:hidden;"><div style="height:100%;width:${Math.min(pp,100)}%;background:${tl(pp)};border-radius:3px;"></div></div>
+      </div>
+      ${metrics?`<div style="display:flex;gap:5px;flex-wrap:wrap;">${metrics}</div>`:''}
+    </div>`;
+  }).join('');
+  el.innerHTML=`
+    <div style="background:linear-gradient(135deg,#0c4a6e,#0369a1);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+      <div style="color:#bae6fd;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Team Total — ${formatPeriodLabel(period)}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;">
+        <div>
+          <div style="color:rgba(255,255,255,.55);font-size:10px;margin-bottom:2px;">Cases</div>
+          <div style="color:#fff;font-size:18px;font-weight:700;line-height:1;">${totC} <span style="font-size:11px;color:rgba(255,255,255,.45);">/ ${totTC}</span></div>
+          <div style="font-size:10px;font-weight:700;margin-top:3px;color:${teamCP>=100?'#86efac':teamCP>=80?'#fde68a':'#fca5a5'};">${teamCP}% of target</div>
+        </div>
+        <div>
+          <div style="color:rgba(255,255,255,.55);font-size:10px;margin-bottom:2px;">Monthly Premium</div>
+          <div style="color:#fff;font-size:16px;font-weight:700;line-height:1;">R${totP.toLocaleString()} <span style="font-size:10px;color:rgba(255,255,255,.45);">/ R${totTP.toLocaleString()}</span></div>
+          <div style="font-size:10px;font-weight:700;margin-top:3px;color:${teamPP>=100?'#86efac':teamPP>=80?'#fde68a':'#fca5a5'};">${teamPP}% · API R${(totP*12).toLocaleString()}</div>
+        </div>
+      </div>
+      <div style="height:6px;background:rgba(255,255,255,.15);border-radius:3px;overflow:hidden;">
+        <div style="height:100%;width:${Math.min(Math.round((teamCP+teamPP)/2),100)}%;background:${Math.round((teamCP+teamPP)/2)>=100?'#86efac':Math.round((teamCP+teamPP)/2)>=80?'#fde68a':'#fca5a5'};border-radius:3px;"></div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px;">${cards}</div>`;
 }
 // ── END MEETING AGENDA BUILDER ────────────────────────────────────────────────
