@@ -1654,6 +1654,18 @@ function switchInboxTab(tab){
   if(isUnread)renderUnreadList();
   if(isReceived)renderInboxList();
 }
+function markAllInboxRead(){
+  const msgs=(window._inboxMsgs||[]).filter(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat');
+  if(!msgs.length)return;
+  msgs.forEach(m=>{
+    m.readBy=[...(m.readBy||[]),currentUser.code];
+    if(window.FB_READY)window.FB.markInboxRead(m.id,currentUser.code).catch(()=>{});
+  });
+  renderUnreadList();
+  renderInboxList();
+  updateInboxBadge();
+  updateChatBadge();
+}
 function _updateUnreadTabCount(){
   if(!currentUser)return;
   const count=(window._inboxMsgs||[]).filter(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat').length;
@@ -1673,6 +1685,7 @@ function renderUnreadList(){
       return bT-aT;
     });
   if(!msgs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:32px 16px;">✅ All caught up — no unread notifications.</div>';return;}
+  const markAllBtn=`<div style="padding:8px 14px;border-bottom:1px solid #f4f2ed;"><button onclick="markAllInboxRead()" style="font-size:11px;font-weight:700;color:#c9922a;background:none;border:none;cursor:pointer;padding:0;">Mark all as read</button></div>`;
   const typeIcon={notice:'📢',stats:'📊',message:'✉️',chat:'💬',reminder:'🗓️'};
   const _allUsers=getUsers();
   el.innerHTML=msgs.map(m=>{
@@ -1698,6 +1711,7 @@ function renderUnreadList(){
       <div class="inbox-unread-dot"></div>
     </div>`;
   }).join('');
+  el.innerHTML=markAllBtn+el.innerHTML;
 }
 function readUnreadItem(id,el,chatFrom,chatFromName){
   if(window.FB_READY)window.FB.markInboxRead(id,currentUser.code).catch(()=>{});
@@ -1745,9 +1759,7 @@ function updateChatBadge(){
 function openInboxPanel(){
   document.getElementById('inboxPanel').classList.add('open');
   document.getElementById('inboxOverlay').style.display='block';
-  // Open to Unread tab if there are unread items, otherwise All
-  const _hasUnread=(window._inboxMsgs||[]).some(m=>!(m.readBy||[]).includes(currentUser.code)&&m.type!=='chat');
-  switchInboxTab(_hasUnread?'unread':'received');
+  switchInboxTab('unread');
   // Refresh user photos from Firebase so avatars are up to date
   if(window.FB_READY){window.FB.getAllUsers().then(fbUsers=>{if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);renderInboxList();}}).catch(()=>{});}
   if(currentUser.isManager||currentUser.isOps){
@@ -1819,6 +1831,9 @@ function readInboxItem(id,el,chatFrom,chatFromName){
   if(el.classList.contains('unread')){
     el.classList.remove('unread');
     el.querySelector('.inbox-unread-dot')?.remove();
+    el.style.transition='background .4s';
+    el.style.background='#f0fdf4';
+    setTimeout(()=>{el.style.background='';},500);
     if(window.FB_READY)window.FB.markInboxRead(id,currentUser.code).catch(()=>{});
     const localMsg=(window._inboxMsgs||[]).find(m=>m.id===id);
     if(localMsg&&!(localMsg.readBy||[]).includes(currentUser.code)){

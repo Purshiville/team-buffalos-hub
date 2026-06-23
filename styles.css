@@ -66,17 +66,19 @@ body::before {
 .side-panel-close{background:none;border:none;color:rgba(255,255,255,.7);font-size:20px;cursor:pointer;line-height:1;padding:0;}
 .side-panel-body{flex:1;overflow-y:auto;}
 /* Inbox */
-.inbox-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f4f2ed;cursor:pointer;transition:background .12s;}
+.inbox-item{display:flex;gap:10px;padding:12px 14px;border-bottom:1px solid #f4f2ed;cursor:pointer;transition:background .25s;border-left:3px solid transparent;}
 .inbox-item:hover{background:#fafaf8;}
-.inbox-item.unread{background:#fdf6ed;}
+.inbox-item.unread{background:#fef9f0;border-left-color:#c9922a;}
+.inbox-item.unread .inbox-title{font-weight:800;color:#0d1f3c;}
+.inbox-item.unread .inbox-body{color:#374151;}
 .inbox-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
 .inbox-icon.notice{background:#e0f2fe;}
 .inbox-icon.stats{background:#d1fae5;}
 .inbox-icon.message{background:#ede9fe;}
 .inbox-icon.chat{background:#fce7f3;}
 .inbox-meta{flex:1;min-width:0;}
-.inbox-title{font-size:12px;font-weight:700;color:#0d1f3c;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.inbox-body{font-size:11px;color:#6b7280;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inbox-title{font-size:12px;font-weight:600;color:#374151;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.inbox-body{font-size:11px;color:#9ca3af;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .inbox-time{font-size:10px;color:#9ca3af;margin-top:3px;}
 .inbox-unread-dot{width:8px;height:8px;background:#c9922a;border-radius:50%;flex-shrink:0;margin-top:4px;}
 .inbox-tabs{display:flex;border-bottom:2px solid #f4f2ed;flex-shrink:0;}
