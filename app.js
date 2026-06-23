@@ -5817,6 +5817,34 @@ function roaCopy(){
   });
 }
 
+function roaSendForSignature(){
+  const out = document.getElementById('roaOutput');
+  const text = out && out.textContent ? out.textContent.trim() : '';
+  if(!text){
+    const btn = document.querySelector('#page-roa button[onclick="roaSendForSignature()"]');
+    if(btn){const orig=btn.textContent;btn.textContent='⚠️ Generate ROA first';setTimeout(()=>{btn.textContent=orig;},2500);}
+    return;
+  }
+  const shareText = 'RECORD OF ADVICE\n\nPlease review the following ROA and confirm by replying "I confirm":\n\n' + text;
+  if(navigator.share){
+    navigator.share({title:'ROA for signature',text:shareText}).catch(()=>{});
+    return;
+  }
+  // WhatsApp deep link — safe up to ~3000 chars in URL
+  if(shareText.length <= 3000){
+    window.open('https://wa.me/?text=' + encodeURIComponent(shareText), '_blank');
+  } else {
+    navigator.clipboard.writeText(shareText).then(()=>{
+      window.open('https://wa.me/', '_blank');
+      const btn = document.querySelector('#page-roa button[onclick="roaSendForSignature()"]');
+      if(btn){const orig=btn.textContent;btn.textContent='✓ Copied — paste in WhatsApp';setTimeout(()=>{btn.textContent=orig;},3000);}
+    }).catch(()=>{
+      const ta=document.createElement('textarea');ta.value=shareText;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);
+      window.open('https://wa.me/', '_blank');
+    });
+  }
+}
+
 function renderROA(){
   _roaPlans=[];_roaRepPolicies=[];_roaNewPolicies=[];
   _repReasonType='affordability';
