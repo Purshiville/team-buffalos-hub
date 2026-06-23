@@ -1340,7 +1340,7 @@ function renderProdStats(data,period){
 function renderStatsManagerPreview(data){
   const el=document.getElementById('statsManagerPreview');
   if(!el)return;
-  const advisors=Object.values(data?.advisors||{});
+  const advisors=Object.values(data?.advisors||{}).filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name));
   if(!advisors.length){el.innerHTML='<div style="font-size:12px;color:#9ca3af;text-align:center;padding:8px 0;">No stats saved for this period yet.</div>';return;}
   el.innerHTML='<div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding-top:10px;border-top:1px solid #f4f2ed;">Current period — all advisors</div>'+
     '<div style="display:flex;flex-direction:column;gap:6px;">'+
