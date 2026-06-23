@@ -724,6 +724,27 @@ function logActivity(action,detail){
   const entry={userCode:currentUser.code,userName:currentUser.name,action,detail:detail||'',localTs:new Date().toISOString()};
   if(window.FB_READY&&window.FB.logActivity)window.FB.logActivity(entry).catch(()=>{});
 }
+// ── DAILY TIME TRACKER ────────────────────────────────────────────────────────
+let _timeTrackInterval=null;
+function _todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function _getTimeRec(code){try{return JSON.parse(localStorage.getItem('tl_time_'+code)||'null');}catch(e){return null;}}
+function _fmtTime(secs){if(!secs||secs<60)return secs>=30?'<1m':'—';const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60);return h>0?h+'h '+m+'m':m+'m';}
+function _startTimeTracker(){
+  if(_timeTrackInterval)clearInterval(_timeTrackInterval);
+  _timeTrackInterval=setInterval(()=>{
+    if(!currentUser||document.hidden)return;
+    const today=_todayStr();
+    let rec=_getTimeRec(currentUser.code);
+    if(!rec||rec.date!==today)rec={date:today,secs:0};
+    rec.secs+=10;
+    localStorage.setItem('tl_time_'+currentUser.code,JSON.stringify(rec));
+    // Sync to Firebase every 60s
+    if(rec.secs%60===0&&window.FB_READY&&window.FB.saveUser){
+      window.FB.saveUser(currentUser.code,{timeToday:rec.secs,timeTodayDate:today}).catch(()=>{});
+      const lu=getUsers();if(lu[currentUser.code]){lu[currentUser.code].timeToday=rec.secs;lu[currentUser.code].timeTodayDate=today;saveUsers(lu);}
+    }
+  },10000);
+}
 function sendCpdNotifIfNeeded(){
   if(!currentUser||!['SKA310889','PURSHIVILLE'].includes(currentUser.code))return;
   const _n=new Date();let _yr=_n.getFullYear();let _mo=_n.getMonth()+1;
@@ -878,6 +899,7 @@ function enterHub(user){
   renderFpPage();renderHubBirthdays();
   // Log login event and start activity log listener for manager/ops
   logActivity('LOGIN','Signed in');
+  _startTimeTracker();
   if(user.isOps||user.isManager)startActivityLogListener();
   sendCpdNotifIfNeeded();
   // Start stats listener immediately — no need to wait for other syncs
@@ -7303,6 +7325,7 @@ function _renderManagerDashInner(){
       <td><span style="font-size:11px;padding:3px 9px;border-radius:20px;font-weight:600;${replCls}">${replLbl}</span></td>
       <td>${u.isSuspended?'<span style="font-size:10px;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;border-radius:20px;padding:1px 7px;font-weight:700;">⏸ Suspended</span>':`<span class="status-dot ${isActive?'active':'offline'}"></span><span style="font-size:12px;">${isActive?'Active':'Offline'}</span>`}</td>
       <td style="font-size:12px;color:#6b7280;white-space:nowrap;">${lastSeenDsp}</td>
+      <td style="font-size:12px;font-weight:600;white-space:nowrap;color:${(()=>{const r=_getTimeRec(u.code);const t=(r&&r.date===_todayStr())?r.secs:(u.timeTodayDate===_todayStr()?u.timeToday||0:0);return t>=3600?'#16a34a':t>=600?'#d97706':'#9ca3af';})()}">${(()=>{const r=_getTimeRec(u.code);const t=(r&&r.date===_todayStr())?r.secs:(u.timeTodayDate===_todayStr()?u.timeToday||0:0);return _fmtTime(t);})()}</td>
       <td><span class="fp-pill ${fpCls}">${fpLbl}</span></td>
       <td><div class="pass-cell"><span class="pass-val" id="pass_val_${u.code}">••••••</span><button class="pass-eye" id="pass_btn_${u.code}" onclick="adminTogglePassVis('${u.code}')" title="Show/hide password">👁️</button></div></td>
       <td style="white-space:nowrap;text-align:right;"><button class="user-act-btn edit" onclick="adminEditUser('${u.code}')" title="Edit">✏️</button> <button class="user-act-btn" onclick="adminToggleSuspend('${u.code}')" title="${u.isSuspended?'Restore':'Suspend'}" style="background:${u.isSuspended?'#d1fae5;color:#065f46':'#fef3c7;color:#92400e'};">${u.isSuspended?'▶':'⏸'}</button> <button class="user-act-btn del" onclick="adminDeleteUser('${u.code}')" title="Delete">🗑️</button></td>
