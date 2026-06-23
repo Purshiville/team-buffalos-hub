@@ -915,6 +915,69 @@ function requestNotificationPermission(){
   }
 }
 
+function applyRoleVisibility(user){
+  const isMgr=user.isManager||user.isOps;
+  document.getElementById('opsTab').style.display=isMgr?'inline-block':'none';
+  const toolMgrSec=document.getElementById('toolMgrSection');if(toolMgrSec)toolMgrSec.style.display=isMgr?'block':'none';
+  const guidesMgrSec=document.getElementById('guidesMgrSection');if(guidesMgrSec)guidesMgrSec.style.display=isMgr?'block':'none';
+  const bTab=document.getElementById('budgetTab');if(bTab)bTab.style.display='none';
+  const tmTab=document.getElementById('teamTab');if(tmTab)tmTab.style.display=isMgr?'inline-block':'none';
+  const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
+  const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=isMgr?'flex':'none';
+  const activityMore=document.getElementById('activityMoreItem');if(activityMore)activityMore.style.display=isMgr?'flex':'none';
+  const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=isMgr?'block':'none';
+  const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
+  const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=isMgr?'block':'none';
+  const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
+  const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=isMgr?'block':'none';
+  const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
+  ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
+  const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='flex';
+  const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='flex';
+  const opsTileEl=document.getElementById('opsTile');if(opsTileEl)opsTileEl.style.display='block';
+  ['oltDailyOps','oltTeam','oltRecruit','oltPrecan','opsTodaySnapshot','oltStats'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.style.display=isMgr?'block':'none';
+  });
+  // Profile switcher panel — show only for real manager/ops
+  const spSwitcher=document.getElementById('sp_profileSwitcher');
+  if(spSwitcher)spSwitcher.style.display=(user._realIsManager||user._realIsOps||user.isManager||user.isOps)?'block':'none';
+  _updateProfileSwitcherUI();
+}
+
+function _updateProfileSwitcherUI(){
+  const isAdvisorPreview=!!currentUser?._advisorPreview;
+  const mgrOpt=document.getElementById('sp_mgrViewOpt');
+  const advOpt=document.getElementById('sp_advViewOpt');
+  if(!mgrOpt||!advOpt)return;
+  if(isAdvisorPreview){
+    mgrOpt.style.border='2px solid #e5e7eb';mgrOpt.style.background='#fff';mgrOpt.style.color='#6b7280';
+    advOpt.style.border='2px solid #0d1f3c';advOpt.style.background='#f0f4ff';advOpt.style.color='#0d1f3c';
+  }else{
+    mgrOpt.style.border='2px solid #0d1f3c';mgrOpt.style.background='#f0f4ff';mgrOpt.style.color='#0d1f3c';
+    advOpt.style.border='2px solid #e5e7eb';advOpt.style.background='#fff';advOpt.style.color='#6b7280';
+  }
+}
+
+function toggleAdvisorPreview(goAdvisor){
+  if(!currentUser)return;
+  if(goAdvisor){
+    currentUser._realIsManager=currentUser.isManager;
+    currentUser._realIsOps=currentUser.isOps;
+    currentUser._advisorPreview=true;
+    currentUser.isManager=false;
+    currentUser.isOps=false;
+  }else{
+    currentUser.isManager=currentUser._realIsManager||false;
+    currentUser.isOps=currentUser._realIsOps||false;
+    currentUser._advisorPreview=false;
+  }
+  applyRoleVisibility(currentUser);
+  const banner=document.getElementById('advisorPreviewBanner');
+  if(banner)banner.style.display=goAdvisor?'block':'none';
+  closeSettingsPanel();
+  showPage('hub');
+}
+
 function enterHub(user){
   // Read saved page BEFORE startup renders run (they call showPage and would overwrite it)
   const _entryPage=localStorage.getItem('tl_page')||'hub';
@@ -947,32 +1010,7 @@ function enterHub(user){
   if(!checkLegalAcceptance(user.code))showLegalOverlay();
   const unEl=document.getElementById('userName');if(unEl)unEl.textContent=user.name.split(' ')[0];
   const uaEl=document.getElementById('userAvatar');if(uaEl)uaEl.textContent=user.name.charAt(0).toUpperCase();
-  // managerTab removed — Team is inside opsland
-  // teamTile removed — inside opsland
-  // Ops tab only for manager/Arlene; advisors use Tools instead
-  document.getElementById('opsTab').style.display=(user.isManager||user.isOps)?'inline-block':'none';
-  const toolMgrSec=document.getElementById('toolMgrSection');if(toolMgrSec)toolMgrSec.style.display=(user.isManager||user.isOps)?'block':'none';
-  const guidesMgrSec=document.getElementById('guidesMgrSection');if(guidesMgrSec)guidesMgrSec.style.display=(user.isManager||user.isOps)?'block':'none';
-  const bTab=document.getElementById('budgetTab');if(bTab)bTab.style.display='none';
-  const tmTab=document.getElementById('teamTab');if(tmTab)tmTab.style.display=(user.isManager||user.isOps)?'inline-block':'none';
-  // More dropdown role-aware items
-  const budgetMore=document.getElementById('budgetMoreItem');if(budgetMore)budgetMore.style.display='flex';
-  const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=(user.isManager||user.isOps)?'flex':'none';
-  const activityMore=document.getElementById('activityMoreItem');if(activityMore)activityMore.style.display=(user.isManager||user.isOps)?'flex':'none';
-  const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=(user.isManager||user.isOps)?'block':'none';
-  const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
-  const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=(user.isManager||user.isOps)?'block':'none';
-  const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
-  const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=(user.isManager||user.isOps)?'block':'none';
-  const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
-  ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
-  const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='flex';
-  const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='flex';
-  const opsTileEl=document.getElementById('opsTile');if(opsTileEl)opsTileEl.style.display='block';
-  // Manager-only sub-tiles inside opsland
-  ['oltDailyOps','oltTeam','oltRecruit','oltPrecan','opsTodaySnapshot','oltStats'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.style.display=(user.isOps||user.isManager)?'block':'none';
-  });
+  applyRoleVisibility(user);
   chatHistory=[];
   const fn=user.name.split(' ')[0];
   const bday=user.dob?getBdayInfo(user.dob):null;
