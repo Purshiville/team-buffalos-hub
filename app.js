@@ -741,8 +741,8 @@ function _startTimeTracker(){
     if(!rec||rec.date!==today)rec={date:today,secs:0};
     rec.secs+=10;
     localStorage.setItem('tl_time_'+currentUser.code,JSON.stringify(rec));
-    // Sync to Firebase every 60s
-    if(rec.secs%60===0&&window.FB_READY&&window.FB.saveUser){
+    // Sync to Firebase every 30s
+    if(rec.secs%30===0&&window.FB_READY&&window.FB.saveUser){
       window.FB.saveUser(currentUser.code,{timeToday:rec.secs,timeTodayDate:today}).catch(()=>{});
       const lu=getUsers();if(lu[currentUser.code]){lu[currentUser.code].timeToday=rec.secs;lu[currentUser.code].timeTodayDate=today;saveUsers(lu);}
     }
@@ -753,24 +753,33 @@ function _startTimeTracker(){
     }
   },10000);
 }
+function _updateTimeCells(){
+  const tbody=document.getElementById('userTableBody');if(!tbody)return;
+  const users=getUsers();
+  tbody.querySelectorAll('tr').forEach(row=>{
+    const codeEl=row.querySelector('div[style*="monospace"]');if(!codeEl)return;
+    const code=codeEl.textContent.trim();
+    const u=users[code]||{code};
+    const secs=_getTimeSecs(u);
+    const cell=row.cells[6];
+    if(cell){cell.textContent=_fmtTime(secs);cell.style.color=_timeColor(secs);}
+  });
+}
 function _startTeamPageRefresh(){
   _stopTeamPageRefresh();
-  // Refresh time cells every 30s — pulls fresh Firebase data for other advisors too
   _teamRefreshInt=setInterval(()=>{
     if(!document.getElementById('page-team')?.classList.contains('active'))return;
-    // Fast path: just update the time cells in place without re-rendering the whole table
-    const tbody=document.getElementById('userTableBody');
-    if(!tbody)return;
-    const users=getUsers();
-    tbody.querySelectorAll('tr').forEach(row=>{
-      const codeEl=row.querySelector('div[style*="monospace"]');
-      if(!codeEl)return;
-      const code=codeEl.textContent.trim();
-      const u=users[code]||{code};
-      const secs=_getTimeSecs(u);
-      const cell=row.cells[6];
-      if(cell){cell.textContent=_fmtTime(secs);cell.style.color=_timeColor(secs);}
-    });
+    // Pull fresh timeToday values from Firebase then update cells
+    if(window.FB_READY&&window.FB.getAllUsers){
+      window.FB.getAllUsers().then(fbUsers=>{
+        if(fbUsers&&Object.keys(fbUsers).length){
+          const local=getUsers();
+          Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});
+          saveUsers(local);
+        }
+        _updateTimeCells();
+      }).catch(()=>_updateTimeCells());
+    }else{_updateTimeCells();}
   },30000);
 }
 function _stopTeamPageRefresh(){if(_teamRefreshInt){clearInterval(_teamRefreshInt);_teamRefreshInt=null;}}
