@@ -392,7 +392,7 @@ const FP_CATEGORIES=[
 const QLINK_DATES={'202604':[{d:'2026-03-12'},{d:'2026-03-16'},{d:'2026-03-19'},{d:'2026-03-23'}],'202605':[{d:'2026-04-13'},{d:'2026-04-16'},{d:'2026-04-20'},{d:'2026-04-23'}],'202606':[{d:'2026-05-11'},{d:'2026-05-14'},{d:'2026-05-18'},{d:'2026-05-21'}],'202607':[{d:'2026-06-11'},{d:'2026-06-15'},{d:'2026-06-18'},{d:'2026-06-22'}],'202608':[{d:'2026-07-13'},{d:'2026-07-16'},{d:'2026-07-20'},{d:'2026-07-23'}],'202609':[{d:'2026-08-13'},{d:'2026-08-17'},{d:'2026-08-20'},{d:'2026-08-24'}],'202610':[{d:'2026-09-10'},{d:'2026-09-14'},{d:'2026-09-17'},{d:'2026-09-21'}],'202611':[{d:'2026-10-12'},{d:'2026-10-15'},{d:'2026-10-19'},{d:'2026-10-22'}],'202612':[{d:'2026-11-05'},{d:'2026-11-09'},{d:'2026-11-12'},{d:'2026-11-16'},{d:'2026-11-19'}]};
 const PROD_CUTOFFS=[{opens:'2026-01-24',cutoff:'2026-02-20'},{opens:'2026-02-21',cutoff:'2026-03-20'},{opens:'2026-03-21',cutoff:'2026-04-17'},{opens:'2026-04-18',cutoff:'2026-05-22'},{opens:'2026-05-23',cutoff:'2026-06-19'},{opens:'2026-06-20',cutoff:'2026-07-24'},{opens:'2026-07-25',cutoff:'2026-08-21'},{opens:'2026-08-22',cutoff:'2026-09-18'},{opens:'2026-09-19',cutoff:'2026-10-23'},{opens:'2026-10-24',cutoff:'2026-11-20'},{opens:'2026-11-21',cutoff:'2026-12-04'}];
 const PAYMENT_DATES=[1,15,20,25,26,29,30,31];
-const KEY_CONTACTS=[{name:'Jacques du Preez',role:'Regional Executive',num:'082 551 8170'},{name:'Michael',role:'Branch Manager',num:'083 440 9098'},{name:'Anelisa',role:'Servicing & Claims',num:'066 128 5500'},{name:'Lynn',role:'Accounts & Billing',num:'084 429 6131'},{name:'Carleen',role:'Key Individual',num:'082 496 8536'},{name:'Reane',role:'Servicing & Queries',num:'084 965 0997'},{name:'Zuki',role:'Cancellations',num:'079 752 1191'}];
+const KEY_CONTACTS=[{name:'Jacques du Preez',role:'Regional Executive',num:'082 551 8170'},{name:'Michael',role:'Branch Manager',num:'083 440 9098'},{name:'Anelisa',role:'Servicing & Claims',num:'066 128 5500'},{name:'Lynn',role:'Accounts & Billing',num:'084 429 6131'},{name:'Carleen',role:'Key Individual',num:'082 496 8536'},{name:'Reane',role:'Servicing & Queries',num:'084 965 0997'},{name:'Zuki',role:'Cancellations',num:'079 752 1191'},{name:'Randmore',role:'',nums:['082 659 4445','041 582 2066','071 897 1855']}];
 
 let chatHistory=[],currentUser=null,currentModal=null;
 // Gemini API key for image analysis (free tier)
@@ -6937,7 +6937,11 @@ function renderHrTracker(){
 }
 
 function renderContacts(){
-  document.getElementById('contactGrid').innerHTML=KEY_CONTACTS.map(c=>`<div class="contact-card"><div class="contact-av">${c.name.charAt(0)}</div><div><div class="contact-name">${c.name}</div><div class="contact-role">${c.role}</div><div class="contact-num">${c.num}</div><a class="wa-btn" href="https://wa.me/27${c.num.replace(/\s/g,'').replace(/^0/,'')}" target="_blank">WhatsApp</a></div></div>`).join('');
+  document.getElementById('contactGrid').innerHTML=KEY_CONTACTS.map(c=>{
+    const nums=c.nums||(c.num?[c.num]:[]);
+    const numsHtml=nums.map(n=>`<div style="display:flex;align-items:center;gap:6px;margin-top:4px;"><span class="contact-num" style="margin:0;">${n}</span><a class="wa-btn" href="https://wa.me/27${n.replace(/\s/g,'').replace(/^0/,'')}" target="_blank" style="margin:0;">WhatsApp</a></div>`).join('');
+    return`<div class="contact-card"><div class="contact-av">${c.name.charAt(0)}</div><div style="min-width:0;flex:1;"><div class="contact-name">${c.name}</div>${c.role?`<div class="contact-role">${c.role}</div>`:''}${numsHtml}</div></div>`;
+  }).join('');
 }
 
 function fmtShortDate(str){if(!str)return'—';const d=new Date(str);const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return d.getDate()+' '+mo[d.getMonth()]+' '+d.getFullYear();}
