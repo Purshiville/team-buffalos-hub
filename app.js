@@ -12739,7 +12739,7 @@ async function rfLoadCase(id){
   const c=_rfState.cases.find(x=>x.id===id);if(!c)return;
   _rfState.id=id;_rfState.advisorSig=c.advisorSig||null;_rfState.clientSig=c.clientSig||null;
   _rfState.members=c.members&&c.members.length?c.members:[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
-  _rfState.competitors=c.competitors|||(c.competitor?c.competitor.split(', ').filter(Boolean):[]);
+  _rfState.competitors=c.competitors||(c.competitor?c.competitor.split(', ').filter(Boolean):[]);
   rfUpdateCompLabel();
   const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=v||'';};
   sv('rfClientName',c.clientName);sv('rfClientId',c.clientId);sv('rfClientPhone',c.clientPhone);
