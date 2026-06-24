@@ -13304,3 +13304,11 @@ function renderProdSnap(){
     <div style="display:flex;flex-direction:column;gap:8px;">${cards}</div>`;
 }
 // ── END MEETING AGENDA BUILDER ────────────────────────────────────────────────
+
+function rgFaqToggle(btn){
+  const body=btn.nextElementSibling;
+  const arrow=btn.querySelector('span:last-child');
+  const open=body.style.display!=='none';
+  body.style.display=open?'none':'block';
+  if(arrow)arrow.textContent=open?'▾':'▴';
+}
