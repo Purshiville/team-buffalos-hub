@@ -2786,7 +2786,7 @@ function showPage(p){
   if(p==='claimpack'){claimInit();}
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
-  if(p==='replpresentation'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');replPresentationInit();}
+  if(p==='replpresentation'){replPresentationInit();}
   if(p==='meetingagenda'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');agendaRenderNotes();}
   if(p==='prodsnap'){
     if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');
@@ -13067,49 +13067,44 @@ ${d.roaText?`<div class="sec"><div class="sec-hd" style="background:#92400e;">Re
 // ── REPLACEMENT PRESENTATION ──────────────────────────────────────────────────
 const REPL_SLIDES = [
   {
-    bg:'#064e3b', accent:'#6ee7b7', title:'Smart Replacement Strategy',
-    subtitle:'Moving Beyond Like-for-Like',
-    body:'A replacement is not just swapping one policy for another.\nIt is an opportunity to build the right policy for the client\'s current life — compliantly, profitably, and with full protection for both of you.'
+    bg:'#064e3b', accent:'#6ee7b7', title:'Is Your Funeral Cover Working for You?',
+    subtitle:'Let\'s find out together',
+    body:'Funeral cover should give your family peace of mind — not paperwork, hidden delays, or a payout that doesn\'t stretch.\n\nIn the next few minutes we\'ll look at what you currently have, what you might be missing, and what better cover could look like for you.'
   },
   {
-    bg:'#1e3a5f', accent:'#93c5fd', title:'Why Do It Right?',
-    subtitle:'3 Reasons That Protect Your Career',
-    bullets:['Unlock higher, compliant commission by finding unallocated budget','Eradicate clawbacks — the signed Affordability Declaration keeps policies on the books','Your signed file dismisses complaints instantly — zero liability exposure']
+    bg:'#1e3a5f', accent:'#93c5fd', title:'What We\'re Looking For',
+    subtitle:'A quick needs check — no obligation',
+    bullets:['How many family members are currently covered?','Is your monthly premium affordable long-term?','How long is the waiting period on your current plan?','Does the payout match what a funeral actually costs today?']
   },
   {
-    bg:'#3b0764', accent:'#c4b5fd', title:'The Affordability Declaration',
-    subtitle:'Your Most Important Document',
-    body:'Always ask: "What is the maximum you are comfortable paying each month for this cover?"\n\nDo NOT just mirror the old premium. This single question opens the door to legitimate upselling AND protects the client from a policy they cannot sustain.'
+    bg:'#3b0764', accent:'#c4b5fd', title:'What Good Cover Looks Like',
+    subtitle:'Sanlam Sky — what\'s available to you',
+    bullets:['Main member, spouse, children, and parents — all in one plan','Payout within 48 hours of a valid claim','Fixed premium — no surprise increases','No medical exams — just a simple application']
   },
   {
-    bg:'#065f46', accent:'#a7f3d0', title:'The Biological Line Rule',
-    subtitle:'Only Insurable Interests Qualify',
-    body:'Only add family members within the direct biological or legal line:\n• Main member\n• Spouse / life partner\n• Biological / legally adopted children\n• Biological / legally adopted parents\n• Siblings (product-dependent)\n\nNo cousins, aunts, in-laws on the main member\'s policy unless the product specifically allows it.'
+    bg:'#7c2d12', accent:'#fdba74', title:'The Waiting Period — Honest Disclosure',
+    subtitle:'We believe in full transparency',
+    body:'A new Sanlam Sky policy has a 6-month waiting period for natural death. This is standard across the industry.\n\nImportant: if you switch, keep your old policy active until your new one is confirmed in force. We will guide you through exactly when it is safe to cancel — we would never leave you exposed.'
   },
   {
-    bg:'#7c2d12', accent:'#fdba74', title:'The 6-Month Waiting Period',
-    subtitle:'Pre-existing Conditions & The Critical Gap',
-    body:'New Sanlam Sky policies have a 6-month waiting period for pre-existing conditions.\n\nAlways advise the client to:\n1. Keep the old policy active until the new one is firmly in force\n2. Store proof of the old policy cancellation safely\n3. Never cancel before the new policy\'s first collection clears'
+    bg:'#065f46', accent:'#a7f3d0', title:'You Decide What\'s Affordable',
+    subtitle:'Cover that fits your budget',
+    body:'We work with your budget — not against it.\n\nYou choose the cover level that fits what you are comfortable paying each month.\n\nThere is no pressure to spend more than you need to. Our job is to find the right cover at the right price for your family.'
   },
   {
-    bg:'#1e1b4b', accent:'#a5b4fc', title:'Never Replace These',
-    subtitle:'Absolute No-Replace List',
-    bullets:['Sanlam Sky — any plan (add to IMP review with 0 cover only)','Assupol — any plan including Prosperity/MHA','Hollard (Odin products)','Any policy the client cannot afford to lose waiting period cover on']
+    bg:'#1e1b4b', accent:'#a5b4fc', title:'The Switch — Step by Step',
+    subtitle:'We handle the hard part',
+    bullets:['We complete a replacement form together — no surprises','We document why the switch benefits you (legally required and for your protection)','Your new policy starts on your first debit order','We advise you exactly when your old policy can safely be cancelled']
   },
   {
-    bg:'#064e3b', accent:'#6ee7b7', title:'The ROA — Your Legal Shield',
-    subtitle:'Record of Advice — Non-Negotiable',
-    body:'Every replacement MUST have a completed ROA on file in IMP.\n\nThe ROA must reflect:\n• WHY the replacement is in the client\'s best interest\n• The old policy details\n• The new policy details\n• The affordability assessment\n• The client\'s signed acknowledgement'
+    bg:'#0c4a6e', accent:'#7dd3fc', title:'When a Switch Makes Sense',
+    subtitle:'And when it doesn\'t — we\'ll tell you both',
+    body:'A replacement makes sense when:\n• Your current cover leaves family members out\n• Your premiums have become unaffordable\n• The payout won\'t cover the actual cost of a funeral\n• You\'re paying for cover you no longer need\n\nWe will NEVER recommend a switch that leaves you worse off. If your current cover is fine, we\'ll say so.'
   },
   {
-    bg:'#0c4a6e', accent:'#7dd3fc', title:'Checklist Before You Submit',
-    subtitle:'All 4 must be in the file',
-    bullets:['✅ Completed Replacement ROA (uploaded to IMP)', '✅ Signed Affordability Declaration', '✅ Client Needs Sheet / budget discussion documented', '✅ Old policy cancellation letter / proof of replacement — to be stored by client']
-  },
-  {
-    bg:'#14532d', accent:'#86efac', title:'Remember',
-    subtitle:'The Buffalo Way',
-    body:'A correctly processed replacement:\n• Earns you more commission legally\n• Keeps policies on the books longer\n• Protects your client from claim rejection\n• Makes you a financial professional — not an order-taker\n\n🦬 Stay ready. Do it right. Every time.'
+    bg:'#14532d', accent:'#86efac', title:'Your Next Step',
+    subtitle:'Let\'s make it official',
+    body:'If you\'re happy with what you\'ve seen, we can complete your application today.\n\nWe\'ll take care of:\n• The replacement paperwork\n• Notifying your current insurer\n• Setting up your new debit order\n• Confirming your cover is active before you cancel anything\n\n🦬 Team Buffalos — we make cover simple.'
   }
 ];
 
