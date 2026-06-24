@@ -6140,7 +6140,10 @@ function qlinkRenderDeductions(){
   el.innerHTML=_qlDeductions.map((d,i)=>`
     <div style="background:#f8f7f4;border-radius:10px;padding:8px 10px;border:1px solid #e5e7eb;">
       <div style="display:flex;gap:6px;align-items:center;margin-bottom:6px;">
-        <input value="${d.company}" placeholder="FSP / Company" oninput="_qlDeductions[${i}].company=this.value;qlinkCalc();" style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;color:#0d1f3c;background:#fff;"/>
+        <select onchange="_qlDeductions[${i}].company=this.value;qlinkCalc();" style="flex:1;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:600;color:#0d1f3c;background:#fff;">
+          <option value="">— Select FSP —</option>
+          ${FSP_LIST.map(c=>`<option value="${c}"${d.company===c?' selected':''}>${c}</option>`).join('')}
+        </select>
         <span style="font-size:12px;color:#6b7280;">R</span>
         <input type="number" value="${d.amount||''}" placeholder="0" oninput="_qlDeductions[${i}].amount=parseFloat(this.value)||0;qlinkCalc();" style="width:80px;border:1px solid #e5e7eb;border-radius:6px;padding:5px 8px;font-size:12px;font-weight:700;color:#c9922a;background:#fff;"/>
         <button onclick="_qlDeductions.splice(${i},1);qlinkRenderDeductions();qlinkCalc();" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:16px;line-height:1;">✕</button>
@@ -12635,12 +12638,51 @@ function updfReset(){
 
 // ── REPLACEMENT CASE FORM ────────────────────────────────────────────────────
 const RF_MEMBER_TYPES=['Main Life','Spouse','Child','Extended Family','Other'];
-let _rfState={id:null,cases:[],advisorSig:null,clientSig:null,members:[]};
+const RF_RELATIONSHIPS=['Self','Spouse / Partner','Child','Parent','Sibling','Grandparent','Grandchild','Parent-in-law','Sibling-in-law','Aunt / Uncle','Nephew / Niece','Extended — Verified Blood Relative'];
+let _rfState={id:null,cases:[],advisorSig:null,clientSig:null,members:[],competitors:[]};
+
+// Competitor multi-select
+function rfToggleCompDropdown(){
+  const dd=document.getElementById('rfCompDropdown');
+  if(!dd)return;
+  if(dd.style.display==='none'){rfRenderCompDropdown();dd.style.display='block';}
+  else dd.style.display='none';
+}
+function rfRenderCompDropdown(){
+  const dd=document.getElementById('rfCompDropdown');if(!dd)return;
+  const sel=_rfState.competitors||[];
+  dd.innerHTML=INSURER_LIST.map(c=>`
+    <label style="display:flex;align-items:center;gap:8px;padding:7px 12px;cursor:pointer;background:${sel.includes(c)?'#f0fdf4':'#fff'};" onclick="rfToggleComp(this,event)">
+      <input type="checkbox" ${sel.includes(c)?'checked':''} value="${c.replace(/"/g,'&quot;')}" style="accent-color:#059669;width:14px;height:14px;flex-shrink:0;pointer-events:none;"/>
+      <span style="font-size:12px;color:#0d1f3c;">${c}</span>
+    </label>`).join('');
+}
+function rfToggleComp(labelEl,e){
+  e.preventDefault();e.stopPropagation();
+  const cb=labelEl.querySelector('input[type=checkbox]');if(!cb)return;
+  const c=cb.value;
+  const sel=_rfState.competitors||[];
+  const idx=sel.indexOf(c);
+  if(idx>=0)sel.splice(idx,1);else sel.push(c);
+  _rfState.competitors=sel;
+  rfRenderCompDropdown();rfUpdateCompLabel();
+}
+function rfUpdateCompLabel(){
+  const sel=_rfState.competitors||[];
+  const lbl=document.getElementById('rfCompLabel');if(!lbl)return;
+  if(!sel.length){lbl.textContent='Select companies…';lbl.style.color='#9ca3af';}
+  else{lbl.textContent=sel.join(', ');lbl.style.color='#0d1f3c';}
+}
+document.addEventListener('click',function(e){
+  const wrap=document.getElementById('rfCompWrap');
+  if(wrap&&!wrap.contains(e.target)){const dd=document.getElementById('rfCompDropdown');if(dd)dd.style.display='none';}
+});
 
 async function rfInit(){
   document.getElementById('rfDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('rfAdvSigName').textContent=currentUser?.name||'';
   if(!_rfState.members.length)_rfState.members=[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
+  rfUpdateCompLabel();
   renderReplMembers();
   // Defer sig pad setup — canvas needs one paint cycle to get real dimensions
   setTimeout(()=>{
@@ -12657,9 +12699,10 @@ async function rfInit(){
 }
 
 function rfNewCase(){
-  _rfState.id=null;_rfState.advisorSig=null;_rfState.clientSig=null;
+  _rfState.id=null;_rfState.advisorSig=null;_rfState.clientSig=null;_rfState.competitors=[];
   _rfState.members=[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
-  ['rfClientName','rfClientId','rfClientPhone','rfCompetitor','rfCompetitorPolicy','rfBudget','rfPremium','rfBasicSalary','rfRoaText'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  ['rfClientName','rfClientId','rfClientPhone','rfCompetitorPolicy','rfBudget','rfPremium','rfBasicSalary','rfRoaText'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  rfUpdateCompLabel();
   document.getElementById('rfDate').value=new Date().toISOString().slice(0,10);
   document.getElementById('rfIsPersal').checked=false;rfTogglePersal();
   ['rfChkPersal','rfChkAfford','rfChkMandate','rfChkWaiting','rfChkLoss','rfChkProof'].forEach(id=>{const e=document.getElementById(id);if(e)e.checked=false;});
@@ -12686,7 +12729,7 @@ function renderReplCases(){
     <div class="rf-case-item ${c.status==='signed'?'rf-case-signed':''}" onclick="rfLoadCase('${c.id}')">
       <div style="min-width:0;">
         <div style="font-size:12px;font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.clientName||'Unknown Client'}</div>
-        <div style="font-size:10px;color:#6b7280;">${c.date||''} · ${c.competitor||'N/A'} · ${c.status==='signed'?'<span style="color:#059669;">✅ Signed</span>':'📝 Draft'}</div>
+        <div style="font-size:10px;color:#6b7280;">${c.date||''} · ${(c.competitors&&c.competitors.length?c.competitors.join(', '):c.competitor)||'N/A'} · ${c.status==='signed'?'<span style="color:#059669;">✅ Signed</span>':'📝 Draft'}</div>
       </div>
       <button onclick="event.stopPropagation();rfDeleteCase('${c.id}')" style="background:none;border:none;color:#d1d5db;font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;" title="Delete">✕</button>
     </div>`).join('');
@@ -12696,9 +12739,11 @@ async function rfLoadCase(id){
   const c=_rfState.cases.find(x=>x.id===id);if(!c)return;
   _rfState.id=id;_rfState.advisorSig=c.advisorSig||null;_rfState.clientSig=c.clientSig||null;
   _rfState.members=c.members&&c.members.length?c.members:[{type:'Main Life',name:'',oldCover:'',newCover:'',relationship:'Self',insurable:'yes',notes:''}];
+  _rfState.competitors=c.competitors|||(c.competitor?c.competitor.split(', ').filter(Boolean):[]);
+  rfUpdateCompLabel();
   const sv=(eid,v)=>{const e=document.getElementById(eid);if(e)e.value=v||'';};
   sv('rfClientName',c.clientName);sv('rfClientId',c.clientId);sv('rfClientPhone',c.clientPhone);
-  sv('rfCompetitor',c.competitor);sv('rfCompetitorPolicy',c.competitorPolicy);sv('rfDate',c.date);
+  sv('rfCompetitorPolicy',c.competitorPolicy);sv('rfDate',c.date);
   sv('rfBudget',c.budgetDeclared);sv('rfPremium',c.finalPremium);sv('rfBasicSalary',c.basicSalary);sv('rfRoaText',c.roaText);
   const persalEl=document.getElementById('rfIsPersal');if(persalEl){persalEl.checked=!!c.isPersal;rfTogglePersal();}
   const chkMap={rfChkPersal:'persalChecked',rfChkAfford:'affordChecked',rfChkMandate:'mandateChecked',rfChkWaiting:'waitingChecked',rfChkLoss:'lossChecked',rfChkProof:'proofChecked'};
@@ -12742,7 +12787,11 @@ function renderReplMembers(){
         <div><label>NEW COVER (R)</label><input id="rfMNC_${i}" type="number" value="${m.newCover||''}" placeholder="0" inputmode="decimal"/></div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">
-        <div><label>RELATIONSHIP</label><input id="rfMR_${i}" type="text" value="${m.relationship||''}" placeholder="e.g. Self, Spouse"/></div>
+        <div><label>RELATIONSHIP</label>
+          <select id="rfMR_${i}" style="width:100%;padding:8px 10px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;">
+            ${RF_RELATIONSHIPS.map(r=>`<option value="${r}"${(m.relationship||'Self')===r?' selected':''}>${r}</option>`).join('')}
+          </select>
+        </div>
         <div><label>INSURABLE INTEREST</label>
           <select id="rfMI_${i}">
             <option value="yes"${m.insurable==='yes'?' selected':''}>✅ Yes — Verified</option>
@@ -12779,7 +12828,8 @@ function rfReadForm(){
   const gc=id=>!!document.getElementById(id)?.checked;
   return{
     clientName:gv('rfClientName'),clientId:gv('rfClientId'),clientPhone:gv('rfClientPhone'),
-    competitor:gv('rfCompetitor'),competitorPolicy:gv('rfCompetitorPolicy'),
+    competitors:_rfState.competitors||[],competitor:(_rfState.competitors||[]).join(', '),
+    competitorPolicy:gv('rfCompetitorPolicy'),
     date:gv('rfDate')||new Date().toISOString().slice(0,10),
     budgetDeclared:gv('rfBudget'),finalPremium:gv('rfPremium'),
     isPersal:gc('rfIsPersal'),basicSalary:gv('rfBasicSalary'),
@@ -12817,7 +12867,7 @@ function rfGenerateROA(){
   increased.forEach(m=>{const diff=parseFloat(m.newCover||0)-parseFloat(m.oldCover||0);t+=`• Waiting Periods: The existing active base cover of ${fmt(m.oldCover)} on ${m.name||m.type} is transferred with waiting periods waived. The newly requested increase of R${diff.toLocaleString('en-ZA')} is subject to a new 6-month waiting period for natural death.\n`;});
   removed.forEach(m=>{t+=`• Forfeiture of Active Cover: Removing ${m.name||m.type} results in the immediate termination of their active risk cover. The client acknowledges forfeiting a benefit that has already served its waiting period.\n`;});
   t+=`• Proof of Cancellation: If a natural death claim arises within the first 6 months, the underwriter requires written proof of the previous policy's cancellation.\n\n`;
-  t+=`4. CLIENT CONFIRMATION:\nThe client has validated these instructions by signing the Client Needs & Affordability Declaration Form, confirming that the suitability of the new layout and affordability profile outweighs the benefits forfeited from the replaced active policy.\n\nAdvisor: ${d.advisorName} | Date: ${d.date}`;
+  t+=`4. CLIENT CONFIRMATION:\nThe client has validated these instructions by signing the Client Needs & Affordability Declaration Form, confirming that the suitability of the new layout and affordability profile outweighs the benefits forfeited from the replaced active policy.\n\nIndependent Contractor: ${d.advisorName} | Date: ${d.date}`;
   const el=document.getElementById('rfRoaText');if(el)el.value=t;
 }
 
@@ -12886,7 +12936,9 @@ async function rfSave(){
   const payload={...d,id,advisorSig:_rfState.advisorSig||null,clientSig:_rfState.clientSig||null,status:(_rfState.advisorSig&&_rfState.clientSig)?'signed':'draft'};
   try{
     if(!window.FB_READY)throw new Error('Not connected to Firebase — please try again.');
-    await window.FB.saveReplCase(id,payload);
+    // Strip base64 signatures from Firebase payload — they can exceed 1MB doc limit
+    const {advisorSig:_as,clientSig:_cs,...fbPayload}=payload;
+    await window.FB.saveReplCase(id,fbPayload);
     await rfLoadCases();renderReplCases();
     document.getElementById('rfStatus').textContent=payload.status==='signed'?'✅ Signed':'💾 Saved';
     showToast('Case saved ✓','success');
@@ -12959,7 +13011,7 @@ tr:nth-child(even) td{background:#f9fafb;}
   <div class="lbl">📝 Team Buffalos — Smart Replacement</div>
   <div class="ttl">Client Needs &amp; Affordability Declaration Form</div>
   <div class="meta">Client: <b>${d.clientName}</b> &nbsp;|&nbsp; ID: ${d.clientId||'N/A'} &nbsp;|&nbsp; Phone: ${d.clientPhone||'N/A'} &nbsp;|&nbsp; Date: ${d.date}</div>
-  <div class="meta">Competitor: ${d.competitor||'N/A'} &nbsp;|&nbsp; Policy No: ${d.competitorPolicy||'N/A'} &nbsp;|&nbsp; Advisor: ${d.advisorName}</div>
+  <div class="meta">Competitor(s): ${d.competitor||'N/A'} &nbsp;|&nbsp; Policy No: ${d.competitorPolicy||'N/A'} &nbsp;|&nbsp; Independent Contractor: ${d.advisorName}</div>
 </div>
 
 <div class="sec"><div class="sec-hd" style="background:#1d4ed8;">Part A — Affordability, Budget &amp; Persal Cap Declaration</div><div class="sec-body">
@@ -13000,13 +13052,13 @@ ${d.roaText?`<div class="sec"><div class="sec-hd" style="background:#92400e;">Re
 <div class="sec"><div class="sec-hd" style="background:#0d1f3c;">Signatures</div><div class="sec-body" style="padding-top:12px;">
 <div class="sig-box">
   ${d.advisorSig?`<img src="${d.advisorSig}" class="sig-img" alt="Advisor Signature"/>`:'<div class="sig-empty">Not signed</div>'}
-  <div class="sig-lbl">Advisor: <b>${d.advisorName}</b></div>
+  <div class="sig-lbl">Independent Contractor: <b>${d.advisorName}</b></div>
 </div>
 <div class="sig-box">
   ${d.clientSig?`<img src="${d.clientSig}" class="sig-img" alt="Client Signature"/>`:'<div class="sig-empty">Client not signed</div>'}
   <div class="sig-lbl">Client: <b>${d.clientName}</b></div>
 </div>
-<div style="margin-top:14px;font-size:9px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:8px;">Generated by Team Buffalos Hub · ${new Date().toLocaleString('en-ZA')} · This document is the official signed declaration for this replacement case and must be uploaded to iManagePro under Supporting Documents.</div>
+<div style="margin-top:14px;font-size:9px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:8px;">Generated by <b>Team Buffalos</b> Hub · ${new Date().toLocaleString('en-ZA')} · This document is the official signed declaration for this replacement case and must be uploaded to iManagePro under Supporting Documents.</div>
 </div></div>
 </body></html>`;
 }

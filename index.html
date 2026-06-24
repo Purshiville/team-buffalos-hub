@@ -128,7 +128,7 @@
       onCommQueries(cb){ return onSnapshot(collection(db,'commQueries'), s=>{ const docs=s.docs.map(d=>({...d.data(),id:d.id})); docs.sort((a,b)=>(b.submittedAt||'').localeCompare(a.submittedAt||'')); cb(docs); }); },
       // Replacement Cases
       async saveReplCase(id,data){ await setDoc(doc(db,'replacementCases',id),{...data,updatedAt:serverTimestamp()},{merge:true}); },
-      async getReplCases(code){ const q=query(collection(db,'replacementCases'),where('advisorCode','==',code),orderBy('updatedAt','desc'),limit(50)); const s=await getDocs(q); return s.docs.map(d=>({id:d.id,...d.data()})); },
+      async getReplCases(code){ const q=query(collection(db,'replacementCases'),where('advisorCode','==',code),limit(50)); const s=await getDocs(q); const docs=s.docs.map(d=>({id:d.id,...d.data()})); return docs.sort((a,b)=>(b.updatedAt?.seconds||0)-(a.updatedAt?.seconds||0)); },
       async deleteReplCase(id){ await deleteDoc(doc(db,'replacementCases',id)); },
       // Pre-cancellation cases — synced across all devices
       onPrecanCases(cb){ return onSnapshot(query(collection(db,'precancellations'),orderBy('addedAt','asc')), s=>cb(s.docs.map(d=>({...d.data(),_id:d.id})))); },
@@ -2520,8 +2520,14 @@ Please send your Proof of Payment to your advisor once done.</div>
         <div class="field" style="margin:0;"><label>Phone Number</label>
           <input id="rfClientPhone" type="tel" class="bgt-input" placeholder="0XX XXX XXXX"/>
         </div>
-        <div class="field" style="margin:0;"><label>Competitor Insurer *</label>
-          <input id="rfCompetitor" type="text" class="bgt-input" placeholder="e.g. Old Mutual"/>
+        <div class="field" style="margin:0;grid-column:1/-1;"><label>Competitor Insurer(s) *</label>
+          <div style="position:relative;" id="rfCompWrap">
+            <button type="button" onclick="rfToggleCompDropdown()" id="rfCompBtn" style="width:100%;text-align:left;padding:9px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;color:#0d1f3c;cursor:pointer;display:flex;justify-content:space-between;align-items:center;box-sizing:border-box;">
+              <span id="rfCompLabel" style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#9ca3af;">Select companies…</span>
+              <span style="color:#6b7280;font-size:11px;margin-left:6px;flex-shrink:0;">▾</span>
+            </button>
+            <div id="rfCompDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 4px 20px rgba(0,0,0,.12);z-index:300;max-height:220px;overflow-y:auto;padding:6px 0;"></div>
+          </div>
         </div>
         <div class="field" style="margin:0;"><label>Competitor Policy No.</label>
           <input id="rfCompetitorPolicy" type="text" class="bgt-input" placeholder="Policy number"/>
