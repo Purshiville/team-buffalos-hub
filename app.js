@@ -13067,44 +13067,57 @@ ${d.roaText?`<div class="sec"><div class="sec-hd" style="background:#92400e;">Re
 // ── REPLACEMENT PRESENTATION ──────────────────────────────────────────────────
 const REPL_SLIDES = [
   {
-    bg:'#064e3b', accent:'#6ee7b7', title:'Is Your Funeral Cover Working for You?',
-    subtitle:'Let\'s find out together',
-    body:'Funeral cover should give your family peace of mind — not paperwork, hidden delays, or a payout that doesn\'t stretch.\n\nIn the next few minutes we\'ll look at what you currently have, what you might be missing, and what better cover could look like for you.'
+    bg:'#064e3b', accent:'#6ee7b7',
+    subtitle:'Step 1 of 8 — Open the Conversation',
+    title:'Build the Relationship First',
+    say:'Good day. My name is [Your Name] — I\'m an independent contractor with Team Buffalos.\n\nThank you for your time today. I\'m not here to sell you something new. I\'m here to make sure your family is properly protected with what you already have — and only look at alternatives if it genuinely makes sense for you.\n\nCan I take about 10 minutes to go through your current cover with you?'
   },
   {
-    bg:'#1e3a5f', accent:'#93c5fd', title:'What We\'re Looking For',
-    subtitle:'A quick needs check — no obligation',
-    bullets:['How many family members are currently covered?','Is your monthly premium affordable long-term?','How long is the waiting period on your current plan?','Does the payout match what a funeral actually costs today?']
+    bg:'#1e3a5f', accent:'#93c5fd',
+    subtitle:'Step 2 of 8 — Understand What They Have',
+    title:'Tell Me About Your Current Policy',
+    say:'Do you have your policy schedule or document here? Let me ask you three questions:\n\n• Who is currently covered on this policy?\n• What is the payout amount for each person?\n• Do you know which company it\'s with and how long you\'ve had it?\n\nMost clients I sit with can\'t answer all three — and that\'s not their fault. That\'s exactly what I\'m here to help with.'
   },
   {
-    bg:'#3b0764', accent:'#c4b5fd', title:'What Good Cover Looks Like',
-    subtitle:'Sanlam Sky — what\'s available to you',
-    bullets:['Main member, spouse, children, and parents — all in one plan','Payout within 48 hours of a valid claim','Fixed premium — no surprise increases','No medical exams — just a simple application']
+    bg:'#4a1942', accent:'#f0abfc',
+    subtitle:'Step 3 of 8 — Make the Problems Visible',
+    title:'Here\'s What I Find Most Often',
+    bullets:[
+      '"Your main member is covered for R10,000 — but a funeral today costs R30,000 to R50,000."',
+      '"A child turned 21 and aged off the policy automatically. You had no idea — they have zero cover right now."',
+      '"Someone was added who doesn\'t qualify under insurable interest rules. Their claim could be rejected."',
+      '"Your premium has gone up three times but the cover amount has never been reviewed."'
+    ]
   },
   {
-    bg:'#7c2d12', accent:'#fdba74', title:'The Waiting Period — Honest Disclosure',
-    subtitle:'We believe in full transparency',
-    body:'A new Sanlam Sky policy has a 6-month waiting period for natural death. This is standard across the industry.\n\nImportant: if you switch, keep your old policy active until your new one is confirmed in force. We will guide you through exactly when it is safe to cancel — we would never leave you exposed.'
+    bg:'#7c2d12', accent:'#fdba74',
+    subtitle:'Step 4 of 8 — Anchor to Reality',
+    title:'What a Funeral Actually Costs Today',
+    say:'Let me give you some numbers so we\'re talking about the same thing.\n\nA traditional burial — tent, chairs, catering, hearse, tombstone, post-funeral meal — easily runs R30,000 to R50,000. In many communities, the expectation is R80,000 or more.\n\nCremation is cheaper — typically R8,000 to R15,000 — but that\'s not always the family\'s choice.\n\nLook at your current cover amount. Is that enough for the funeral your family would expect?'
   },
   {
-    bg:'#065f46', accent:'#a7f3d0', title:'You Decide What\'s Affordable',
-    subtitle:'Cover that fits your budget',
-    body:'We work with your budget — not against it.\n\nYou choose the cover level that fits what you are comfortable paying each month.\n\nThere is no pressure to spend more than you need to. Our job is to find the right cover at the right price for your family.'
+    bg:'#065f46', accent:'#a7f3d0',
+    subtitle:'Step 5 of 8 — Present the Solution',
+    title:'Here\'s What We Can Do for You',
+    say:'Through Sanlam Sky, we can build one plan that covers you, your spouse, your children, and your parents — all in a single policy.\n\nThe payout comes within 48 hours of a valid claim. There are no medical exams — just a straightforward application. And your premium is fixed — no surprise increases down the line.\n\nI build the plan around your budget. Not the other way around.'
   },
   {
-    bg:'#1e1b4b', accent:'#a5b4fc', title:'The Switch — Step by Step',
-    subtitle:'We handle the hard part',
-    bullets:['We complete a replacement form together — no surprises','We document why the switch benefits you (legally required and for your protection)','Your new policy starts on your first debit order','We advise you exactly when your old policy can safely be cancelled']
+    bg:'#1e3a5f', accent:'#93c5fd',
+    subtitle:'Step 6 of 8 — Be Upfront About the Waiting Period',
+    title:'One Thing I Need to Be Honest About',
+    say:'Every insurer in South Africa has a 6-month waiting period for natural death on a new policy. Not just us — every single one. That\'s regulated by law.\n\nSo here is what we do: we never cancel your old policy until your new one is confirmed active and your first debit order has cleared. You run both for a short overlap period.\n\nI will tell you exactly when it is safe to cancel the old one. Your family will never be without cover. That is my commitment to you.'
   },
   {
-    bg:'#0c4a6e', accent:'#7dd3fc', title:'When a Switch Makes Sense',
-    subtitle:'And when it doesn\'t — we\'ll tell you both',
-    body:'A replacement makes sense when:\n• Your current cover leaves family members out\n• Your premiums have become unaffordable\n• The payout won\'t cover the actual cost of a funeral\n• You\'re paying for cover you no longer need\n\nWe will NEVER recommend a switch that leaves you worse off. If your current cover is fine, we\'ll say so.'
+    bg:'#3b0764', accent:'#c4b5fd',
+    subtitle:'Step 7 of 8 — Establish Real Affordability',
+    title:'What\'s Comfortable for You Each Month?',
+    say:'I need you to answer this honestly — not what you\'re currently paying, but what is the maximum you would be comfortable paying for this cover on an ongoing basis?\n\nI\'m going to go through your bank statements with you so we can confirm the number is real. A policy that lapses because it\'s unaffordable protects nobody.\n\nI would rather put you on less cover that stays on the books than more cover that falls away in six months.'
   },
   {
-    bg:'#14532d', accent:'#86efac', title:'Your Next Step',
-    subtitle:'Let\'s make it official',
-    body:'If you\'re happy with what you\'ve seen, we can complete your application today.\n\nWe\'ll take care of:\n• The replacement paperwork\n• Notifying your current insurer\n• Setting up your new debit order\n• Confirming your cover is active before you cancel anything\n\n🦬 Team Buffalos — we make cover simple.'
+    bg:'#14532d', accent:'#86efac',
+    subtitle:'Step 8 of 8 — Close the Conversation',
+    title:'So, Where Do We Go From Here?',
+    say:'Based on what we\'ve looked at today, I can put together cover that actually makes sense for your family.\n\nIf you\'re happy to move forward, we complete the application together right now — about 20 minutes. I handle everything: the paperwork, notifying your current insurer, and setting up your debit order correctly.\n\nAll I need from you is your ID, your current policy schedule, and your latest bank statement.\n\nAny questions before we start?'
   }
 ];
 
@@ -13118,13 +13131,14 @@ function replRenderSlide(){
   const s=slides[_replSlideIdx];
   const track=document.getElementById('replSlideTrack');
   if(!track)return;
-  const bulletsHtml=s.bullets?`<ul style="margin:0;padding:0 0 0 18px;list-style:none;display:flex;flex-direction:column;gap:10px;">${s.bullets.map(b=>`<li style="font-size:13px;color:#fff;line-height:1.6;padding-left:4px;">${b}</li>`).join('')}</ul>`:'';
+  const bulletsHtml=s.bullets?`<ul style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:8px;">${s.bullets.map(b=>`<li style="font-size:12.5px;color:rgba(255,255,255,0.9);line-height:1.6;padding:9px 12px;background:rgba(255,255,255,0.08);border-radius:8px;border-left:3px solid ${s.accent};">${b}</li>`).join('')}</ul>`:'';
   const bodyHtml=s.body?`<div style="font-size:13px;color:rgba(255,255,255,0.85);line-height:1.8;white-space:pre-wrap;">${s.body}</div>`:'';
+  const sayHtml=s.say?`<div><div style="font-size:9px;font-weight:700;color:${s.accent};text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">🗣 Say this</div><div style="background:rgba(255,255,255,0.1);border-left:4px solid ${s.accent};border-radius:0 10px 10px 0;padding:14px 16px;font-size:13px;color:#fff;line-height:1.9;white-space:pre-wrap;">${s.say}</div></div>`:'';
   track.innerHTML=`<div style="background:${s.bg};padding:28px 22px;min-height:320px;display:flex;flex-direction:column;justify-content:space-between;">
     <div>
       <div style="font-size:10px;font-weight:700;color:${s.accent};text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px;">${s.subtitle}</div>
       <div style="font-size:20px;font-weight:700;color:#fff;margin-bottom:16px;line-height:1.3;">${s.title}</div>
-      ${bodyHtml}${bulletsHtml}
+      ${bodyHtml}${bulletsHtml}${sayHtml}
     </div>
     <div style="margin-top:18px;font-size:10px;color:rgba(255,255,255,0.35);text-align:right;">Slide ${_replSlideIdx+1} / ${slides.length}</div>
   </div>`;
