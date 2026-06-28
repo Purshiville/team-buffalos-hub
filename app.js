@@ -116,6 +116,7 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 
 ## WAITING PERIODS
 - New business: 6 months natural death | 3 months unnatural/accidental death (most plans) | 1 month accidental death only (AIO).
+- EXCEPTION: Sanlam ILC (Immediate Life Cover) has NO waiting period whatsoever — no 6-month natural death waiting period applies. ILC cover is effective immediately from issue date. Do NOT include any waiting period for ILC in the ROA or when advising clients.
 - Full waiver: previous policy active 6+ months AND cancellation proof loaded within 31 days of inception.
 - Partial waiver: previous policy active 2 months → 2 months waived.
 - Waiting period starts from policy issue date on IMP, not from deduction date.
@@ -2850,8 +2851,9 @@ function toggleChat(){
   popup.style.display=isOpen?'none':'flex';
   document.getElementById('aiUnread').style.display='none';
   if(!isOpen){
+    if(!chatHistory.length)_restoreChatHistory();
     document.getElementById('chatInput').focus();
-    if(pills)pills.style.display='flex';
+    if(pills)pills.style.display=chatHistory.length?'none':'flex';
     loadGuideForAI();
   }
 }
@@ -5020,7 +5022,7 @@ function showBriefBlowup(type){
     const tomorrow=new Date();tomorrow.setDate(tomorrow.getDate()+1);
     const tKey=tomorrow.getFullYear()+'-'+(''+(tomorrow.getMonth()+1)).padStart(2,'0')+'-'+(''+tomorrow.getDate()).padStart(2,'0');
     title=`📅 Tomorrow — ${DAYS_SHORT[tomorrow.getDay()]}, ${tomorrow.getDate()} ${MONTHS[tomorrow.getMonth()]}`;
-    const evs=diaryGetEvents().filter(e=>e.date===tKey&&(isOps||(e.advisorCode===currentUser?.code||e.advisorCode==='ALL')));
+    const evs=diaryGetEvents().filter(e=>e.date===tKey&&(isOps||(e.advisorCode===currentUser?.code||e.advisorCode==='ALL'))).sort((a,b)=>(a.startTime||'99:99').localeCompare(b.startTime||'99:99'));
     if(evs.length){
       rows=evs.map(ev=>`<div style="background:#f8f7f4;border-radius:10px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #c9922a;">
         <div style="font-size:13px;font-weight:700;color:#0d1f3c;">${ev.title}</div>
@@ -7680,29 +7682,62 @@ function askQ(q){const popup=document.getElementById('aiPopup');popup.style.disp
 // ── VOICE INPUT ───────────────────────────────────────────────────────────────
 let _micRecognition=null,_micActive=false;
 function toggleVoiceInput(){
-  if(_micActive){_micRecognition&&_micRecognition.stop();return;}
+  if(_micActive){_micActive=false;_micRecognition&&_micRecognition.stop();return;}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showAlert("Voice input is not supported on this browser. Use Chrome or Safari.","error");return;}
   _micRecognition=new SR();
-  _micRecognition.continuous=false;
+  _micRecognition.continuous=true;
   _micRecognition.interimResults=true;
   _micRecognition.lang="en-ZA";
   const btn=document.getElementById("micBtn");
   const inp=document.getElementById("chatInput");
-  _micRecognition.onstart=()=>{_micActive=true;if(btn){btn.textContent="🔴";btn.classList.add("listening");}if(inp)inp.placeholder="Listening…";};
+  _micRecognition.onstart=()=>{_micActive=true;if(btn){btn.textContent="🔴";btn.classList.add("listening");}if(inp)inp.placeholder="Listening… tap 🔴 to stop";};
   _micRecognition.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join("");if(inp)inp.value=t;};
-  _micRecognition.onend=()=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";const v=document.getElementById("chatInput")?.value.trim();if(v)sendChat();};
-  _micRecognition.onerror=e=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";if(e.error!=="no-speech"&&e.error!=="aborted")showAlert("Voice error: "+e.error,"error");};
+  _micRecognition.onend=()=>{if(_micActive){_micRecognition.start();return;}_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";};
+  _micRecognition.onerror=e=>{if(e.error==="no-speech"&&_micActive)return;_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";if(e.error!=="aborted")showAlert("Voice error: "+e.error,"error");};
   _micRecognition.start();
 }
 // ── END VOICE INPUT ───────────────────────────────────────────────────────────
 function clearAIChat(){
   chatHistory=[];
+  if(currentUser)try{localStorage.removeItem('tl_ai_hist_'+currentUser.code);}catch(e){}
   const msgs=document.getElementById('chatMessages');if(!msgs)return;
   const greeting=currentUser?`Hi ${currentUser.name.split(' ')[0]}! `:'';
   msgs.innerHTML=`<div class="msg bot"><div class="msg-av bot">AI</div><div class="msg-bubble">${greeting}Ask me anything about products, commission, NTU, persistency, Qlink, pre-cancellations, fit &amp; proper, or compliance — I'm here 24/7.</div></div>`;
   const pills=document.getElementById('chatPills');if(pills)pills.style.display='flex';
 }
+function _saveChatHistory(){if(!currentUser)return;try{localStorage.setItem('tl_ai_hist_'+currentUser.code,JSON.stringify(chatHistory.slice(-40)));}catch(e){}}
+function _restoreChatHistory(){
+  if(!currentUser)return;
+  try{
+    const saved=JSON.parse(localStorage.getItem('tl_ai_hist_'+currentUser.code)||'[]');
+    if(!saved.length)return;
+    chatHistory=saved;
+    const msgs=document.getElementById('chatMessages');if(!msgs)return;
+    msgs.innerHTML='';
+    saved.forEach(m=>{
+      const div=document.createElement('div');div.className='msg '+(m.role==='user'?'user':'bot');
+      div.innerHTML=`<div class="msg-av ${m.role==='user'?'':'bot'}">${m.role==='user'?(currentUser?.name.charAt(0)||'A'):'AI'}</div><div class="msg-bubble">${m.role==='user'?m.content:renderMarkdown(m.content)}</div>`;
+      msgs.appendChild(div);
+    });
+    msgs.scrollTop=msgs.scrollHeight;
+    const pills=document.getElementById('chatPills');if(pills)pills.style.display='none';
+  }catch(e){}
+}
+let _chatPhoto=null,_chatPhotoType=null;
+function chatPhotoSelected(inp){
+  const file=inp.files?.[0];if(!file)return;
+  _chatPhotoType=file.type||'image/jpeg';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    _chatPhoto=e.target.result.split(',')[1];
+    let ind=document.getElementById('chatPhotoIndicator');
+    if(!ind){ind=document.createElement('div');ind.id='chatPhotoIndicator';ind.style.cssText='font-size:11px;color:#0d1f3c;padding:4px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;margin:0 8px 4px;display:flex;align-items:center;gap:6px;';const ir=document.querySelector('.ai-popup-input');if(ir)ir.parentElement.insertBefore(ind,ir);}
+    ind.innerHTML=`📷 <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${file.name}</span><button onclick="clearChatPhoto()" style="background:none;border:none;color:#6b7280;cursor:pointer;font-size:14px;padding:0;flex-shrink:0;line-height:1;">✕</button>`;
+  };
+  reader.readAsDataURL(file);
+}
+function clearChatPhoto(){_chatPhoto=null;_chatPhotoType=null;const ind=document.getElementById('chatPhotoIndicator');if(ind)ind.remove();const inp=document.getElementById('chatPhotoInput');if(inp)inp.value='';}
 function renderMarkdown(text){
   const s=text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   return s
@@ -7720,8 +7755,28 @@ function addMsg(role,text,typing){
   msgs.appendChild(div);msgs.scrollTop=msgs.scrollHeight;return div.querySelector('.msg-bubble');
 }
 async function sendChat(){
-  const input=document.getElementById('chatInput'),text=input.value.trim();if(!text)return;
-  input.value='';addMsg('user',text);chatHistory.push({role:'user',content:text});
+  const input=document.getElementById('chatInput');
+  const text=input.value.trim();
+  if(!text&&!_chatPhoto)return;
+  input.value='';if(input.tagName==='TEXTAREA'){input.style.height='auto';}
+  document.getElementById('chatPills').style.display='none';
+  if(_chatPhoto){
+    const photoB64=_chatPhoto,photoType=_chatPhotoType;
+    const userText=text||'Please analyse this photo.';
+    clearChatPhoto();
+    addMsg('user',text?`📷 ${text}`:'📷 [Photo sent for analysis]');
+    chatHistory.push({role:'user',content:userText});
+    const bubble=addMsg('bot','Analysing your photo…',true);
+    try{
+      const prompt=`${userText}\n\n[You are the Team Buffalos AI assistant for Sanlam Sky advisors in South Africa. Analyse this image and respond helpfully — whether it relates to insurance documents, policy schedules, client information, or any other context the advisor needs help with.]`;
+      const reply=await callClaudeVision(photoB64,photoType,prompt,1500);
+      bubble.innerHTML=renderMarkdown(reply);bubble.classList.remove('typing');
+      chatHistory.push({role:'assistant',content:reply});
+    }catch(e){bubble.textContent='Could not analyse the photo. Please try again.';bubble.classList.remove('typing');}
+    _saveChatHistory();return;
+  }
+  if(!text)return;
+  addMsg('user',text);chatHistory.push({role:'user',content:text});
   const bubble=addMsg('bot','Thinking...',true);
   try{
     const trimmed=chatHistory.slice(-20);
@@ -7730,6 +7785,7 @@ async function sendChat(){
     const reply=data.content?.find(b=>b.type==='text')?.text||'Sorry, I could not get a response.';
     bubble.innerHTML=renderMarkdown(reply);bubble.classList.remove('typing');chatHistory.push({role:'assistant',content:reply});
   }catch(e){bubble.textContent='Something went wrong. Please try again.';bubble.classList.remove('typing');}
+  _saveChatHistory();
 }
 
 function previewSettingsPhoto(input){
@@ -12563,15 +12619,24 @@ function claimCopyMsg(){
 // ── END CLAIM PACK BUILDER ────────────────────────────────────────────────────
 
 // ── UNLOCK PDF ────────────────────────────────────────────────────────────────
-let _updfFile=null,_updfBytes=null;
+let _updfFiles=[];
 
-function updfHandleFile(file){
+function updfHandleFile(file){if(file)updfHandleFiles([file]);}
+function updfHandleFiles(files){
+  const pdfs=Array.from(files).filter(f=>f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf'));
+  if(!pdfs.length)return;
+  pdfs.forEach(f=>{
+    const id='updf_'+Date.now()+'_'+Math.random().toString(36).slice(2);
+    _updfFiles.push({id,file:f,bytes:null,status:'pending'});
+  });
+  updfRenderList();
+  document.getElementById('updfDropZone').style.display='none';
+}
+function updfHandleFile_legacy(file){
   if(!file||file.type!=='application/pdf')return;
-  _updfFile=file;
-  document.getElementById('updfFileName').textContent=file.name;
-  document.getElementById('updfFileSize').textContent=(file.size/1024).toFixed(1)+' KB';
-  document.getElementById('updfFileRow').style.display='block';
-  document.getElementById('updfPwdRow').style.display='none';
+  _updfFiles=[{id:'updf_0',file,bytes:null,status:'pending'}];
+  updfRenderList();
+  document.getElementById('updfDropZone').style.display='none';
   document.getElementById('updfStatus').style.display='none';
   document.getElementById('updfResult').style.display='none';
   document.getElementById('updfBtn').style.display='block';
@@ -12580,102 +12645,97 @@ function updfHandleFile(file){
 function updfHandleDrop(e){
   e.preventDefault();
   document.getElementById('updfDropZone').style.borderColor='#e5e7eb';
-  const f=e.dataTransfer?.files?.[0];
-  if(f)updfHandleFile(f);
+  const files=e.dataTransfer?.files;
+  if(files&&files.length)updfHandleFiles(files);
 }
-
-async function updfUnlock(){
-  if(!_updfFile)return;
-  const btn=document.getElementById('updfBtn');
-  const status=document.getElementById('updfStatus');
-  const pwd=document.getElementById('updfPwd')?.value.trim()||'';
-
-  btn.disabled=true;btn.textContent='Unlocking…';
-  status.style.display='block';
-  status.style.background='#f0f9ff';status.style.color='#075985';status.style.border='1px solid #bae6fd';
-  status.textContent='Loading PDF engines…';
-
+function updfRenderList(){
+  const list=document.getElementById('updfFileList');
+  const addBtn=document.getElementById('updfAddMoreBtn');
+  const unlockBtn=document.getElementById('updfUnlockAllBtn');
+  if(!list)return;
+  if(!_updfFiles.length){list.innerHTML='';if(addBtn)addBtn.style.display='none';if(unlockBtn)unlockBtn.style.display='none';return;}
+  list.innerHTML=_updfFiles.map(entry=>{
+    const name=entry.file.name;
+    const size=(entry.file.size/1024).toFixed(1)+' KB';
+    let statusHtml='';
+    if(entry.status==='unlocking')statusHtml=`<div id="updfSt_${entry.id}" style="font-size:11px;color:#075985;padding:4px 0;">Unlocking…</div>`;
+    else if(entry.status==='done')statusHtml=`<div style="font-size:11px;color:#16a34a;padding:4px 0;">✅ Unlocked — <button onclick="updfDownloadFile('${entry.id}')" style="background:none;border:none;color:#065f46;font-weight:700;cursor:pointer;font-size:11px;text-decoration:underline;">Download</button></div>`;
+    else if(entry.status==='pwd_needed')statusHtml=`<div style="margin-top:6px;"><div style="font-size:11px;color:#92400e;margin-bottom:4px;">🔐 Enter password:</div><div style="display:flex;gap:6px;"><input id="updfPwd_${entry.id}" type="password" placeholder="PDF password…" style="flex:1;padding:7px 10px;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;" onkeydown="if(event.key==='Enter')updfUnlockFile('${entry.id}')"/><button onclick="updfUnlockFile('${entry.id}')" style="background:#0d1f3c;color:#fff;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;">Unlock</button></div><div id="updfSt_${entry.id}" style="font-size:11px;color:#dc2626;padding:4px 0;display:none;"></div></div>`;
+    else if(entry.status==='error')statusHtml=`<div style="font-size:11px;color:#dc2626;padding:4px 0;">❌ ${entry.error||'Could not process'}</div>`;
+    return`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:10px 14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;flex-shrink:0;">📄</span>
+        <div style="flex:1;min-width:0;"><div style="font-size:13px;font-weight:700;color:#0d1f3c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div><div style="font-size:11px;color:#9ca3af;">${size}</div></div>
+        ${entry.status==='pending'||entry.status==='pwd_needed'?`<button onclick="updfRemoveFile('${entry.id}')" style="background:none;border:none;color:#9ca3af;font-size:18px;cursor:pointer;flex-shrink:0;line-height:1;">✕</button>`:''}
+      </div>
+      ${statusHtml}
+    </div>`;
+  }).join('');
+  const pending=_updfFiles.filter(e=>e.status==='pending'||e.status==='pwd_needed').length;
+  if(unlockBtn){unlockBtn.style.display=pending?'block':'none';unlockBtn.textContent=`🔓 Unlock All (${pending} PDF${pending===1?'':'s'})`;}
+  if(addBtn)addBtn.style.display='block';
+  const rb=document.getElementById('updfResetBtn');if(rb)rb.style.display='block';
+}
+function updfRemoveFile(id){
+  _updfFiles=_updfFiles.filter(e=>e.id!==id);
+  if(!_updfFiles.length){document.getElementById('updfDropZone').style.display='';updfReset();}
+  else updfRenderList();
+}
+async function updfUnlockFile(id){
+  const entry=_updfFiles.find(e=>e.id===id);if(!entry)return;
+  const pwd=(document.getElementById('updfPwd_'+id)?.value.trim())||'';
+  entry.status='unlocking';updfRenderList();
+  const stEl=document.getElementById('updfSt_'+id);
   try{
     await Promise.all([_loadPdfJs(),loadPdfLib()]);
     const {PDFDocument}=window.PDFLib;
-    const bytes=await _updfFile.arrayBuffer();
-
-    // Use pdf.js to load & decrypt — it handles owner-password and open-password PDFs correctly
+    const bytes=await entry.file.arrayBuffer();
     let pdfJsDoc;
-    try{
-      pdfJsDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes),password:pwd}).promise;
-    }catch(err){
+    try{pdfJsDoc=await window.pdfjsLib.getDocument({data:new Uint8Array(bytes),password:pwd}).promise;}
+    catch(err){
       const isPassErr=err?.name==='PasswordException'||/PasswordException/i.test(err?.name||'');
-      if(isPassErr){
-        document.getElementById('updfPwdRow').style.display='block';
-        status.style.display='block';
-        status.style.background='#fef9ec';status.style.color='#92400e';status.style.border='1px solid #f5d98b';
-        status.textContent=pwd?'❌ Incorrect password — please try again.':'🔐 This PDF requires an open password. Enter it above.';
-        btn.disabled=false;btn.textContent='🔓 Remove Password';
-        return;
-      }
+      if(isPassErr){entry.status='pwd_needed';updfRenderList();const st=document.getElementById('updfSt_'+id);if(st){st.style.display='block';st.textContent=pwd?'❌ Incorrect password — try again.':'';}return;}
       throw err;
     }
-
     const total=pdfJsDoc.numPages;
     const newDoc=await PDFDocument.create();
-
-    // Render each page via canvas then embed as JPEG into the new PDF
     for(let i=1;i<=total;i++){
-      status.textContent=`Rendering page ${i} of ${total}…`;
+      if(stEl)stEl.textContent=`Rendering page ${i} of ${total}…`;
       const pg=await pdfJsDoc.getPage(i);
       const vp=pg.getViewport({scale:2});
-      const canvas=document.createElement('canvas');
-      canvas.width=vp.width; canvas.height=vp.height;
+      const canvas=document.createElement('canvas');canvas.width=vp.width;canvas.height=vp.height;
       await pg.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-
-      // Convert canvas to JPEG bytes
       const dataUrl=canvas.toDataURL('image/jpeg',0.92);
       const b64=dataUrl.split(',')[1];
       const imgBytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0));
-
       const img=await newDoc.embedJpg(imgBytes);
-      // Page size = original points (scale was 2, so divide by 2)
-      const w=vp.width/2, h=vp.height/2;
-      const newPg=newDoc.addPage([w,h]);
-      newPg.drawImage(img,{x:0,y:0,width:w,height:h});
+      const w=vp.width/2,h=vp.height/2;
+      const newPg=newDoc.addPage([w,h]);newPg.drawImage(img,{x:0,y:0,width:w,height:h});
     }
-
-    _updfBytes=await newDoc.save();
-    btn.style.display='none';
-    status.style.display='none';
-    document.getElementById('updfPwdRow').style.display='none';
-    document.getElementById('updfResultNote').textContent='Unlocked copy ready — '+(_updfFile.name.replace(/\.pdf$/i,''))+'-unlocked.pdf';
-    document.getElementById('updfResult').style.display='block';
-  }catch(e){
-    status.style.background='#fef2f2';status.style.color='#dc2626';status.style.border='1px solid #fca5a5';
-    status.textContent='Error: '+(e.message||'Could not process this PDF.');
-    btn.disabled=false;btn.textContent='🔓 Remove Password';
-  }
+    entry.bytes=await newDoc.save();
+    entry.status='done';updfRenderList();
+  }catch(e){entry.status='error';entry.error=e.message||'Could not process this PDF.';updfRenderList();}
 }
-
-function updfDownload(){
-  if(!_updfBytes)return;
-  const blob=new Blob([_updfBytes],{type:'application/pdf'});
+async function updfUnlockAll(){
+  const pending=_updfFiles.filter(e=>e.status==='pending'||e.status==='pwd_needed');
+  for(const entry of pending)await updfUnlockFile(entry.id);
+}
+function updfDownloadFile(id){
+  const entry=_updfFiles.find(e=>e.id===id);if(!entry||!entry.bytes)return;
+  const blob=new Blob([entry.bytes],{type:'application/pdf'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  a.href=url;
-  a.download=(_updfFile?.name||'document').replace(/\.pdf$/i,'')+'-unlocked.pdf';
-  a.click();
+  const a=document.createElement('a');a.href=url;a.download=entry.file.name.replace(/\.pdf$/i,'')+'-unlocked.pdf';a.click();
   setTimeout(()=>URL.revokeObjectURL(url),8000);
 }
-
+function updfDownload(){const done=_updfFiles.find(e=>e.status==='done');if(done)updfDownloadFile(done.id);}
 function updfReset(){
-  _updfFile=null;_updfBytes=null;
+  _updfFiles=[];
   document.getElementById('updfInput').value='';
-  document.getElementById('updfFileRow').style.display='none';
-  document.getElementById('updfResult').style.display='none';
-  document.getElementById('updfStatus').style.display='none';
-  document.getElementById('updfPwdRow').style.display='none';
-  document.getElementById('updfPwd').value='';
-  document.getElementById('updfBtn').style.display='block';
-  document.getElementById('updfBtn').disabled=false;
-  document.getElementById('updfBtn').textContent='🔓 Remove Password';
+  document.getElementById('updfFileList').innerHTML='';
+  const dz=document.getElementById('updfDropZone');if(dz)dz.style.display='';
+  const ab=document.getElementById('updfAddMoreBtn');if(ab)ab.style.display='none';
+  const ub=document.getElementById('updfUnlockAllBtn');if(ub)ub.style.display='none';
+  const rb=document.getElementById('updfResetBtn');if(rb)rb.style.display='none';
 }
 // ── END UNLOCK PDF ────────────────────────────────────────────────────────────
 
