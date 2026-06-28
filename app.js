@@ -8801,12 +8801,13 @@ function refAdd(){
   const by=document.getElementById('ref-by').value.trim();
   const name=document.getElementById('ref-name').value.trim();
   const facility=document.getElementById('ref-facility').value.trim();
+  const phone=document.getElementById('ref-phone').value.trim();
   const relation=document.getElementById('ref-relation').value;
   if(!by||!name||!facility)return showAlert('Please fill in all referral fields.','error');
   const refs=getReferrals();
-  refs.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),referredBy:by,name,facility,relation,status:'pipeline',advisorCode:currentUser.code,createdAt:new Date().toISOString()});
+  refs.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),referredBy:by,name,phone,facility,relation,status:'pipeline',advisorCode:currentUser.code,createdAt:new Date().toISOString()});
   saveReferrals(refs);
-  ['ref-by','ref-name','ref-facility'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['ref-by','ref-name','ref-facility','ref-phone'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   renderReferrals();
 }
 function refSetStatus(id,status){
@@ -8851,7 +8852,7 @@ function renderReferrals(){
       </div>
       ${list.map(r=>`<div style="padding:10px 16px;border-top:1px solid #f4f2ed;">
         <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;">
-          <div><div style="font-size:13px;font-weight:700;color:#0d1f3c;">${r.name}${_refAge(r)}</div><div style="font-size:11px;color:#6b7280;">${r.facility} · ${r.relation}</div></div>
+          <div><div style="font-size:13px;font-weight:700;color:#0d1f3c;">${r.name}${_refAge(r)}</div><div style="font-size:11px;color:#6b7280;">${r.facility} · ${r.relation}${r.phone?` · <a href="tel:${r.phone}" style="color:#c9922a;text-decoration:none;">${r.phone}</a>`:''}</div></div>
           <div style="display:flex;align-items:center;gap:6px;">
             <select onchange="refSetStatus('${r.id}',this.value)" style="font-size:11px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;background:#f9f9f9;">
               ${Object.entries(REF_STATUS_LABELS).map(([v,l])=>`<option value="${v}"${r.status===v?' selected':''}>${l}</option>`).join('')}
