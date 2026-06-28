@@ -479,9 +479,22 @@ window.addEventListener('offline',()=>{
 const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
-// ── NEW ADVISORS — show "New" badge in rankings ──
-const NEW_ADVISOR_CODES = new Set(['SKA315568']); // Stefan Barnard
-const _newBadge=(code)=>NEW_ADVISOR_CODES.has(code)?` <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:6px;padding:1px 5px;vertical-align:middle;">New</span>`:'';
+// ── NEW ADVISORS — dynamic "New" badge ──
+// New to industry (DOFA within 12 months of hub registration): 90 days from DOFA
+// Previously appointed (older DOFA): 90 days from registeredAt
+function _newBadge(code){
+  const u=getUsers()[code];
+  if(!u)return'';
+  const today=new Date();today.setHours(0,0,0,0);
+  const reg=u.registeredAt?new Date(u.registeredAt):null;
+  const dofa=u.dofa?new Date(u.dofa):null;
+  let ref=null;
+  if(dofa&&reg){const gap=Math.round((reg-dofa)/86400000);ref=(gap>=0&&gap<=365)?dofa:reg;}
+  else if(reg){ref=reg;}
+  if(!ref)return'';
+  const daysNew=Math.floor((today-ref)/86400000);
+  return daysNew<=90?` <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:6px;padding:1px 5px;vertical-align:middle;">New</span>`:'';
+}
 
 // ── APPROVED ADVISOR WHITELIST ──
 const APPROVED_CODES = new Set([
