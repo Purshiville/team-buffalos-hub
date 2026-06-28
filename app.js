@@ -253,6 +253,7 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 - Discovery Funeral (Phakama / Safrican): 011 778 8000 · 012 348 8310 | safmembership@safrican.co.za · info@phakama.co.za
 - Discovery Life: 0860 005 433 | discoverylifeinfo@discovery.co.za
 - Emerald Life: 011 658 8200 · 021 910 0916 | info@emeraldsa.co.za
+- 1Life: 0800 007 700 | clientservices@1life.co.za
 - FNB Life: 087 736 7772 | fnblife@fnb.co.za
 - Hollard Life: 0860 333 118 | customerservice@hollard.co.za
 - Hollard MLM: 0860 000 789 | lifeclientservice@hollard.co.za
@@ -291,7 +292,7 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 - Lerato Mogadima — Cancellations: 066 359 7401
 
 ## HUB FEATURES (Team Buffalos Advisor Hub — https://purshiville.github.io/team-buffalos-hub/index-live-v2_1.html)
-- Home: daily brief, production cut-off countdown, pre-cancellation alert, next Qlink run date, notice board, top-3 leaderboard, daily tools grid. Tap the buffalo logo to return home from anywhere.
+- Home: daily brief, production cut-off countdown, pre-cancellation alert, next Qlink run date, notice board, top-3 leaderboard, daily tools grid, team birthday alerts (all users see upcoming birthdays within 7 days). Tap the buffalo logo to return home from anywhere.
 - Policy Review: upload client policy PDFs → AI extracts cover, premiums, benefits → compare → generate professional advice PDF. Rate-limited to once per 24 hours for advisors; manager has unlimited access.
 - QLink Calculator: enter client's basic salary + existing deductions → instant PERSAL space calculation. FSP name dropdown included.
 - ROA Tool: AI-assisted Record of Advice generator for replacement cases — fill in client details, cover changes, and reasons. Tool generates compliant ROA boilerplate text to copy directly into IMP.
@@ -311,9 +312,33 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 - Activity Log (Manager only): Today at a Glance stat cards (Online now / Active today / Actions today). Today's engagement table per advisor — time on site, last seen, Online/Away/Offline chip. Tool usage leaderboard showing which tools each advisor used.
 - Time on Site Tracker: per-advisor daily timer — counts only while the tab is visible, resets at midnight. Green ≥1h, amber ≥10m, grey <10m. Advisor syncs to Firebase every 30s; manager sees all advisors live on the Team page.
 - Profile Switcher (Manager only): Settings → tap avatar → ACTIVE PROFILE section → toggle between Manager view and Advisor view. Orange banner appears below topbar while in Advisor view. Tap the banner to return to Manager view.
-- Need Answers?: this AI assistant — ask any product, process, compliance, or business question. Voice input available (mic button next to send, auto-sends on speech end).
+- Need Answers?: this AI assistant — ask any product, process, compliance, business, or hub technical question. Voice input: tap 🎤 mic button to start — stays on until you tap again (will not stop on silence). Photo/image analysis: tap 📷 to attach a photo or screenshot, then ask your question. Chat history automatically saved per advisor (last 40 messages) and restored on next open.
 - Daily Tools: IMP, Connect Me, Santech/Moodle, The Guide, Forms & Resources (Google Drive), Product Resources, ABNA, Intel, Sanlam Sky portal.
 - Product Resources: additional product guides and resources — Google Drive folder linked from Guides page.
+- Leads: Tools → Client & Field → Leads — view and manage your leads pipeline (opens Connect Me leads section).
+- Unlock PDF: Tools → Case & Documentation → Unlock PDF — remove passwords from one or multiple PDFs at once. Upload PDFs, enter each PDF's individual password, unlock and download. Handles multiple files simultaneously.
+- Referral Tracker: Tools → Client & Field → Referral Tracker — track client referrals (1 Name = 2 Names). Log the date and time you contacted each referral plus notes. Status tracking: In pipeline / Contacted / Converted / Lost.
+
+## HUB HOW-TO — TECHNICAL QUESTIONS
+When an advisor asks how to do something on the hub, direct them to the right feature:
+- Remove a password from a PDF / unlock a PDF → Tools → Case & Documentation → Unlock PDF. Can handle multiple PDFs simultaneously, each with its own password.
+- Analyse a photo, image, or document → In Need Answers, tap 📷 to attach the image, then type your question.
+- Use voice input / talk to the AI → In Need Answers, tap 🎤. Recording stays on until you tap the mic again — will not stop on silence.
+- Track a referral → Tools → Client & Field → Referral Tracker. Log date, time contacted, and notes per referral entry.
+- View or manage leads → Tools → Client & Field → Leads (Connect Me leads pipeline).
+- Generate a replacement ROA → Tools → Case & Documentation → ROA Tool (ROA Generator).
+- Complete a replacement form → Tools → Case & Documentation → Replacement Form (senior advisors and manager only).
+- Calculate QLink / deduction space for a client → Tools → Client & Field → QLink Calculator.
+- Verify FSCA registration of an advisor → Tools → Client & Field → FSCA Advisor Search.
+- Merge documents into one PDF → Tools → Case & Documentation → Merge Docs.
+- Book a diary or field appointment → Tools → Client & Field → Herd Strategy (Herd Calendar).
+- See team birthdays → Home page — birthday cards appear for any team member with a birthday in the next 7 days.
+- Get pre-written WhatsApp messages → Operations → WhatsApp Templates.
+- Post a notice to the team → Operations → Notices (manager and ops only).
+- Check who is online or active today → Team page. Manager: More → Activity Log for full engagement detail.
+- Check Fit & Proper compliance → More → Fit & Proper Tracker.
+- View production leaderboard → Home page (top 3). Manager: Tools → Team Snapshot for a full breakdown.
+- Build a meeting agenda → Manager Resources → Meeting Agenda Builder.
 
 ## COMPETITOR POSITIONING (brief — see Intel page for full detail)
 - Assupol (DO NOT REPLACE): Sanlam now owns Assupol (Oct 2024). Cashback every 4 years — forfeited the moment any claim is made. Position Sky AIO as the premium adviser-led complement. Cannot replace; do a review only.
@@ -5928,12 +5953,17 @@ function roaGenerate(){
       reasonNarrative=parts.join('\n\n');
     }
 
-    const waitText = increase==='yes'
-      ? 'All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month waiting period applies on any additional cover taken up above the existing cover amount.'
-      : 'All waiting periods were discussed with the client. The waiting period has been waived in full as the client has had continuous funeral cover for 31 or more days prior to commencement of the new policy.';
+    let waitText;
+    if(increase==='yes'){
+      waitText='All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month natural death waiting period applies on any additional cover taken up above the existing cover amount. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter.';
+    }else if(increase==='residual'){
+      waitText='All waiting periods were discussed with the client. At the time of replacement, the client\'s previous policy had not yet completed its statutory waiting period. The remaining portion of that waiting period carries over to the new policy and must still be served before a natural death claim can be processed. This residual waiting period was fully disclosed to the client and confirmed in writing. The client was further informed that proof of cancellation of the previous policy will be required by the underwriter for any natural death claim lodged within the first 6 months.';
+    }else{
+      waitText='All waiting periods were discussed with the client. The waiting period has been waived in full as the client has had continuous funeral cover for 31 or more days prior to commencement of the new policy. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter to process the claim under the waiver provision.';
+    }
 
     const repPlanNames=newPolList.map(p=>p.plan).join(' and ');
-    const repBenefitsText=`The advisor explained and disclosed all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including the funeral cover amounts per life assured, the paid-up benefit, repatriation cover, waiting period structure, and all applicable cashback options. The client confirmed full understanding of the new policy benefits and acknowledged how the new benefits compare to and improve upon the cancelled policy.`;
+    const repBenefitsText=`The advisor explained and disclosed all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including the funeral cover amounts per life assured, the paid-up benefit, repatriation cover, waiting period structure, and all applicable cashback options. The client confirmed full understanding of the new policy benefits and acknowledged how the new benefits compare to and improve upon the cancelled policy. It was disclosed that even on a like-for-like replacement, the benefits of the new policy may not be identical in every respect to the cancelled policy — the client confirmed understanding and acceptance of this disclosure. The advisor advised ${client} that all documents pertaining to this advice will be retained for a minimum of 5 years in accordance with the FAIS Act record-keeping obligation.`;
 
     const repPremiumSummary=newPolList.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
     const repAgreementText=`${client} confirmed agreement to${repPremiumSummary?' the monthly premium ('+repPremiumSummary+') and':''} the funeral cover amounts for all lives assured as set out above. The client confirmed that the replacement is in their best interest, that the advice given is fully understood and accepted, and that all questions have been answered to their satisfaction.`;
@@ -8744,6 +8774,29 @@ async function _deleteSavedPRReview(id){
 function getReferrals(){try{return JSON.parse(localStorage.getItem('tl_referrals')||'[]');}catch(e){return[];}}
 function saveReferrals(d){localStorage.setItem('tl_referrals',JSON.stringify(d));}
 const REF_STATUS_LABELS={pipeline:'In pipeline',contacted:'Contacted',converted:'Converted',lost:'Lost'};
+function _fmtContactDT(dt){
+  if(!dt)return'';
+  try{const d=new Date(dt);return d.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});}catch(e){return dt;}
+}
+function _refContactLog(r){
+  const contacts=r.contacts||[];
+  const entries=contacts.map((c,i)=>`<div style="display:flex;align-items:flex-start;gap:6px;margin-bottom:4px;"><div style="flex:1;background:#f8f7f4;border-radius:6px;padding:5px 8px;"><div style="font-size:10px;color:#6b7280;font-weight:600;">${_fmtContactDT(c.datetime)}</div><div style="font-size:12px;color:#374151;margin-top:2px;">${(c.notes||'').replace(/</g,'&lt;')}</div></div><button onclick="refDeleteContact('${r.id}',${i})" style="background:none;border:none;color:#d1d5db;cursor:pointer;font-size:12px;padding:2px 4px;flex-shrink:0;">✕</button></div>`).join('');
+  const now=new Date().toISOString().slice(0,16);
+  return`<div style="margin-top:8px;padding-top:8px;border-top:1px dashed #e5e7eb;">${entries}<div style="display:flex;gap:6px;align-items:center;margin-top:${contacts.length?'6':'0'}px;"><input type="datetime-local" id="refDT_${r.id}" style="font-size:11px;padding:4px 6px;border:1px solid #e5e7eb;border-radius:6px;max-width:160px;flex-shrink:0;" value="${now}"/><input type="text" id="refNote_${r.id}" placeholder="Contact note..." style="flex:1;font-size:12px;padding:4px 8px;border:1px solid #e5e7eb;border-radius:6px;background:#f9f9f9;min-width:0;"/><button onclick="refLogContact('${r.id}')" style="font-size:11px;font-weight:700;background:#0d1f3c;color:#fff;border:none;border-radius:6px;padding:5px 10px;cursor:pointer;white-space:nowrap;flex-shrink:0;">+ Log</button></div></div>`;
+}
+function refLogContact(id){
+  const dt=document.getElementById('refDT_'+id)?.value;
+  const note=(document.getElementById('refNote_'+id)?.value||'').trim();
+  if(!note)return showAlert('Please enter a note before logging a contact.','error');
+  const refs=getReferrals();const r=refs.find(x=>x.id===id);if(!r)return;
+  if(!r.contacts)r.contacts=[];
+  r.contacts.push({datetime:dt||new Date().toISOString(),notes:note});
+  saveReferrals(refs);renderReferrals();
+}
+function refDeleteContact(refId,idx){
+  const refs=getReferrals();const r=refs.find(x=>x.id===refId);if(!r||!r.contacts)return;
+  r.contacts.splice(idx,1);saveReferrals(refs);renderReferrals();
+}
 function refAdd(){
   const by=document.getElementById('ref-by').value.trim();
   const name=document.getElementById('ref-name').value.trim();
@@ -8806,6 +8859,7 @@ function renderReferrals(){
             <button onclick="refDelete('${r.id}')" style="background:none;border:none;color:#9ca3af;cursor:pointer;font-size:14px;">✕</button>
           </div>
         </div>
+        ${_refContactLog(r)}
       </div>`).join('')}
     </div>`;
   }).join('');
