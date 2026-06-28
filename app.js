@@ -7446,15 +7446,22 @@ function renderHubBirthdays(){
     if(b&&b.isToday)ab.innerHTML=`<div class="bday-banner today"><div class="bday-emoji">🎂</div><div><div class="bday-title">Happy Birthday, ${currentUser.name.split(' ')[0]}! 🎉</div><div class="bday-sub">Wishing you an amazing day from the whole Team Buffalos family. You turn ${b.turningAge} today — enjoy every moment!</div></div></div>`;
     else if(b&&b.daysUntil<=7)ab.innerHTML=`<div class="bday-banner upcoming"><div class="bday-emoji">🎁</div><div><div class="bday-title">Your birthday is coming up!</div><div class="bday-sub">${b.daysUntil===1?'Tomorrow is your big day':'Only '+b.daysUntil+' days until your birthday'} — ${b.dateStr}. You'll be turning ${b.turningAge}!</div></div></div>`;
   }
-  if(currentUser&&currentUser.isManager){
+  function _renderTeamBdays(){
     const users=getUsers(),all=Object.values(users);
-    const wb=all.filter(u=>u.dob&&!REVOKED_CODES.has(u.code)).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=30).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
+    const wb=all.filter(u=>u.dob&&!REVOKED_CODES.has(u.code)&&u.code!==currentUser?.code).map(u=>({...u,bday:getBdayInfo(u.dob)})).filter(u=>u.bday&&u.bday.daysUntil<=7).sort((a,b)=>a.bday.daysUntil-b.bday.daysUntil);
     if(wb.length){
       let html='';
-      wb.filter(u=>u.bday.isToday).forEach(u=>{html+=`<div class="bday-banner today" style="margin-bottom:8px;"><div class="bday-emoji">🎂</div><div><div class="bday-title">${u.name} — Birthday today!</div><div class="bday-sub">Turning ${u.bday.turningAge} today (${u.bday.dateStr}). Don't forget to wish them!</div></div></div>`;});
-      wb.filter(u=>!u.bday.isToday&&u.bday.daysUntil<=7).forEach(u=>{html+=`<div class="bday-banner upcoming" style="margin-bottom:8px;"><div class="bday-emoji">🎁</div><div><div class="bday-title">${u.name}</div><div class="bday-sub">${u.bday.dateStr} — in ${u.bday.daysUntil} day${u.bday.daysUntil===1?'':'s'}. Turning ${u.bday.turningAge}.</div></div></div>`;});
+      wb.filter(u=>u.bday.isToday).forEach(u=>{html+=`<div class="bday-banner today" style="margin-bottom:8px;"><div class="bday-emoji">🎂</div><div><div class="bday-title">${u.name} — Birthday today!</div><div class="bday-sub">Turning ${u.bday.turningAge} today (${u.bday.dateStr}). Don't forget to wish them! 🎉</div></div></div>`;});
+      wb.filter(u=>!u.bday.isToday).forEach(u=>{html+=`<div class="bday-banner upcoming" style="margin-bottom:8px;"><div class="bday-emoji">🎁</div><div><div class="bday-title">${u.name}</div><div class="bday-sub">${u.bday.dateStr} — in ${u.bday.daysUntil} day${u.bday.daysUntil===1?'':'s'}. Turning ${u.bday.turningAge}.</div></div></div>`;});
       ms.innerHTML=html;
-    }
+    } else {ms.innerHTML='';}
+  }
+  _renderTeamBdays();
+  if(window.FB_READY&&window.FB.getAllUsers){
+    window.FB.getAllUsers().then(fbUsers=>{
+      if(fbUsers&&Object.keys(fbUsers).length>0){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
+      _renderTeamBdays();
+    }).catch(()=>{});
   }
 }
 
