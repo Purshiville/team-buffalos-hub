@@ -507,6 +507,7 @@ const APPROVED_CODES = new Set([
   'SKA315568', // Stefan Barnard
   'SKA315496', // Litha Qashani
   'SKA315759', // Lutho Mphahlele
+  'SKA313383', // Kevin Kruger
   'PURSHIVILLE',
   'ARLENE',
 ]);
@@ -3634,6 +3635,19 @@ function toggleNoticeRecipPicker(event){
   picker.innerHTML=opts.map(o=>`<div onclick="event.stopPropagation();_noticeSelectRecip('${o.code}')" style="padding:7px 10px;font-size:13px;cursor:pointer;border-radius:6px;color:#0d1f3c;font-weight:${_noticeSelectedRecipient===o.code?'700':'400'};background:${_noticeSelectedRecipient===o.code?'#e8f0fe':'transparent'};">${o.name}</div>`).join('');
   picker.style.display='block';
   setTimeout(()=>document.addEventListener('click',function h(e){if(!picker.contains(e.target)){picker.style.display='none';document.removeEventListener('click',h);}},{once:false}),0);
+}
+const _NOTICE_AUTO_LINKS={
+  'qlink':'https://connect-me-cz7b.bolt.host/#/submission-trackers',
+  'precan':'https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk',
+};
+function noticeTypeChanged(){
+  const typeEl=_noticeEl('noticeType');
+  const linkEl=_noticeEl('noticeLinkField');
+  if(!typeEl||!linkEl)return;
+  const type=typeEl.value;
+  const cur=linkEl.value.trim();
+  const knownLinks=Object.values(_NOTICE_AUTO_LINKS);
+  if(!cur||knownLinks.includes(cur)){linkEl.value=_NOTICE_AUTO_LINKS[type]||'';}
 }
 function getNotices(){
   // Use Firebase cache if available, fall back to localStorage
@@ -12632,16 +12646,6 @@ function updfHandleFiles(files){
   updfRenderList();
   document.getElementById('updfDropZone').style.display='none';
 }
-function updfHandleFile_legacy(file){
-  if(!file||file.type!=='application/pdf')return;
-  _updfFiles=[{id:'updf_0',file,bytes:null,status:'pending'}];
-  updfRenderList();
-  document.getElementById('updfDropZone').style.display='none';
-  document.getElementById('updfStatus').style.display='none';
-  document.getElementById('updfResult').style.display='none';
-  document.getElementById('updfBtn').style.display='block';
-}
-
 function updfHandleDrop(e){
   e.preventDefault();
   document.getElementById('updfDropZone').style.borderColor='#e5e7eb';
