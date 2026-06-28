@@ -13537,7 +13537,7 @@ function rgFaqToggle(btn){
 }
 
 // ── HUB TOUR ────────────────────────────────────────────────────────────────
-let _tourIdx=0,_tourActive=false;
+let _tourIdx=0,_tourActive=false,_tourSteps=[];
 const TOUR_STEPS=[
   {page:'hub',target:null,title:'Welcome to the Hub Tour 🦬',text:'This tour walks through every section of the Team Buffalos Advisor Hub. Tap Next to start, or Skip to exit at any time.',pos:'center'},
   {page:'hub',target:'#hubRemindersSection',title:'Home — Reminders & Countdowns',text:'Your daily brief: production cut-off countdown, next Qlink run date, pre-cancellation alerts, and personal reminders. This section only shows when there is something to display.',pos:'bottom'},
@@ -13557,29 +13557,31 @@ const TOUR_STEPS=[
   {page:'policyreview',target:'#page-policyreview',title:'Policy Summary — AI Policy Reader',text:"Upload a client's existing policy PDF. The AI extracts all cover, premiums, benefits, and lives assured. Use it to build a proper needs analysis and comparison before recommending a change.",pos:'bottom'},
   {page:'canpack',target:'#page-canpack',title:'Merge Docs — Pack Builder',text:'Combine JPGs, PNGs, and PDFs into a single file. Perfect for cancellation packs or IMP submissions. Auto-compresses to stay within the 4MB IMP limit.',pos:'bottom'},
   {page:'unlockpdf',target:'#page-unlockpdf',title:'Unlock PDF — Remove Passwords',text:'Remove passwords from protected PDFs. Upload multiple PDFs at once — each file gets its own individual password field. Unlock and download instantly.',pos:'bottom'},
-  {page:'appchecks',target:'#page-appchecks',title:'App Checks — Case Status Tracker',text:'Track submitted cases from Pending Approval through Spotcheck to Approved. Log all policies in a case and monitor each one through the review pipeline.',pos:'bottom'},
-  {page:'replform',target:'#page-replform',title:'Replacement Form',text:'Full digital replacement case form (senior advisors and manager only). Captures client info, competitor insurer, cover, insurable interest, affordability declaration, and digital signatures. Generates a compliant PDF.',pos:'bottom'},
+  {page:'appchecks',target:'#page-appchecks',title:'App Checks — Case Status Tracker',text:'Track submitted cases from Pending Approval through Spotcheck to Approved. Log all policies in a case and monitor each one through the review pipeline.',pos:'bottom',managerOnly:true},
+  {page:'replform',target:'#page-replform',title:'Replacement Form',text:'Full digital replacement case form (manager only). Captures client info, competitor insurer, cover, insurable interest, affordability declaration, and digital signatures. Generates a compliant PDF.',pos:'bottom',managerOnly:true},
   {page:'guides',target:'#page-guides',title:'Resources — Guides & Training',text:'All training and reference material: Product Resources, The Guide, the Smart Replacement Training Guide, and the Client Prospect Presentation.',pos:'bottom'},
   {page:'replguide',target:'#page-replguide',title:'Smart Replacement Training Guide',text:'Your compliance playbook for replacements: 5 biggest client issues, needs analysis checklist, ROA boilerplate, practical scenarios, and the red lines you must never cross.',pos:'bottom'},
   {page:'replpresentation',target:'#page-replpresentation',title:'Client Prospect Presentation',text:'8-slide conversation cue-card deck. Each slide is a step in your client conversation — scripted dialogue from opening through to closing. Available to all advisors.',pos:'bottom'},
-  {page:'opsland',target:'#page-opsland',title:'Operations — Daily Business Hub',text:'Daily operations: notices, pre-cancellation management, WhatsApp templates, meeting minutes, contacts, and insurer portals.',pos:'bottom'},
-  {page:'dailyops',target:'#page-dailyops',title:'Notices & WhatsApp Templates',text:'(Manager/Ops) Post notices to the team or a specific advisor. Qlink type auto-fills the Connect Me link; Pre-Cancellations auto-fills the Pavlov report. WhatsApp Templates section has 10+ pre-written client messages ready to send.',pos:'bottom'},
+  {page:'opsland',target:'#page-opsland',title:'Operations — Daily Business Hub',text:'Daily operations: notices, pre-cancellation management, WhatsApp templates, meeting minutes, contacts, and insurer portals.',pos:'bottom',managerOnly:true},
+  {page:'dailyops',target:'#page-dailyops',title:'Notices & WhatsApp Templates',text:'(Manager/Ops) Post notices to the team or a specific advisor. Qlink type auto-fills the Connect Me link; Pre-Cancellations auto-fills the Pavlov report. WhatsApp Templates section has 10+ pre-written client messages ready to send.',pos:'bottom',managerOnly:true},
   {page:'cancellations',target:'#page-cancellations',title:'Cancellations — Save Policies',text:'Manage pending cancellations. Each insurer shows which form is required (AL9, own form, own letter). Capital Legacy has its own dedicated section — do NOT use the standard IMP letter.',pos:'bottom'},
   {page:'directory',target:'#page-directory',title:'Directory — Contacts & Portals',text:'Search for any team member, insurer contact, or FSP email instantly. Tap a phone number to call directly. Online portals for all major insurers are listed here too.',pos:'bottom'},
   {page:'hub',target:'#inboxBtn',title:'Inbox — Your Notices',text:'Tap the bell icon in the top bar to open your Inbox. The Unread tab shows new notices highlighted in amber. Tap any item to read it and mark as read — or Mark All as Read.',pos:'bottom'},
-  {page:'team',target:'#userTableBody',title:'Team Page — Advisor Roster',text:'All advisors with DOFA, birthday, status, last seen, and time on site today. Green = 1h+ active, amber = 10m+, grey = inactive. Manager sees this live, refreshed every 30 seconds.',pos:'top'},
+  {page:'team',target:'#userTableBody',title:'Team Page — Advisor Roster',text:'All advisors with DOFA, birthday, status, last seen, and time on site today. Green = 1h+ active, amber = 10m+, grey = inactive. Manager sees this live, refreshed every 30 seconds.',pos:'top',managerOnly:true},
   {page:'fitproper',target:'#fpRingCircle',title:'Fit & Proper Tracker',text:'Your compliance checklist: RE5, qualifications, CPD hours, PST per product, COB modules, and FAIS registration. The ring shows your overall compliance percentage — keep it at 100%.',pos:'bottom'},
-  {page:'activity',target:'#actToolLeaderboard',title:'Activity Log — Manager View',text:'(Manager only) See who is online now, who was active today, and what tools each advisor has used. The tool usage leaderboard shows engagement across the whole team.',pos:'bottom'},
+  {page:'activity',target:'#actToolLeaderboard',title:'Activity Log — Manager View',text:'(Manager only) See who is online now, who was active today, and what tools each advisor has used. The tool usage leaderboard shows engagement across the whole team.',pos:'bottom',managerOnly:true},
   {page:'hub',target:'#aiFab',title:"You're all set! 🎉",text:"You've now seen every section of the Team Buffalos Hub. If you ever get stuck, tap Need Answers and ask 'how do I...?' — the AI knows every tool on this hub. Welcome to the herd!",pos:'top'},
 ];
 
 function startTour(){
+  const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
+  _tourSteps=TOUR_STEPS.filter(s=>!s.managerOnly||isMgr);
   _tourActive=true;_tourIdx=0;
   document.getElementById('tourSpotlight').style.display='block';
   document.getElementById('tourCallout').style.display='block';
   _tourShowStep(0);
 }
-function tourNext(){if(_tourIdx<TOUR_STEPS.length-1){_tourIdx++;_tourShowStep(_tourIdx);}else tourEnd();}
+function tourNext(){if(_tourIdx<_tourSteps.length-1){_tourIdx++;_tourShowStep(_tourIdx);}else tourEnd();}
 function tourBack(){if(_tourIdx>0){_tourIdx--;_tourShowStep(_tourIdx);}}
 function tourEnd(){
   _tourActive=false;
@@ -13587,7 +13589,7 @@ function tourEnd(){
   document.getElementById('tourCallout').style.display='none';
 }
 function _tourShowStep(idx){
-  const step=TOUR_STEPS[idx],total=TOUR_STEPS.length;
+  const step=_tourSteps[idx],total=_tourSteps.length;
   document.getElementById('tourStepLabel').textContent='Step '+(idx+1)+' of '+total;
   document.getElementById('tourTitle').textContent=step.title;
   document.getElementById('tourText').textContent=step.text;
