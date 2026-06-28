@@ -13535,3 +13535,108 @@ function rgFaqToggle(btn){
   body.style.display=open?'none':'block';
   if(arrow)arrow.textContent=open?'▾':'▴';
 }
+
+// ── HUB TOUR ────────────────────────────────────────────────────────────────
+let _tourIdx=0,_tourActive=false;
+const TOUR_STEPS=[
+  {page:'hub',target:null,title:'Welcome to the Hub Tour 🦬',text:'This tour walks through every section of the Team Buffalos Advisor Hub. Tap Next to start, or Skip to exit at any time.',pos:'center'},
+  {page:'hub',target:'#hubRemindersSection',title:'Home — Reminders & Countdowns',text:'Your daily brief: production cut-off countdown, next Qlink run date, pre-cancellation alerts, and personal reminders. This section only shows when there is something to display.',pos:'bottom'},
+  {page:'hub',target:'#bdayManagerHubSection',title:'Team Birthdays',text:'Any team member with a birthday in the next 7 days gets a card here — visible to all advisors. Never miss a birthday again.',pos:'bottom'},
+  {page:'hub',target:'#noticeBoardSection',title:'Notice Board',text:'Notices from your manager or ops appear directly on the home page. Amber highlight means unread. Tap any notice to read it in full.',pos:'bottom'},
+  {page:'hub',target:'#hubTop3',title:'Leaderboard — Top 3 This Month',text:'The top 3 advisors by premium for the current production month. Updated live from production data.',pos:'bottom'},
+  {page:'hub',target:'#aiFab',title:'Need Answers — AI Assistant',text:'Tap this floating button any time to ask the AI anything: products, compliance, processes, or "how do I use this tool?" Attach a photo with 📷 or use your voice with 🎤.',pos:'top'},
+  {page:'standard',target:'#stdBufHero',title:'The Standard',text:'Your conduct guide — minimum production, attendance, behaviour, and consequences for falling short. Every advisor must know this page.',pos:'bottom'},
+  {page:'tools',target:'#page-tools',title:'Tools — Your Full Toolbox',text:'Every tool you use in the field lives here: Client & Field tools, Case & Documentation, and Manager Tools. Scroll to see all three sections.',pos:'bottom'},
+  {page:'termcal',target:'#page-termcal',title:'Herd Strategy — Diary & Field Planner',text:'Book and manage your field appointments. Set date, start time, end time, and notes. Your manager can view all advisor diaries.',pos:'bottom'},
+  {page:'referrals',target:'#page-referrals',title:'Referral Tracker — 1 Name = 2 Names',text:'Every client should give you 2 referrals. Log them here with name, phone number, facility, and relationship to the referring client.',pos:'bottom'},
+  {page:'referrals',target:'#refList',title:'Referral Pipeline',text:'Referrals grouped by the client who gave them. Track status (In Pipeline → Contacted → Converted → Lost) and log every contact attempt with date, time, and notes.',pos:'top'},
+  {page:'prospectmap',target:'#page-prospectmap',title:'Prospect Map',text:'Map and track facilities where you prospect. Record the contact person, potential headcount, and access notes so you never lose a good lead.',pos:'bottom'},
+  {page:'qlink',target:'#page-qlink',title:'QLink Calculator',text:"Enter a client's basic salary and all existing stop order deductions to instantly calculate how much PERSAL space they have within the 15% bracket. Select their FSP from the dropdown.",pos:'bottom'},
+  {page:'roa',target:'#roaBtnNew',title:'ROA Tool — New Business',text:'For first-time Sanlam Sky policies. Enter client name, plan, lives, cover amounts, and waiting period status. The tool generates compliant ROA text to paste directly into IMP.',pos:'bottom'},
+  {page:'roa',target:'#roaBtnRep',title:'ROA Tool — Replacement',text:'For cases where a client cancels an existing policy. Select the reason (affordability or benefits), fill in cancelled and new policies. The generated text includes all required disclosures including "benefits may differ."',pos:'bottom'},
+  {page:'policyreview',target:'#page-policyreview',title:'Policy Summary — AI Policy Reader',text:"Upload a client's existing policy PDF. The AI extracts all cover, premiums, benefits, and lives assured. Use it to build a proper needs analysis and comparison before recommending a change.",pos:'bottom'},
+  {page:'canpack',target:'#page-canpack',title:'Merge Docs — Pack Builder',text:'Combine JPGs, PNGs, and PDFs into a single file. Perfect for cancellation packs or IMP submissions. Auto-compresses to stay within the 4MB IMP limit.',pos:'bottom'},
+  {page:'unlockpdf',target:'#page-unlockpdf',title:'Unlock PDF — Remove Passwords',text:'Remove passwords from protected PDFs. Upload multiple PDFs at once — each file gets its own individual password field. Unlock and download instantly.',pos:'bottom'},
+  {page:'appchecks',target:'#page-appchecks',title:'App Checks — Case Status Tracker',text:'Track submitted cases from Pending Approval through Spotcheck to Approved. Log all policies in a case and monitor each one through the review pipeline.',pos:'bottom'},
+  {page:'replform',target:'#page-replform',title:'Replacement Form',text:'Full digital replacement case form (senior advisors and manager only). Captures client info, competitor insurer, cover, insurable interest, affordability declaration, and digital signatures. Generates a compliant PDF.',pos:'bottom'},
+  {page:'guides',target:'#page-guides',title:'Resources — Guides & Training',text:'All training and reference material: Product Resources, The Guide, the Smart Replacement Training Guide, and the Client Prospect Presentation.',pos:'bottom'},
+  {page:'replguide',target:'#page-replguide',title:'Smart Replacement Training Guide',text:'Your compliance playbook for replacements: 5 biggest client issues, needs analysis checklist, ROA boilerplate, practical scenarios, and the red lines you must never cross.',pos:'bottom'},
+  {page:'replpresentation',target:'#page-replpresentation',title:'Client Prospect Presentation',text:'8-slide conversation cue-card deck. Each slide is a step in your client conversation — scripted dialogue from opening through to closing. Available to all advisors.',pos:'bottom'},
+  {page:'opsland',target:'#page-opsland',title:'Operations — Daily Business Hub',text:'Daily operations: notices, pre-cancellation management, WhatsApp templates, meeting minutes, contacts, and insurer portals.',pos:'bottom'},
+  {page:'dailyops',target:'#page-dailyops',title:'Notices & WhatsApp Templates',text:'(Manager/Ops) Post notices to the team or a specific advisor. Qlink type auto-fills the Connect Me link; Pre-Cancellations auto-fills the Pavlov report. WhatsApp Templates section has 10+ pre-written client messages ready to send.',pos:'bottom'},
+  {page:'cancellations',target:'#page-cancellations',title:'Cancellations — Save Policies',text:'Manage pending cancellations. Each insurer shows which form is required (AL9, own form, own letter). Capital Legacy has its own dedicated section — do NOT use the standard IMP letter.',pos:'bottom'},
+  {page:'directory',target:'#page-directory',title:'Directory — Contacts & Portals',text:'Search for any team member, insurer contact, or FSP email instantly. Tap a phone number to call directly. Online portals for all major insurers are listed here too.',pos:'bottom'},
+  {page:'hub',target:'#inboxBtn',title:'Inbox — Your Notices',text:'Tap the bell icon in the top bar to open your Inbox. The Unread tab shows new notices highlighted in amber. Tap any item to read it and mark as read — or Mark All as Read.',pos:'bottom'},
+  {page:'team',target:'#userTableBody',title:'Team Page — Advisor Roster',text:'All advisors with DOFA, birthday, status, last seen, and time on site today. Green = 1h+ active, amber = 10m+, grey = inactive. Manager sees this live, refreshed every 30 seconds.',pos:'top'},
+  {page:'fitproper',target:'#fpRingCircle',title:'Fit & Proper Tracker',text:'Your compliance checklist: RE5, qualifications, CPD hours, PST per product, COB modules, and FAIS registration. The ring shows your overall compliance percentage — keep it at 100%.',pos:'bottom'},
+  {page:'activity',target:'#actToolLeaderboard',title:'Activity Log — Manager View',text:'(Manager only) See who is online now, who was active today, and what tools each advisor has used. The tool usage leaderboard shows engagement across the whole team.',pos:'bottom'},
+  {page:'hub',target:'#aiFab',title:"You're all set! 🎉",text:"You've now seen every section of the Team Buffalos Hub. If you ever get stuck, tap Need Answers and ask 'how do I...?' — the AI knows every tool on this hub. Welcome to the herd!",pos:'top'},
+];
+
+function startTour(){
+  _tourActive=true;_tourIdx=0;
+  document.getElementById('tourSpotlight').style.display='block';
+  document.getElementById('tourCallout').style.display='block';
+  _tourShowStep(0);
+}
+function tourNext(){if(_tourIdx<TOUR_STEPS.length-1){_tourIdx++;_tourShowStep(_tourIdx);}else tourEnd();}
+function tourBack(){if(_tourIdx>0){_tourIdx--;_tourShowStep(_tourIdx);}}
+function tourEnd(){
+  _tourActive=false;
+  document.getElementById('tourSpotlight').style.display='none';
+  document.getElementById('tourCallout').style.display='none';
+}
+function _tourShowStep(idx){
+  const step=TOUR_STEPS[idx],total=TOUR_STEPS.length;
+  document.getElementById('tourStepLabel').textContent='Step '+(idx+1)+' of '+total;
+  document.getElementById('tourTitle').textContent=step.title;
+  document.getElementById('tourText').textContent=step.text;
+  const backBtn=document.getElementById('tourBackBtn'),nextBtn=document.getElementById('tourNextBtn');
+  backBtn.style.display=idx>0?'':'none';
+  if(idx===total-1){nextBtn.className='tc-finish';nextBtn.textContent='🎉 Done';}
+  else{nextBtn.className='tc-next';nextBtn.textContent='Next →';}
+  const cur=document.querySelector('.page.active');
+  const curId=cur?cur.id.replace('page-',''):'';
+  const doPos=()=>{
+    if(!step.target||step.pos==='center'){
+      document.getElementById('tourSpotlight').style.display='none';
+      _tourCenterCallout();return;
+    }
+    const el=document.querySelector(step.target);
+    if(!el||(!el.offsetWidth&&!el.offsetHeight)){
+      document.getElementById('tourSpotlight').style.display='none';
+      _tourCenterCallout();return;
+    }
+    el.scrollIntoView({behavior:'smooth',block:'center'});
+    setTimeout(()=>{
+      const rect=el.getBoundingClientRect(),p=8;
+      const sp=document.getElementById('tourSpotlight');
+      sp.style.display='block';
+      sp.style.left=(rect.left-p)+'px';sp.style.top=(rect.top-p)+'px';
+      sp.style.width=(rect.width+p*2)+'px';sp.style.height=(rect.height+p*2)+'px';
+      _tourPosCallout(rect,step.pos);
+    },200);
+  };
+  if(step.page&&step.page!==curId){showPage(step.page);setTimeout(doPos,340);}
+  else setTimeout(doPos,80);
+}
+function _tourCenterCallout(){
+  const cl=document.getElementById('tourCallout');
+  const cw=Math.min(300,window.innerWidth-28);
+  cl.style.maxWidth=cw+'px';
+  cl.style.left=Math.round((window.innerWidth-cw)/2)+'px';
+  cl.style.top=Math.round(window.innerHeight*0.35)+'px';
+}
+function _tourPosCallout(rect,pos){
+  const cl=document.getElementById('tourCallout');
+  const cw=Math.min(300,window.innerWidth-24),gap=14;
+  const vw=window.innerWidth,vh=window.innerHeight;
+  let left=Math.round(rect.left+rect.width/2-cw/2);
+  let top;
+  if(pos==='top'||(rect.bottom+gap+175>vh)){top=Math.round(rect.top-gap-175);}
+  else{top=Math.round(rect.bottom+gap);}
+  left=Math.max(12,Math.min(left,vw-cw-12));
+  top=Math.max(60,Math.min(top,vh-210));
+  cl.style.maxWidth=cw+'px';cl.style.left=left+'px';cl.style.top=top+'px';
+}
+// ── END HUB TOUR ─────────────────────────────────────────────────────────────
