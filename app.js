@@ -480,19 +480,15 @@ const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
-// New to industry (DOFA within 12 months of hub registration): 90 days from DOFA
-// Previously appointed (older DOFA): 90 days from registeredAt
+// Established advisors (were on the team before the hub launched) never get the badge.
+// All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
+const _ESTABLISHED_CODES=new Set(['SKA312009','SKA310185','SKA310194','SKA311460','SKA312741','SKA310889','SKA313162','SKA313936','SKA315109','SKA313383']);
 function _newBadge(code){
+  if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
-  if(!u)return'';
+  if(!u||!u.registeredAt)return'';
   const today=new Date();today.setHours(0,0,0,0);
-  const reg=u.registeredAt?new Date(u.registeredAt):null;
-  const dofa=u.dofa?new Date(u.dofa):null;
-  let ref=null;
-  if(dofa&&reg){const gap=Math.round((reg-dofa)/86400000);ref=(gap>=0&&gap<=365)?dofa:reg;}
-  else if(reg){ref=reg;}
-  if(!ref)return'';
-  const daysNew=Math.floor((today-ref)/86400000);
+  const daysNew=Math.floor((today-new Date(u.registeredAt))/86400000);
   return daysNew<=90?` <span style="font-size:9px;font-weight:700;background:#dcfce7;color:#16a34a;border:1px solid #86efac;border-radius:6px;padding:1px 5px;vertical-align:middle;">New</span>`:'';
 }
 
