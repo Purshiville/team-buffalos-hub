@@ -850,16 +850,17 @@ body::before {
 .diary-week-col.cutoff{background:linear-gradient(160deg,#0d1f3c,#1b3460) !important;border-color:#c9922a !important;}
 .diary-week-col.cutoff .diary-week-col-hd,.diary-week-col.cutoff .diary-week-col-day{color:#f5d98b !important;}
 .diary-week-col.minicutoff{border-left:3px solid #d97706 !important;}
-.diary-week-wrap{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;}
-.diary-week-col{border-radius:8px;padding:8px 4px;background:#f9f9f9;border:1px solid #f3f4f6;min-height:140px;}
+.diary-week-wrap{display:flex;gap:5px;overflow-x:auto;padding-bottom:10px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.diary-week-wrap::-webkit-scrollbar{display:none;}
+.diary-week-col{flex:0 0 calc((100vw - 90px) / 3.8);min-width:82px;max-width:110px;border-radius:10px;padding:10px 6px 8px;background:#f9f9f9;border:1px solid #f3f4f6;min-height:160px;}
 .diary-week-col.today{border-color:#c9922a;background:#fffbf0;}
 .diary-week-col.pubhol{background:#fef2f2;}
 .diary-week-col.exam{background:#fff7ed;}
 .diary-week-col.term{background:#f0fdf4;}
-.diary-week-col-hd{font-size:9px;font-weight:700;color:#9ca3af;text-align:center;text-transform:uppercase;}
-.diary-week-col-day{font-size:15px;font-weight:700;color:#0d1f3c;text-align:center;margin-bottom:4px;}
+.diary-week-col-hd{font-size:10px;font-weight:700;color:#9ca3af;text-align:center;text-transform:uppercase;letter-spacing:.4px;}
+.diary-week-col-day{font-size:18px;font-weight:800;color:#0d1f3c;text-align:center;margin-bottom:6px;line-height:1.2;}
 .diary-week-col.today .diary-week-col-day{color:#c9922a;}
-.diary-week-ev{font-size:8px;font-weight:700;border-radius:3px;padding:2px 3px;margin-bottom:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.diary-week-ev{font-size:9px;font-weight:700;border-radius:4px;padding:3px 4px;margin-bottom:3px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .diary-day-ev{background:#fff;border:1px solid #e5e7eb;border-left:3px solid #0d1f3c;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;}
 .diary-day-ev.visit{border-left-color:#1d4ed8;}
 .diary-day-ev.presentation{border-left-color:#d97706;}
