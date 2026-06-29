@@ -13777,7 +13777,7 @@ function renderWorksites(){
 // ── END WORKSITE PIPELINE ─────────────────────────────────────────────────────
 
 // ── HUB TOUR ────────────────────────────────────────────────────────────────
-let _tourIdx=0,_tourActive=false,_tourSteps=[];
+let _tourIdx=0,_tourActive=false,_tourSteps=[],_tourForcedEl=null,_tourForcedPrevDisplay='',_tourForcedPrevMinH='';
 const TOUR_STEPS=[
   // ── Introduction ────────────────────────────────────────────────────────────────
   {page:'hub',target:null,title:'Welcome to the Hub Tour 🦬',text:'This tour follows the exact process you use to find clients, run appointments, and get paid — in the right order. 7 phases covering every tool. Tap Next to start, or Skip any time.',pos:'center',phase:'Introduction'},
@@ -13792,10 +13792,10 @@ const TOUR_STEPS=[
   {page:'guides',target:'#mainGuideCard',title:'§07 — The 12 Steps to Getting Paid',text:'The most important chapter. It maps the complete sales cycle: Map your area → Visit the facility → Meet the PIC → Confirm → Follow up → Present → Collect LOAs → Get schedules → Portfolio review → Close & submit → Capture on Connect Me → Initiate cancellations. The rest of this tour follows that exact sequence.',pos:'bottom',phase:'Phase 2 of 7 — Learn the Playbook'},
   {page:'replpresentation',target:'#replSlideContainer',title:'Client Prospect Presentation — Rehearse Before You Go',text:"A slide-by-slide deck built from The Guide's scripts. Slide 1 opens the conversation, Slide 8 closes it. Go through this before your first group appointment to rehearse exactly what to say at each step.",pos:'bottom',phase:'Phase 2 of 7 — Learn the Playbook'},
   // ── Phase 3 — Daily Starting Point ─────────────────────────────────────────────
-  {page:'hub',target:'#hubRemindersSection',title:'Home — Your Daily Brief',text:'Every morning starts here. Production cut-off countdown, next QLink run date, pre-cancellation alerts, and personal reminders. Only shows what needs your attention today — nothing clutter.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
-  {page:'hub',target:'#noticeBoardSection',title:'Notice Board — Stay Informed',text:"Manager posts here when something important happens: QLink runs, pre-can deadlines, team updates. Amber means unread. You'll also receive these in your Inbox so nothing slips through.",pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
-  {page:'hub',target:'#bdayManagerHubSection',title:'Team Birthdays',text:'Any team member with a birthday in the next 7 days gets a card here. Visible to all advisors. A quick message goes a long way.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
   {page:'hub',target:'#inboxBtn',title:'Inbox — Your Messages',text:'All notices sent to you land here. The Unread tab shows new messages highlighted in amber. Tap any item to read it. Tap the bell icon in the top bar to open your inbox from anywhere on the hub.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
+  {page:'hub',target:'#hubRemindersSection',title:'Home — Your Daily Brief',text:'Every morning starts here. Production cut-off countdown, next QLink run date, pre-cancellation alerts, and personal reminders. Only shows what needs your attention today — nothing clutter.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
+  {page:'hub',target:'#bdayManagerHubSection',title:'Team Birthdays',text:'Any team member with a birthday in the next 7 days gets a card here. Visible to all advisors. A quick message goes a long way.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
+  {page:'hub',target:'#noticeBoardSection',title:'Notice Board — Stay Informed',text:"Manager posts here when something important happens: QLink runs, pre-can deadlines, team updates. Amber means unread. You'll also receive these in your Inbox so nothing slips through.",pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
   {page:'hub',target:'#hubTop3',title:'Advisors of the Month — Previous Period',text:"Top 3 advisors by premium for the previous completed production month, plus your own card showing your cases and premium vs target for the current period. Use this every morning to know where you stand and who to benchmark against.",pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point'},
   {page:'opsland',target:'#page-opsland',title:'Operations — Manager Command Centre',text:'Daily command centre: pre-cancellation management, insurer portals, team management tools, and meeting minutes. Start every management day here before doing anything else.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point',managerOnly:true},
   {page:'dailyops',target:'#page-dailyops',title:'Notices & WhatsApp Templates',text:'Post notices to the whole team or a specific advisor. QLink type auto-fills the Connect Me link; Pre-Cancellations auto-fills the Pavlov report. WhatsApp Templates has 10+ pre-written client messages ready to send.',pos:'bottom',phase:'Phase 3 of 7 — Daily Starting Point',managerOnly:true},
@@ -13827,6 +13827,9 @@ const TOUR_STEPS=[
   {page:'hub',target:'#aiFab',title:"You're All Set! 🎉",text:"You've now seen the full process — from knowing the rules, to finding clients, running appointments, and submitting cases. Whenever you're stuck at any step, tap Need Answers and ask. Welcome to the herd!",pos:'top',phase:'You\'re ready 🦬'},
 ];
 
+function _tourRestoreForced(){
+  if(_tourForcedEl){_tourForcedEl.style.display=_tourForcedPrevDisplay;_tourForcedEl.style.minHeight=_tourForcedPrevMinH;_tourForcedEl=null;}
+}
 function startTour(){
   const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
   _tourSteps=TOUR_STEPS.filter(s=>!s.managerOnly||isMgr);
@@ -13839,10 +13842,12 @@ function tourNext(){if(_tourIdx<_tourSteps.length-1){_tourIdx++;_tourShowStep(_t
 function tourBack(){if(_tourIdx>0){_tourIdx--;_tourShowStep(_tourIdx);}}
 function tourEnd(){
   _tourActive=false;
+  _tourRestoreForced();
   document.getElementById('tourSpotlight').style.display='none';
   document.getElementById('tourCallout').style.display='none';
 }
 function _tourShowStep(idx){
+  _tourRestoreForced();
   const step=_tourSteps[idx],total=_tourSteps.length;
   document.getElementById('tourPhase').textContent=step.phase||'Tour';
   document.getElementById('tourProg').textContent='Step '+(idx+1)+' of '+total;
@@ -13861,9 +13866,16 @@ function _tourShowStep(idx){
       _tourCenterCallout();return;
     }
     const el=document.querySelector(step.target);
-    if(!el||(!el.offsetWidth&&!el.offsetHeight)){
+    if(!el){
       document.getElementById('tourSpotlight').style.display='none';
       _tourCenterCallout();return;
+    }
+    if(getComputedStyle(el).display==='none'||!el.offsetHeight){
+      _tourForcedEl=el;
+      _tourForcedPrevDisplay=el.style.display;
+      _tourForcedPrevMinH=el.style.minHeight;
+      el.style.display='block';
+      if(!el.offsetHeight)el.style.minHeight='72px';
     }
     el.scrollIntoView({block:'start'});
     setTimeout(()=>{
