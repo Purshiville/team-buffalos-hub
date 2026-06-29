@@ -13816,19 +13816,22 @@ function _tourCenterCallout(){
   const cl=document.getElementById('tourCallout');
   const cw=Math.min(300,window.innerWidth-28);
   cl.style.maxWidth=cw+'px';
+  const ch=cl.offsetHeight||220;
   cl.style.left=Math.round((window.innerWidth-cw)/2)+'px';
-  cl.style.top=Math.round(window.innerHeight*0.35)+'px';
+  cl.style.top=Math.max(70,Math.round((window.innerHeight-ch)/2))+'px';
 }
 function _tourPosCallout(rect,pos){
   const cl=document.getElementById('tourCallout');
   const cw=Math.min(300,window.innerWidth-24),gap=14;
   const vw=window.innerWidth,vh=window.innerHeight;
+  cl.style.maxWidth=cw+'px';
+  const ch=cl.offsetHeight||220;
   let left=Math.round(rect.left+rect.width/2-cw/2);
   let top;
-  if(pos==='top'||(rect.bottom+gap+175>vh)){top=Math.round(rect.top-gap-175);}
+  if(pos==='top'||(rect.bottom+gap+ch>vh)){top=Math.round(rect.top-gap-ch);}
   else{top=Math.round(rect.bottom+gap);}
   left=Math.max(12,Math.min(left,vw-cw-12));
-  top=Math.max(60,Math.min(top,vh-210));
-  cl.style.maxWidth=cw+'px';cl.style.left=left+'px';cl.style.top=top+'px';
+  top=Math.max(60,Math.min(top,vh-ch-10));
+  cl.style.left=left+'px';cl.style.top=top+'px';
 }
 // ── END HUB TOUR ─────────────────────────────────────────────────────────────
