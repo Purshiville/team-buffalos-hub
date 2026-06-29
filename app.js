@@ -13844,7 +13844,9 @@ function tourEnd(){
 }
 function _tourShowStep(idx){
   const step=_tourSteps[idx],total=_tourSteps.length;
-  document.getElementById('tourStepLabel').textContent=step.phase?step.phase+' · '+(idx+1)+' / '+total:'Step '+(idx+1)+' of '+total;
+  document.getElementById('tourPhase').textContent=step.phase||'Tour';
+  document.getElementById('tourProg').textContent='Step '+(idx+1)+' of '+total;
+  document.getElementById('tourPbarFill').style.width=Math.round((idx+1)/total*100)+'%';
   document.getElementById('tourTitle').textContent=step.title;
   document.getElementById('tourText').textContent=step.text;
   const backBtn=document.getElementById('tourBackBtn'),nextBtn=document.getElementById('tourNextBtn');
