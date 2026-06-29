@@ -400,10 +400,15 @@ function buildSystemPrompt(){
     ?`\n\n## CURRENT USER\nName: ${currentUser.name} | Code: ${currentUser.code} | Role: ${isOps?'Manager/Ops':'Advisor'}\n${isOps?'This user has full manager access — you may share all resources including manager-only links.':'This user is an advisor — do NOT share manager-only spreadsheet links (precan sheet, commission queries sheet, recruitment sheet). Redirect manager-specific requests to Percy Nortje (067 674 7722).'}`
     :'';
   const managerSection=isOps?MANAGER_ONLY:'';
-  const base=SYSTEM_PROMPT+userCtx+managerSection;
+  const now=new Date();
+  const todayISO=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0')+'-'+(''+now.getDate()).padStart(2,'0');
+  const bookingCtx=`\n\n## CALENDAR BOOKING\nToday is ${todayISO}. When the advisor asks you to book, schedule, set, or create an appointment in their Herd Calendar / Field Diary, reply naturally confirming the details AND append this block at the very end of your response (replace values, omit empty optional fields):\n[BOOK_APPT:{"title":"Appointment title","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","location":"Location","notes":"Notes","type":"visit"}]\ntype must be one of: visit, presentation, gatekeeper, close, planning, admin, other.\nIf the advisor hasn't given you enough detail (especially date), ask before including the block. Never guess a date.`;
+  const base=SYSTEM_PROMPT+userCtx+managerSection+bookingCtx;
   if(!_guideCache.content)return base;
   return base+'\n\n---\nTEAM BUFFALOS GUIDE (live — use as primary knowledge source):\n\n'+_guideCache.content;
 }
+
+let _aiPendingBooking=null;
 
 const FP_CATEGORIES=[
   {id:'qualifications',icon:'🎓',title:'Qualification requirements',info:'Under the FAIS Act, all representatives must hold a recognised qualification. For Long-Term Insurance (Cat B1/B2), minimum Matric (NQF Level 4) is required.',items:[
@@ -7832,9 +7837,47 @@ async function sendChat(){
     const res=await fetch('https://sky-claude-proxy.percy-nortje.workers.dev',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:buildSystemPrompt(),messages:trimmed})});
     const data=await res.json();
     const reply=data.content?.find(b=>b.type==='text')?.text||'Sorry, I could not get a response.';
-    bubble.innerHTML=renderMarkdown(reply);bubble.classList.remove('typing');chatHistory.push({role:'assistant',content:reply});
+    const bookMatch=reply.match(/\[BOOK_APPT:(\{[\s\S]*?\})\]/);
+    let displayReply=reply,bookingData=null;
+    if(bookMatch){displayReply=reply.replace(bookMatch[0],'').trim();try{bookingData=JSON.parse(bookMatch[1]);}catch(e){}}
+    bubble.innerHTML=renderMarkdown(displayReply);bubble.classList.remove('typing');
+    chatHistory.push({role:'assistant',content:displayReply});
+    if(bookingData)_aiShowBookingCard(bookingData,bubble);
   }catch(e){bubble.textContent='Something went wrong. Please try again.';bubble.classList.remove('typing');}
   _saveChatHistory();
+}
+
+function _aiShowBookingCard(d,bubble){
+  _aiPendingBooking=d;
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let dateLabel=d.date;
+  try{const[y,m,dy]=d.date.split('-');dateLabel=parseInt(dy)+' '+mo[parseInt(m)-1]+' '+y;}catch(e){}
+  const timeStr=d.startTime?(d.startTime.slice(0,5)+(d.endTime?' – '+d.endTime.slice(0,5):'')):'';
+  let details=`<b>${d.title||'Appointment'}</b><br>📆 ${dateLabel}`;
+  if(timeStr)details+=`<br>⏰ ${timeStr}`;
+  if(d.location)details+=`<br>📍 ${d.location}`;
+  if(d.notes)details+=`<br>📝 ${d.notes}`;
+  const card=document.createElement('div');
+  card.className='ai-booking-card';
+  card.id='aiBookingCard';
+  card.innerHTML=`<div class="abc-title">📅 Add to Herd Calendar?</div><div class="abc-detail">${details}</div><div class="ai-booking-btns"><button class="abc-confirm" onclick="aiBookAppt()">Confirm — Add Appointment</button><button class="abc-cancel" onclick="document.getElementById('aiBookingCard')?.remove();_aiPendingBooking=null;">Cancel</button></div>`;
+  bubble.closest('.msg').insertAdjacentElement('afterend',card);
+  bubble.closest('#chatMessages')?.scrollTo({top:99999,behavior:'smooth'});
+}
+function aiBookAppt(){
+  const d=_aiPendingBooking;
+  if(!d||!currentUser)return;
+  const id=Date.now()+'_'+Math.random().toString(36).slice(2);
+  const newEv={id,date:d.date,title:d.title||'Appointment',startTime:d.startTime||'',endTime:d.endTime||'',location:d.location||'',notes:d.notes||'',type:d.type||'visit',status:'confirmed',advisorCode:currentUser.code,advisorName:currentUser.name,reminderSent:[]};
+  const events=diaryGetEvents();
+  events.push(newEv);
+  diarySaveEvents(events);
+  if(window.FB_READY)window.FB.saveCalEvent(id,newEv).catch(()=>{});
+  logActivity('CALENDAR_ADD',`Added appointment via AI: "${newEv.title}" on ${newEv.date}`);
+  document.getElementById('aiBookingCard')?.remove();
+  _aiPendingBooking=null;
+  showAlert('Appointment added to your Herd Calendar!','success');
+  if(document.querySelector('#page-termcal.active'))renderDiary();
 }
 
 function previewSettingsPhoto(input){
