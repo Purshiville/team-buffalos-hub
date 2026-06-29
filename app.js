@@ -585,7 +585,7 @@ function fmtLastActive(ts){
   if(diffDays===1)return'Last seen: Yesterday';
   return'Last seen: '+diffDays+' days ago';
 }
-function getBdayInfo(dob){if(!dob)return null;const t=new Date(),d=new Date(dob),ty=new Date(t.getFullYear(),d.getMonth(),d.getDate()),ny=new Date(t.getFullYear()+1,d.getMonth(),d.getDate()),tm=new Date(t.getFullYear(),t.getMonth(),t.getDate());const diff=Math.round((ty-tm)/86400000);const du=diff<0?Math.round((ny-tm)/86400000):diff;const age=t.getFullYear()-d.getFullYear();const ta=diff<=0?age:age+1;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return{daysUntil:du,isToday:du===0,dateStr:d.getDate()+' '+mo[d.getMonth()],turningAge:ta};}
+function getBdayInfo(dob){if(!dob)return null;const t=new Date(),d=new Date(dob),ty=new Date(t.getFullYear(),d.getMonth(),d.getDate()),ny=new Date(t.getFullYear()+1,d.getMonth(),d.getDate()),tm=new Date(t.getFullYear(),t.getMonth(),t.getDate());const diff=Math.round((ty-tm)/86400000);const du=diff<0?Math.round((ny-tm)/86400000):diff;const age=t.getFullYear()-d.getFullYear();const ta=diff<0?age+1:age;const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];return{daysUntil:du,isToday:du===0,dateStr:d.getDate()+' '+mo[d.getMonth()],turningAge:ta};}
 function showAlert(m,t){const el=document.getElementById('alertBox');el.textContent=m;el.className='alert '+t;}
 function clearAlert(){const el=document.getElementById('alertBox');el.className='alert';el.textContent='';}
 // Floating toast — works anywhere in the app (auth alertBox is hidden once logged in)
