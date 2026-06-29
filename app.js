@@ -13806,12 +13806,12 @@ const TOUR_STEPS=[
   // ── Phase 6 — Pack & Submit ────────────────────────────────────────────────────
   {page:'fica',target:'#ficaList',title:'FICA Checklist — Before You Pack',text:"Run through this before submitting any case. New Business needs 5 documents; Replacement needs 8. Tick each off as you pack the file. The bar turns green when all items are confirmed — that's your signal you're clear to submit.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'canpack',target:'#page-canpack',title:'Merge Docs — Build the IMP Pack',text:'Combine your signed declaration form, ROA, and policy schedule into a single PDF for IMP submission. This is the §8 file checklist in practice. Auto-compresses to stay within the 4MB IMP limit.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
-  {page:'cancellations',target:'#page-cancellations',title:'Cancellations — Know the Right Form',text:"When a pre-cancellation appears on your name, find the insurer here. Each shows exactly what's required: AL9 form, own form, or own letter. Capital Legacy has its own section — never use the standard IMP letter for them.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
+  {page:'cancellations',target:'#page-cancellations',title:'Cancellations — Know the Right Form',text:"When replacing a policy, find the old insurer here to know exactly what cancellation documentation is required. Each insurer specifies its own format: AL9 form, own form, or own letter. Capital Legacy has its own section — never use the standard IMP letter for them.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'replform',target:'#page-replform',title:'Replacement Form — Full Digital Case Capture',text:'Capture the complete replacement case digitally: client info, competitor insurer, cover amounts, insurable interest, affordability declaration, and digital signatures from both advisor and client. Exports a compliant PDF.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit',managerOnly:true},
   {page:'appchecks',target:'#page-appchecks',title:'App Checks — Track the Case to Paid',text:'Track submitted cases from Pending Approval through Spotcheck to Approved. Log all policies per case and monitor each through the pipeline. This is how you know a case is progressing and when commission will run.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit',managerOnly:true},
   // ── Phase 7 — Support & Resources ─────────────────────────────────────────────
   {page:'guides',target:'#page-guides',title:'Resources & Training — Everything in One Place',text:'All reference material: Product Resources (guides and forms in Drive), The Guide (full FSP guide), Smart Replacement Training Guide, and the Client Prospect Presentation.',pos:'bottom',phase:'Phase 7 of 7 — Support & Resources'},
-  {page:'directory',target:'#page-directory',title:'Directory — Every Contact You Need',text:"Search for any team member, insurer cancellation number, or FSP email instantly. Tap a phone number to call. Insurer portals for all major providers listed — Sanlam Sky, AVBOB, Old Mutual, and more.",pos:'bottom',phase:'Phase 7 of 7 — Support & Resources'},
+  {page:'directory',target:'#page-directory',title:'Directory — Every Contact You Need',text:"Insurer online portals are listed here — use them to download policy schedules directly from the insurer when clients can't provide them. Below the portals, find cancellation numbers, FSP emails, and team member contact details. Tap any number to call directly.",pos:'bottom',phase:'Phase 7 of 7 — Support & Resources'},
   {page:'team',target:'#userTableBody',title:'Team Page — Advisor Roster',text:'All advisors with DOFA, birthday, compliance status, last seen, and time on site today. Green = 1h+ active, amber = 10m+, grey = inactive. Live view refreshed every 30 seconds.',pos:'top',phase:'Phase 7 of 7 — Support & Resources',managerOnly:true},
   {page:'activity',target:'#actToolLeaderboard',title:'Activity Log — Live Team Engagement',text:'See who is online now, who was active today, and which tools each advisor has used. The engagement table and tool leaderboard give a real-time picture of how the team is using the hub.',pos:'bottom',phase:'Phase 7 of 7 — Support & Resources',managerOnly:true},
   // ── Final ──────────────────────────────────────────────────────────────────────
@@ -13854,7 +13854,7 @@ function _tourShowStep(idx){
       document.getElementById('tourSpotlight').style.display='none';
       _tourCenterCallout();return;
     }
-    el.scrollIntoView({behavior:'smooth',block:'center'});
+    el.scrollIntoView({block:'start'});
     setTimeout(()=>{
       const rect=el.getBoundingClientRect(),p=8;
       const sp=document.getElementById('tourSpotlight');
