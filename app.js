@@ -402,13 +402,13 @@ function buildSystemPrompt(){
   const managerSection=isOps?MANAGER_ONLY:'';
   const now=new Date();
   const todayISO=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0')+'-'+(''+now.getDate()).padStart(2,'0');
-  const bookingCtx=`\n\n## CALENDAR BOOKING\nToday is ${todayISO}. When the advisor asks you to book, schedule, set, or create an appointment in their Herd Calendar / Field Diary, reply naturally confirming the details AND append this block at the very end of your response (replace values, omit empty optional fields):\n[BOOK_APPT:{"title":"Appointment title","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","location":"Location","notes":"Notes","type":"visit"}]\ntype must be one of: visit, presentation, gatekeeper, close, planning, admin, other.\nIf the advisor hasn't given you enough detail (especially date), ask before including the block. Never guess a date.`;
+  const bookingCtx=`\n\n## CALENDAR BOOKING\nToday is ${todayISO}. When the advisor asks you to book, schedule, set, or create an appointment in their Herd Calendar / Field Diary, reply naturally confirming the details AND append this block at the very end of your response (replace values, omit empty optional fields):\n[BOOK_APPT:{"title":"Appointment title","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","location":"Location","notes":"Notes","type":"visit"}]\ntype must be one of: visit, presentation, gatekeeper, close, planning, admin, other.\nIf the advisor hasn't given you enough detail (especially date), ask before including the block. Never guess a date.\n\n## ADDING REFERRALS\nWhen the advisor asks to add, log, or capture a referral, confirm the details naturally AND append at the end:\n[ADD_REFERRAL:{"name":"Full Name","phone":"082 123 4567","facility":"Facility or station name","referredBy":"Name of referring client","relation":"colleague"}]\nrelation must be one of: spouse, colleague, family, friend. If name or referredBy is missing, ask first.\n\n## HUB NAVIGATION\nWhen the advisor says "go to", "open", "take me to", "show me", or "navigate to" a section, reply with one short confirmation line AND add at the very end: [NAVIGATE:pageid]\nPage IDs: hub (Home), termcal (Herd Calendar), referrals (Referral Tracker), prospectmap (Prospect Map), worksites (Worksite Pipeline), roa (ROA Generator), policyreview (Policy Summary), qlink (QLink Calculator), unlockpdf (Unlock PDF), canpack (Merge Docs), cancellations (Cancellations), replguide (Replacement Guide), replpresentation (Client Presentation), guides (Resources & Training), directory (Directory), fitproper (Fit & Proper), standard (The Standard), fica (FICA Checklist), forms (FSP Forms), claimpack (Claim Pack Builder).`;
   const base=SYSTEM_PROMPT+userCtx+managerSection+bookingCtx;
   if(!_guideCache.content)return base;
   return base+'\n\n---\nTEAM BUFFALOS GUIDE (live — use as primary knowledge source):\n\n'+_guideCache.content;
 }
 
-let _aiPendingBooking=null;
+let _aiPendingBooking=null,_aiPendingReferral=null;
 
 const FP_CATEGORIES=[
   {id:'qualifications',icon:'🎓',title:'Qualification requirements',info:'Under the FAIS Act, all representatives must hold a recognised qualification. For Long-Term Insurance (Cat B1/B2), minimum Matric (NQF Level 4) is required.',items:[
@@ -2857,6 +2857,8 @@ function showPage(p){
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
   if(p==='claimpack'){claimInit();}
+  if(p==='fica'){ficaSetMode(_ficaMode||'nb');}
+  if(p==='worksites')renderWorksites();
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   if(p==='replpresentation'){replPresentationInit();}
@@ -5166,6 +5168,14 @@ function renderDailyBrief(){
       const qlinkText=isToday?`<b>Qlink run TODAY</b> — submit before 13:00`:`<b>Next Qlink run: ${next.date}</b> (${next.month}) — submit before 13:00`;
       items.push({icon:'⚡',onclick:`showBriefBlowup('qlink')`,text:qlinkText});
     }
+  }
+
+  // Stale referral follow-up reminder (advisors only)
+  if(!isOps){
+    const myRefs=getReferrals().filter(r=>r.advisorCode===currentUser.code&&(r.status==='pipeline'||r.status==='contacted'));
+    const staleThreshold=Date.now()-3*86400000;
+    const staleCount=myRefs.filter(r=>{const lastAct=r.contacts?.length?Math.max(...r.contacts.map(c=>new Date(c.datetime).getTime())):new Date(r.createdAt||0).getTime();return lastAct<staleThreshold;}).length;
+    if(staleCount)items.push({icon:'🔗',onclick:`showPage('referrals')`,text:`<b>${staleCount} referral${staleCount>1?'s':''}</b> with no follow-up in 3+ days — <span style="color:#c9922a;font-weight:600;text-decoration:underline;">action them now →</span>`});
   }
 
   // Day of week motivation
@@ -7838,11 +7848,17 @@ async function sendChat(){
     const data=await res.json();
     const reply=data.content?.find(b=>b.type==='text')?.text||'Sorry, I could not get a response.';
     const bookMatch=reply.match(/\[BOOK_APPT:(\{[\s\S]*?\})\]/);
-    let displayReply=reply,bookingData=null;
-    if(bookMatch){displayReply=reply.replace(bookMatch[0],'').trim();try{bookingData=JSON.parse(bookMatch[1]);}catch(e){}}
+    const refMatch=reply.match(/\[ADD_REFERRAL:(\{[\s\S]*?\})\]/);
+    const navMatch=reply.match(/\[NAVIGATE:([a-z]+)\]/);
+    let displayReply=reply,bookingData=null,refData=null;
+    if(bookMatch){displayReply=displayReply.replace(bookMatch[0],'').trim();try{bookingData=JSON.parse(bookMatch[1]);}catch(e){}}
+    if(refMatch){displayReply=displayReply.replace(refMatch[0],'').trim();try{refData=JSON.parse(refMatch[1]);}catch(e){}}
+    if(navMatch){displayReply=displayReply.replace(navMatch[0],'').trim();}
     bubble.innerHTML=renderMarkdown(displayReply);bubble.classList.remove('typing');
     chatHistory.push({role:'assistant',content:displayReply});
     if(bookingData)_aiShowBookingCard(bookingData,bubble);
+    if(refData)_aiShowReferralCard(refData,bubble);
+    if(navMatch){const pg=navMatch[1];setTimeout(()=>{document.getElementById('aiPopup').style.display='none';showPage(pg);},700);}
   }catch(e){bubble.textContent='Something went wrong. Please try again.';bubble.classList.remove('typing');}
   _saveChatHistory();
 }
@@ -7878,6 +7894,29 @@ function aiBookAppt(){
   _aiPendingBooking=null;
   showAlert('Appointment added to your Herd Calendar!','success');
   if(document.querySelector('#page-termcal.active'))renderDiary();
+}
+
+function _aiShowReferralCard(d,bubble){
+  _aiPendingReferral=d;
+  let details=`<b>${d.name||'Referral'}</b>`;
+  if(d.referredBy)details+=`<br>👤 Referred by: ${d.referredBy}`;
+  if(d.facility)details+=`<br>🏢 ${d.facility}`;
+  if(d.phone)details+=`<br>📞 ${d.phone}`;
+  if(d.relation)details+=`<br>🔗 ${d.relation}`;
+  const card=document.createElement('div');
+  card.className='ai-booking-card';card.id='aiReferralCard';
+  card.innerHTML=`<div class="abc-title">🔗 Add to Referral Tracker?</div><div class="abc-detail">${details}</div><div class="ai-booking-btns"><button class="abc-confirm" onclick="aiAddReferral()">Confirm — Add Referral</button><button class="abc-cancel" onclick="document.getElementById('aiReferralCard')?.remove();_aiPendingReferral=null;">Cancel</button></div>`;
+  bubble.closest('.msg').insertAdjacentElement('afterend',card);
+  bubble.closest('#chatMessages')?.scrollTo({top:99999,behavior:'smooth'});
+}
+function aiAddReferral(){
+  const d=_aiPendingReferral;if(!d||!currentUser)return;
+  const refs=getReferrals();
+  refs.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),referredBy:d.referredBy||'',name:d.name||'',phone:d.phone||'',facility:d.facility||'',relation:d.relation||'colleague',status:'pipeline',advisorCode:currentUser.code,createdAt:new Date().toISOString()});
+  saveReferrals(refs);
+  document.getElementById('aiReferralCard')?.remove();_aiPendingReferral=null;
+  showAlert('Referral added to your tracker!','success');
+  if(document.querySelector('#page-referrals.active'))renderReferrals();
 }
 
 function previewSettingsPhoto(input){
@@ -13583,6 +13622,95 @@ function rgFaqToggle(btn){
   body.style.display=open?'none':'block';
   if(arrow)arrow.textContent=open?'▾':'▴';
 }
+
+// ── FICA / SUBMISSION CHECKLIST ──────────────────────────────────────────────
+const _FICA_NB=[
+  {id:'f1',text:'Certified copy of client\'s ID document'},
+  {id:'f2',text:'Latest payslip (not older than 3 months)'},
+  {id:'f3',text:'3-month bank statement'},
+  {id:'f4',text:'Signed application form — completed by client'},
+  {id:'f5',text:'ROA (Record of Advice) captured in IMP'},
+];
+const _FICA_REP=[
+  ..._FICA_NB,
+  {id:'f6',text:'Competitor policy schedule(s) for all policies being cancelled',tag:'Replacement only'},
+  {id:'f7',text:'Signed Client Declaration Form — Parts A, B & C',tag:'Replacement only'},
+  {id:'f8',text:'ROA with replacement boilerplate text (§3 wording) entered in IMP',tag:'Replacement only'},
+];
+let _ficaMode='nb';
+function ficaSetMode(mode){
+  _ficaMode=mode;
+  const nb=document.getElementById('ficaTabNB'),rp=document.getElementById('ficaTabRP');
+  if(nb){nb.style.background=mode==='nb'?'#0d1f3c':'#f4f2ed';nb.style.color=mode==='nb'?'#f5d98b':'#6b7280';}
+  if(rp){rp.style.background=mode==='rep'?'#0d1f3c':'#f4f2ed';rp.style.color=mode==='rep'?'#f5d98b':'#6b7280';}
+  ficaRender();
+}
+function ficaRender(){
+  const items=_ficaMode==='rep'?_FICA_REP:_FICA_NB;
+  const tot=document.getElementById('ficaTotal');if(tot)tot.textContent=items.length;
+  const list=document.getElementById('ficaList');if(!list)return;
+  list.innerHTML=items.map((item,i)=>`<label style="display:flex;align-items:flex-start;gap:12px;padding:13px 16px;${i>0?'border-top:1px solid #f4f2ed;':''}cursor:pointer;"><input type="checkbox" id="fc_${item.id}" onchange="ficaUpdate()" style="width:18px;height:18px;cursor:pointer;accent-color:#0d1f3c;flex-shrink:0;margin-top:2px;"><div><div style="font-size:13px;color:#0d1f3c;line-height:1.4;">${item.text}</div>${item.tag?`<div style="font-size:10px;color:#059669;font-weight:700;margin-top:2px;">+ ${item.tag.toUpperCase()}</div>`:''}</div></label>`).join('');
+  ficaUpdate();
+}
+function ficaUpdate(){
+  const items=_ficaMode==='rep'?_FICA_REP:_FICA_NB;
+  const done=items.filter(item=>{const el=document.getElementById('fc_'+item.id);return el&&el.checked;}).length;
+  const doneEl=document.getElementById('ficaDone');if(doneEl)doneEl.textContent=done;
+  const prog=document.getElementById('ficaProgress');
+  if(prog){const all=done===items.length&&items.length>0;prog.style.background=all?'#dcfce7':'#f4f2ed';prog.style.borderLeft=all?'4px solid #16a34a':'none';prog.style.borderRadius='12px';}
+}
+function ficaReset(){
+  const items=_ficaMode==='rep'?_FICA_REP:_FICA_NB;
+  items.forEach(item=>{const el=document.getElementById('fc_'+item.id);if(el)el.checked=false;});
+  ficaUpdate();
+}
+// ── END FICA CHECKLIST ────────────────────────────────────────────────────────
+
+// ── WORKSITE PIPELINE ─────────────────────────────────────────────────────────
+const WS_STAGES=['🎯 Identified','👋 Approached','🤝 PIC Met','✅ Access Approved','🔥 Active','💤 Inactive'];
+const WS_STAGE_COLORS=['#6b7280','#2563eb','#7c3aed','#d97706','#16a34a','#9ca3af'];
+function wsGetAll(){try{return JSON.parse(localStorage.getItem('tl_ws_'+(currentUser?.code||'x'))||'[]');}catch(e){return[];}}
+function wsSaveAll(arr){localStorage.setItem('tl_ws_'+(currentUser?.code||'x'),JSON.stringify(arr));}
+function wsAdd(){
+  const name=(document.getElementById('ws-name')?.value||'').trim();
+  const pic=(document.getElementById('ws-pic')?.value||'').trim();
+  const phone=(document.getElementById('ws-phone')?.value||'').trim();
+  const headcount=parseInt(document.getElementById('ws-headcount')?.value||'0')||0;
+  if(!name)return showAlert('Please enter the company name.','error');
+  const ws=wsGetAll();
+  ws.unshift({id:Date.now()+'_'+Math.random().toString(36).slice(2),name,pic,phone,headcount,stage:0,notes:'',addedAt:new Date().toISOString()});
+  wsSaveAll(ws);
+  ['ws-name','ws-pic','ws-phone','ws-headcount'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  renderWorksites();showAlert('Worksite added!','success');
+}
+function wsUpdateStage(id,stage){
+  const ws=wsGetAll();const w=ws.find(x=>x.id===id);
+  if(w){w.stage=+stage;wsSaveAll(ws);renderWorksites();}
+}
+function wsDelete(id){
+  if(!confirm('Remove this worksite?'))return;
+  wsSaveAll(wsGetAll().filter(x=>x.id!==id));renderWorksites();
+}
+function wsSaveNotes(id,val){
+  const ws=wsGetAll();const w=ws.find(x=>x.id===id);if(w){w.notes=val;wsSaveAll(ws);}
+}
+function renderWorksites(){
+  const ws=wsGetAll();
+  const statsEl=document.getElementById('wsStats');
+  if(statsEl){
+    const active=ws.filter(w=>w.stage===4).length;
+    const pipeline=ws.filter(w=>w.stage>=0&&w.stage<=3).length;
+    statsEl.innerHTML=[{label:'Total',val:ws.length,col:'#0d1f3c'},{label:'Active',val:active,col:'#16a34a'},{label:'In Pipeline',val:pipeline,col:'#d97706'}].map(s=>`<div style="background:#fff;border:1px solid #e8e4db;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:${s.col};">${s.val}</div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">${s.label}</div></div>`).join('');
+  }
+  const el=document.getElementById('wsList');if(!el)return;
+  if(!ws.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:2rem;background:#f9fafb;border-radius:12px;border:1px dashed #e5e7eb;">No worksites added yet — add your first commercial worksite above.</div>';return;}
+  el.innerHTML=ws.map(w=>{
+    const sc=WS_STAGE_COLORS[w.stage]||'#6b7280';
+    const dateStr=new Date(w.addedAt).toLocaleDateString('en-ZA',{day:'numeric',month:'short'});
+    return`<div class="full-card" style="margin-bottom:10px;padding:0;overflow:hidden;"><div style="padding:12px 14px;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:8px;"><div style="min-width:0;"><div style="font-size:14px;font-weight:700;color:#0d1f3c;">${w.name}</div>${w.pic?`<div style="font-size:11px;color:#6b7280;margin-top:2px;">👤 ${w.pic}${w.phone?` · <a href="tel:${w.phone}" style="color:#c9922a;text-decoration:none;">${w.phone}</a>`:''}</div>`:''} ${w.headcount?`<div style="font-size:11px;color:#6b7280;margin-top:1px;">👥 ~${w.headcount} employees</div>`:''}<div style="font-size:10px;color:#9ca3af;margin-top:2px;">Added ${dateStr}</div></div><button onclick="wsDelete('${w.id}')" style="background:none;border:none;color:#d1d5db;cursor:pointer;font-size:18px;flex-shrink:0;padding:0;">✕</button></div><select onchange="wsUpdateStage('${w.id}',this.value)" style="font-size:12px;font-weight:700;border:1.5px solid ${sc};border-radius:8px;padding:5px 8px;color:${sc};background:#f9fafb;cursor:pointer;margin-bottom:8px;width:100%;">${WS_STAGES.map((s,i)=>`<option value="${i}" ${w.stage===i?'selected':''}>${s}</option>`).join('')}</select><input type="text" placeholder="Notes — PIC contact, access terms, best days to visit..." value="${(w.notes||'').replace(/"/g,'&quot;')}" onblur="wsSaveNotes('${w.id}',this.value)" style="width:100%;font-size:12px;border:1px solid #e5e7eb;border-radius:8px;padding:6px 10px;box-sizing:border-box;color:#374151;background:#f9fafb;"></div></div>`;
+  }).join('');
+}
+// ── END WORKSITE PIPELINE ─────────────────────────────────────────────────────
 
 // ── HUB TOUR ────────────────────────────────────────────────────────────────
 let _tourIdx=0,_tourActive=false,_tourSteps=[];
