@@ -7750,15 +7750,16 @@ function toggleVoiceInput(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){showAlert("Voice input is not supported on this browser. Use Chrome or Safari.","error");return;}
   _micRecognition=new SR();
-  _micRecognition.continuous=true;
-  _micRecognition.interimResults=true;
   _micRecognition.lang="en-ZA";
   const btn=document.getElementById("micBtn");
   const inp=document.getElementById("chatInput");
   _micRecognition.onstart=()=>{_micActive=true;if(btn){btn.textContent="🔴";btn.classList.add("listening");}if(inp)inp.placeholder="Listening… tap 🔴 to stop";};
-  _micRecognition.onresult=e=>{const t=Array.from(e.results).map(r=>r[0].transcript).join("");if(inp)inp.value=t;};
-  _micRecognition.onend=()=>{if(_micActive){_micRecognition.start();return;}_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";};
-  _micRecognition.onerror=e=>{if(e.error==="no-speech"&&_micActive)return;_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";if(e.error!=="aborted")showAlert("Voice error: "+e.error,"error");};
+  _micRecognition.onresult=e=>{
+    const final=Array.from(e.results).filter(r=>r.isFinal).map(r=>r[0].transcript).join(" ");
+    if(final&&inp){const cur=inp.value.trim();inp.value=cur?cur+" "+final:final;}
+  };
+  _micRecognition.onend=()=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";};
+  _micRecognition.onerror=e=>{_micActive=false;if(btn){btn.textContent="🎤";btn.classList.remove("listening");}if(inp)inp.placeholder="Ask anything about the business...";if(e.error==="not-allowed")showAlert("Microphone permission denied — allow mic access in your browser settings and try again.","error");else if(e.error!=="aborted"&&e.error!=="no-speech")showAlert("Voice error: "+e.error,"error");};
   _micRecognition.start();
 }
 // ── END VOICE INPUT ───────────────────────────────────────────────────────────
