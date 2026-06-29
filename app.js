@@ -1393,12 +1393,17 @@ async function saveAdvisorStats(){
 }
 function initStatsListener(){
   const now=new Date();
-  const period=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
-  // Set current month in manager selectors
+  const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const curProdEntry=PROD_CUTOFFS.find(p=>todayStr>=p.opens&&todayStr<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>todayStr);
+  let _yr,_mo;
+  if(curProdEntry){const cd=new Date(curProdEntry.cutoff);_yr=cd.getFullYear();_mo=cd.getMonth()+1;}
+  else{_yr=now.getFullYear();_mo=now.getMonth()+1;}
+  const period=_yr+'-'+String(_mo).padStart(2,'0');
+  // Set current production month in manager selectors
   const mm=document.getElementById('statsPeriodMonth');
   const yy=document.getElementById('statsPeriodYear');
-  if(mm)mm.value=String(now.getMonth()+1).padStart(2,'0');
-  if(yy)yy.value=String(now.getFullYear());
+  if(mm)mm.value=String(_mo).padStart(2,'0');
+  if(yy)yy.value=String(_yr);
   if(window.FB_READY&&window.startStatsListener){
     window.startStatsListener(period);
   } else {
