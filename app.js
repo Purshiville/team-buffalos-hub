@@ -491,9 +491,22 @@ window.addEventListener('load',()=>{
   },200);
 });
 
+function _restoreLoginForm(){
+  try{
+    const rem=JSON.parse(localStorage.getItem('tl_remember')||'null');
+    if(!rem)return;
+    const cEl=document.getElementById('loginCode');
+    const pEl=document.getElementById('loginPass');
+    const cbEl=document.getElementById('loginRemember');
+    if(cEl)cEl.value=rem.code||'';
+    if(pEl)pEl.value=rem.pass||'';
+    if(cbEl)cbEl.checked=true;
+  }catch(e){}
+}
 window.addEventListener('load',()=>{
   // Try immediately from localStorage
   if(tryRestoreSession())return;
+  _restoreLoginForm();
   // If Firebase loads users, try again
   document.addEventListener('fb-ready',()=>{
     setTimeout(()=>{
@@ -636,15 +649,16 @@ function doLogin(){
   if(!code)return showAlert('Please enter your employee code.','error');
   if(!pass)return showAlert('Please enter your password.','error');
   if(!APPROVED_CODES.has(code)&&code!=='PURSHIVILLE'&&code!=='ARLENE')return showAlert('Access denied. Your employee code is not on the approved list. Please contact your manager.','error');
-  if(code==='PURSHIVILLE'||code==='MANAGER')return enterHub({name:'Purshiville Nortje',email:'manager@teambuffalos.co.za',code:'PURSHIVILLE',pass,isManager:true,isOps:true,dob:null});
-  if(code==='ARLENE'||code==='OPS')return enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null});
+  const _saveRemember=()=>{const cb=document.getElementById('loginRemember');if(cb?.checked){try{localStorage.setItem('tl_remember',JSON.stringify({code,pass}));}catch(e){}}else{try{localStorage.removeItem('tl_remember');}catch(e){}}};
+  if(code==='PURSHIVILLE'||code==='MANAGER'){_saveRemember();return enterHub({name:'Purshiville Nortje',email:'manager@teambuffalos.co.za',code:'PURSHIVILLE',pass,isManager:true,isOps:true,dob:null});}
+  if(code==='ARLENE'||code==='OPS'){_saveRemember();return enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null});}
   const users=getUsers();
   if(users[code]){
     if(users[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
     if(users[code].isSuspended)return showAlert('Your access has been suspended. Please contact your manager.','error');
     users[code].lastActive=now();saveUsers(users);
     if(window.FB_READY&&window.FB.saveUser)window.FB.saveUser(code,users[code]).catch(()=>{});
-    enterHub(users[code]);
+    _saveRemember();enterHub(users[code]);
     return;
   }
   // Not in local cache — fetch from Firebase
@@ -657,7 +671,7 @@ function doLogin(){
       if(local[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
       local[code].lastActive=now();saveUsers(local);
       if(window.FB.saveUser)window.FB.saveUser(code,local[code]).catch(()=>{});
-      enterHub(local[code]);
+      _saveRemember();enterHub(local[code]);
     }).catch(()=>showAlert('Employee code not found. Please register first.','error'));
   } else {
     showAlert('Employee code not found. Please register first.','error');
@@ -1243,11 +1257,13 @@ function doLogout(reason){
   window._inboxMsgs=[];window._myChats=[];
   currentUser=null;chatHistory=[];
   try{localStorage.removeItem('tl_session');}catch(e){}
+  if(reason!=='inactivity'&&reason!=='connection_lost'){try{localStorage.removeItem('tl_remember');}catch(e){}}
   document.getElementById('hubMain').style.display='none';
   document.getElementById('authScreen').classList.add('active');
   clearAlert();
   document.getElementById('loginCode').value='';
   document.getElementById('loginPass').value='';
+  _restoreLoginForm();
   if(reason==='connection_lost')showAlert('You were signed out because the connection was lost. Please sign in again.','warning');
   showPage('hub');
 }
