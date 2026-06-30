@@ -1016,6 +1016,22 @@ function requestNotificationPermission(){
   }
 }
 
+function toolsFilter(cat){
+  document.querySelectorAll('.tfbtn').forEach(b=>b.classList.remove('active'));
+  const idMap={all:'tfAll',field:'tfField',docs:'tfDocs',builders:'tfBuilders',compliance:'tfCompliance',manager:'tfManager'};
+  const btn=document.getElementById(idMap[cat]);if(btn)btn.classList.add('active');
+  const s=id=>{const e=document.getElementById(id);if(e)e.style.display='block';};
+  const h=id=>{const e=document.getElementById(id);if(e)e.style.display='none';};
+  const all=cat==='all';
+  (all||cat==='field')?s('toolSectionField'):h('toolSectionField');
+  (all||cat==='docs')?s('toolSectionDocs'):h('toolSectionDocs');
+  (all||cat==='builders')?s('toolSectionBuilders'):h('toolSectionBuilders');
+  const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
+  if(isMgr){
+    (all||cat==='compliance')?s('toolComplianceSection'):h('toolComplianceSection');
+    (all||cat==='manager')?s('toolMgrSection'):h('toolMgrSection');
+  }
+}
 function applyRoleVisibility(user){
   const isMgr=user.isManager||user.isOps;
   document.getElementById('opsTab').style.display=isMgr?'inline-block':'none';
@@ -1027,6 +1043,8 @@ function applyRoleVisibility(user){
   const academyMore=document.getElementById('academyMoreItem');if(academyMore)academyMore.style.display=isMgr?'flex':'none';
   const activityMore=document.getElementById('activityMoreItem');if(activityMore)activityMore.style.display=isMgr?'flex':'none';
   const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=isMgr?'block':'none';
+  const tfCompliance=document.getElementById('tfCompliance');if(tfCompliance)tfCompliance.style.display=isMgr?'':'none';
+  const tfManager=document.getElementById('tfManager');if(tfManager)tfManager.style.display=isMgr?'':'none';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=isMgr?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
@@ -2890,6 +2908,7 @@ function showPage(p){
   if(p==='dailyregion'){if(currentUser&&currentUser.isManager)initDailyRegion();else showPage('hub');}
   if(p==='forms'){renderFormsPage();return;}
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
+  if(p==='tools'){toolsFilter('all');}
   if(p==='cancellations'){cpInit();}
   if(p==='claimpack'){claimInit();}
   if(p==='reinstatement'){reinstInit();}
