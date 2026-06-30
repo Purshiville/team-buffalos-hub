@@ -163,7 +163,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - CRITICAL: EasyPay payments MUST be made by the CLIENT ONLY. Advisor paying EasyPay on behalf of a client = immediate contract termination + potential FAIS debarment (honesty & integrity violation).
 - Payment options: EFT to Standard Bank (SANLAM SKY STOP ORDERS, acc: 000790265, branch code: 051001) with policy number as reference; OR EasyPay cash at Pick 'n Pay, Shoprite/Checkers, Lewis, Lifestyle Living, Best Electric, Foodworld/Saveworld/Elite (WC), Score, Boxer, Spar, M-KEM Bellville.
 - Processing time: 5–7 working days. Commission processed in same production month as reinstatement.
-- Reinstatement Guide and Pack Builder available in Resources → Reinstatement Guide.
+- Reinstatement Pack Builder available in Tools → Pack Builders.
 
 ## CASHBACK & PAID-UP BENEFITS
 - Enhanced Priority: cashback every 3 years. Paid-up at age 75.
