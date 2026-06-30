@@ -150,9 +150,23 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 ## LAPSE MANAGEMENT & REINSTATEMENTS
 - Persistency measured over 15-month window. Lapse before 15 months = potential clawback.
 - 24-month contractual commitment per policy.
-- Reinstatement window: 120 days (4 months) from lapse date. After that, new application required.
-- Reinstatement requires: Reinstatement Form + proof of payment (1 outstanding premium) + new Stop Order Mandate.
-- Reinstatements take 5–7 working days.
+REINSTATEMENT RULES (Updated May 2026 — product-specific):
+- FUNERAL PRODUCTS (Value Funeral Plan, AIO — AIO back to Funeral class as of June 2026): Minimum 1 month's full premium paid in cash within 90 days of lapse date. Covers LAPSED, NTU, NTU-CAN, CANCELLED statuses.
+- RISK PRODUCTS (Enhanced Priority, Immediate Life Cover, Essential Med): ALL outstanding arrears must be paid in full within 60 days of lapse date. The 2024 flexible Funeral rule does NOT apply to Risk products.
+- Payment amount must be exact premium or more — a lesser payment results in non-reinstatement.
+- Reinstatement Form + Stop Order Mandate must be signed by client, advisor, and sales manager.
+- Policy holder must sign reinstatement request; signature must match previous documents on file.
+- Update contact details if different from system. Clear and legible documentation required.
+- Persal clients: affordability check required before reinstatement can be processed.
+- Stop Order billing takes 2+ months; client must make EasyPay cash payment to secure reinstatement now.
+- Different intermediary from original: broker note must accompany reinstatement form.
+- Cover backdated to lapse date. No new waiting periods; remaining unexpired waiting periods still apply.
+- Existing debt: clients encouraged to settle; all unpaid debt deducted at claims stage.
+- CRITICAL: EasyPay payments MUST be made by the CLIENT ONLY. Advisor paying EasyPay on behalf of a client = immediate contract termination + potential FAIS debarment (honesty & integrity violation).
+- Payment options: EFT to Standard Bank (SANLAM SKY STOP ORDERS, acc: 000790265, branch code: 051001) with policy number as reference; OR EasyPay cash at Pick 'n Pay, Shoprite/Checkers, Lewis, Lifestyle Living, Best Electric, Foodworld/Saveworld/Elite (WC), Score, Boxer, Spar, M-KEM Bellville.
+- Processing time: 5–7 working days. Commission processed in same production month as reinstatement.
+- Contact: 0861 235 433 | Commission queries: DEE_Commissions@sanlamsky.co.za
+- Reinstatement Guide and Pack Builder available in Resources → Reinstatement Guide.
 
 ## CASHBACK & PAID-UP BENEFITS
 - Enhanced Priority: cashback every 3 years. Paid-up at age 75.
@@ -2881,6 +2895,7 @@ function showPage(p){
   if(p==='standard'){setupStandardHero();renderYTDStats();renderYTDTop3();}
   if(p==='cancellations'){cpInit();}
   if(p==='claimpack'){claimInit();}
+  if(p==='reinstatement'){reinstInit();}
   if(p==='fica'){ficaSetMode(_ficaMode||'nb');}
   if(p==='worksites')renderWorksites();
   if(p==='policyreview'){renderPRSavedList();}
@@ -12837,6 +12852,103 @@ function claimCopyMsg(){
   });
 }
 // ── END CLAIM PACK BUILDER ────────────────────────────────────────────────────
+// ── REINSTATEMENT PACK BUILDER ───────────────────────────────────────────────
+const _reinstReqSlots=[
+  {id:'riForm',    label:'Sanlam Sky Reinstatement Form', icon:'📋', note:'Signed by client, advisor, and sales manager — download from Drive'},
+  {id:'riMandate', label:'Stop Order Mandate',            icon:'🏦', note:'Signed by client, advisor, and sales manager — download from Drive'},
+  {id:'riPayment', label:'Proof of Payment',              icon:'💳', note:'Exact premium amount or more — a lesser payment results in non-reinstatement'},
+];
+const _reinstOptSlots=[
+  {id:'riId',  label:'Client ID (copy)',         icon:'🪪', note:'Optional — include if available'},
+  {id:'riLoa', label:'Letter of Authority (LOA)', icon:'📄', note:'Optional — include if client has provided LOA'},
+];
+let _reinstFiles={};
+function reinstInit(){
+  _reinstFiles={};
+  const reqC=document.getElementById('reinstSlotList');
+  const optC=document.getElementById('reinstOptSlotList');
+  if(!reqC||!optC)return;
+  reqC.innerHTML=_reinstReqSlots.map(s=>`
+    <div id="rist_wrap_${s.id}" style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #fde68a;border-radius:10px;padding:10px 12px;transition:border-color .2s;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+        <div id="rist_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+      </div>
+      <label style="background:#0d1f3c;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="reinstFileAdded('${s.id}',this)">
+      </label>
+    </div>`).join('');
+  optC.innerHTML=_reinstOptSlots.map(s=>`
+    <div id="rist_wrap_${s.id}" style="display:flex;align-items:center;gap:10px;background:#fff;border:1.5px dashed #d1d5db;border-radius:10px;padding:10px 12px;transition:border-color .2s;opacity:0.7;">
+      <span style="font-size:20px;flex-shrink:0;">${s.icon}</span>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+        <div id="rist_${s.id}" style="font-size:10px;color:#9ca3af;margin-top:1px;">${s.note}</div>
+      </div>
+      <label style="background:#6b7280;color:#fff;font-size:11px;font-weight:700;padding:6px 12px;border-radius:7px;cursor:pointer;flex-shrink:0;white-space:nowrap;">
+        Upload<input type="file" accept=".pdf,.jpg,.jpeg,.png" style="display:none;" onchange="reinstFileAdded('${s.id}',this)">
+      </label>
+    </div>`).join('');
+  const btn=document.getElementById('reinstBuildBtn');
+  if(btn){btn.textContent='Build Reinstatement Pack';btn.style.opacity='0.45';btn.style.pointerEvents='none';}
+  const st=document.getElementById('reinstStatus');if(st)st.innerHTML='';
+}
+function reinstFileAdded(slotId,input){
+  const file=input.files[0];if(!file)return;
+  _reinstFiles[slotId]=file;
+  const stEl=document.getElementById('rist_'+slotId);
+  const wrapEl=document.getElementById('rist_wrap_'+slotId);
+  if(stEl){stEl.textContent='✅ '+file.name;stEl.style.color='#16a34a';}
+  if(wrapEl){wrapEl.style.borderColor='#86efac';wrapEl.style.opacity='1';wrapEl.style.borderStyle='solid';}
+  const reqReady=_reinstReqSlots.every(s=>_reinstFiles[s.id]);
+  const btn=document.getElementById('reinstBuildBtn');
+  if(btn){btn.style.opacity=reqReady?'1':'0.45';btn.style.pointerEvents=reqReady?'auto':'none';}
+}
+async function reinstBuild(){
+  const PL=window.PDFLib;
+  const statusEl=document.getElementById('reinstStatus');
+  const btn=document.getElementById('reinstBuildBtn');
+  if(!PL||!PL.PDFDocument){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;font-weight:700;">⚠️ PDF library not loaded — check your internet connection and try again.</div>';
+    return;
+  }
+  btn.textContent='Building…';btn.style.opacity='0.7';btn.style.pointerEvents='none';
+  if(statusEl)statusEl.innerHTML='';
+  try{
+    const merged=await PL.PDFDocument.create();
+    const allSlots=[..._reinstReqSlots,..._reinstOptSlots.filter(s=>_reinstFiles[s.id])];
+    for(const s of allSlots){
+      const file=_reinstFiles[s.id];if(!file)continue;
+      const buf=await file.arrayBuffer();
+      if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
+        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
+        const pages=await merged.copyPages(src,src.getPageIndices());
+        pages.forEach(p=>merged.addPage(p));
+      } else {
+        const pg=merged.addPage([595,842]);
+        let img;
+        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){img=await merged.embedPng(buf);}
+        else{img=await merged.embedJpg(buf);}
+        const scaled=img.scaleToFit(555,802);
+        pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
+      }
+    }
+    const bytes=await merged.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    const name=(document.getElementById('reinstFileName')?.value||'reinstatement-pack').replace(/\.pdf$/i,'');
+    a.href=url;a.download=name+'.pdf';a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),8000);
+    if(statusEl)statusEl.innerHTML='<div style="color:#16a34a;font-size:12px;font-weight:700;margin-top:4px;">✅ Reinstatement pack saved to your Downloads folder.</div>';
+    btn.textContent='✅ Pack Downloaded';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }catch(e){
+    if(statusEl)statusEl.innerHTML='<div style="color:#dc2626;font-size:12px;">Error: '+e.message+'</div>';
+    btn.textContent='Build Reinstatement Pack';btn.style.opacity='1';btn.style.pointerEvents='auto';
+  }
+}
+// ── END REINSTATEMENT PACK BUILDER ───────────────────────────────────────────
 
 // ── UNLOCK PDF ────────────────────────────────────────────────────────────────
 let _updfFiles=[];
