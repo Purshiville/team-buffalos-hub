@@ -1032,6 +1032,19 @@ function toolsFilter(cat){
     (all||cat==='manager')?s('toolMgrSection'):h('toolMgrSection');
   }
 }
+function guidesFilter(cat){
+  document.querySelectorAll('#guidesFilterBar .tfbtn').forEach(b=>b.classList.remove('active'));
+  const idMap={all:'gfAll',systems:'gfSystems',training:'gfTraining',guides:'gfGuides',manager:'gfManager'};
+  const btn=document.getElementById(idMap[cat]);if(btn)btn.classList.add('active');
+  const s=id=>{const e=document.getElementById(id);if(e)e.style.display='block';};
+  const h=id=>{const e=document.getElementById(id);if(e)e.style.display='none';};
+  const all=cat==='all';
+  (all||cat==='systems')?s('guideSectionSystems'):h('guideSectionSystems');
+  (all||cat==='training')?s('guideSectionTraining'):h('guideSectionTraining');
+  (all||cat==='guides')?s('guideSectionGuides'):h('guideSectionGuides');
+  const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
+  if(isMgr)(all||cat==='manager')?s('guidesMgrSection'):h('guidesMgrSection');
+}
 function applyRoleVisibility(user){
   const isMgr=user.isManager||user.isOps;
   document.getElementById('opsTab').style.display=isMgr?'inline-block':'none';
@@ -1045,6 +1058,7 @@ function applyRoleVisibility(user){
   const compSection=document.getElementById('toolComplianceSection');if(compSection)compSection.style.display=isMgr?'block':'none';
   const tfCompliance=document.getElementById('tfCompliance');if(tfCompliance)tfCompliance.style.display=isMgr?'':'none';
   const tfManager=document.getElementById('tfManager');if(tfManager)tfManager.style.display=isMgr?'':'none';
+  const gfManager=document.getElementById('gfManager');if(gfManager)gfManager.style.display=isMgr?'':'none';
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=isMgr?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
@@ -2887,7 +2901,7 @@ function showPage(p){
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
-  if(p==='guides'){const fc=document.getElementById('fanewsCard');if(fc)fc.style.display=(currentUser&&['SKA310889','PURSHIVILLE'].includes(currentUser.code))?'flex':'none';}
+  if(p==='guides'){guidesFilter('all');const fc=document.getElementById('fanewsCard');if(fc)fc.style.display=(currentUser&&['SKA310889','PURSHIVILLE'].includes(currentUser.code))?'flex':'none';}
   if(p==='activity')renderActivityLog();
   if(p==='canpack'){mdInit();}
   if(p==='termcal')renderTermCal();
