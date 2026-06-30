@@ -150,22 +150,19 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 ## LAPSE MANAGEMENT & REINSTATEMENTS
 - Persistency measured over 15-month window. Lapse before 15 months = potential clawback.
 - 24-month contractual commitment per policy.
-REINSTATEMENT RULES (Updated May 2026 — product-specific):
-- FUNERAL PRODUCTS (Value Funeral Plan, AIO — AIO back to Funeral class as of June 2026): Minimum 1 month's full premium paid in cash within 90 days of lapse date. Covers LAPSED, NTU, NTU-CAN, CANCELLED statuses.
-- RISK PRODUCTS (Enhanced Priority, Immediate Life Cover, Essential Med): ALL outstanding arrears must be paid in full within 60 days of lapse date. The 2024 flexible Funeral rule does NOT apply to Risk products.
+REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
+- ALL PRODUCTS (Value Funeral Plan, AIO, Enhanced Priority): Minimum 1 month's full premium paid within 120 days of lapse date. Covers LAPSED, NTU, NTU-CAN, CANCELLED statuses.
 - Payment amount must be exact premium or more — a lesser payment results in non-reinstatement.
 - Reinstatement Form + Stop Order Mandate must be signed by client, advisor, and sales manager.
 - Policy holder must sign reinstatement request; signature must match previous documents on file.
-- Update contact details if different from system. Clear and legible documentation required.
 - Persal clients: affordability check required before reinstatement can be processed.
 - Stop Order billing takes 2+ months; client must make EasyPay cash payment to secure reinstatement now.
-- Different intermediary from original: broker note must accompany reinstatement form.
+- Different intermediary from original: a Letter of Authority must accompany the reinstatement form.
 - Cover backdated to lapse date. No new waiting periods; remaining unexpired waiting periods still apply.
 - Existing debt: clients encouraged to settle; all unpaid debt deducted at claims stage.
 - CRITICAL: EasyPay payments MUST be made by the CLIENT ONLY. Advisor paying EasyPay on behalf of a client = immediate contract termination + potential FAIS debarment (honesty & integrity violation).
 - Payment options: EFT to Standard Bank (SANLAM SKY STOP ORDERS, acc: 000790265, branch code: 051001) with policy number as reference; OR EasyPay cash at Pick 'n Pay, Shoprite/Checkers, Lewis, Lifestyle Living, Best Electric, Foodworld/Saveworld/Elite (WC), Score, Boxer, Spar, M-KEM Bellville.
 - Processing time: 5–7 working days. Commission processed in same production month as reinstatement.
-- Contact: 0861 235 433 | Commission queries: DEE_Commissions@sanlamsky.co.za
 - Reinstatement Guide and Pack Builder available in Resources → Reinstatement Guide.
 
 ## CASHBACK & PAID-UP BENEFITS
