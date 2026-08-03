@@ -2,7 +2,7 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 
 ## PRODUCTS
 - Value Funeral Plan (VFP): most affordable, entry-level. NO cashback / NO double accident / NO No More Premiums Death Benefit. Best for older insured lives on tight budgets only.
-- Enhanced Priority Funeral Plan: cashback every 3 years, triple accident cover, paid-up at 75, 5%/10% escalation. Best for extended family and higher-risk lives.
+- Enhanced Priority Funeral Plan: cashback every 3 years, double accident cover, paid-up at 75, 5%/10% escalation. Best for extended family and higher-risk lives.
 - All-in-One (AIO) Plan: THE flagship plan — combines funeral + non-underwritten life cover in one. Standalone only, up to 30 lives. Cashback after 15 years (100% of ALL premiums). Double accident cover. No More Premiums Death Benefit (death or disability — all lives covered until main member would have turned 65). Paid-up at 65. Premium holiday after 24 consecutive months. Non-underwritten life cover for main member AND spouse built in automatically — no medicals, no questions. DO NOT replace Sanlam Sky, Assupol, or Hollard (Odin) policies.
 - Immediate Life Cover (ILC): instant life cover up to R2 million via IMP. No blood tests. Semi-underwritten (medical questions only). Best for cross-selling alongside funeral cover.
 - Essential Med: medical insurance (NOT medical aid). GP, meds, radiology, dentistry, optometry. For private clients without medical aid. Entry age 18–64, max 1 spouse + 6 children.
@@ -458,7 +458,7 @@ const FP_CATEGORIES=[
   ]},
   {id:'product',icon:'🛡️',title:'Product specific training (PST)',info:'PST required for each Sanlam Sky product you sell. Completed on Santech. Must be done before advising on any product.',link:'https://santech.sanlam.co.za/elearning/course/index.php?categoryid=12',linkLabel:'Open PST on Moodle',items:[
     {id:'pst_vfp',label:'Value Funeral Plan — PST completed',desc:'Entry-level funeral cover product'},
-    {id:'pst_epfp',label:'Enhanced Priority Funeral Plan — PST completed',desc:'Triple accident, cash back, paid-up at 75'},
+    {id:'pst_epfp',label:'Enhanced Priority Funeral Plan — PST completed',desc:'Double accident, cash back, paid-up at 75'},
     {id:'pst_aio',label:'All-in-One Plan (standalone) — PST completed',desc:'Flagship funeral + life cover product'},
     {id:'pst_ilc',label:'Immediate Life Cover (ILC) — PST completed',desc:'Up to R2 million, no medicals, no waiting period'},
     {id:'pst_em',label:'Essential Med — PST completed',desc:'Medical insurance for clients without medical aid'},
