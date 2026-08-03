@@ -4957,7 +4957,24 @@ function renderTop3(){
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
   const _badgeCol={gold:'#f59e0b',silver:'#9ca3af',bronze:'#cd7f32'};
   const _regUsers=getUsers();
-  const _card=(r,cls,medal,posLabel)=>(r&&REVOKED_CODES.has(r.code))?`<div class="podium-col"></div>`:r?`
+  // Resolve 3rd: if saved 3rd is missing or revoked, derive from production stats
+  let thirdRecord=record.third&&!REVOKED_CODES.has(record.third.code)?record.third:null;
+  if(!thirdRecord){
+    let statsData=null;
+    try{statsData=JSON.parse(localStorage.getItem('tl_prod_stats_'+usedKey)||'null');}catch(e){}
+    if(!statsData)try{statsData=JSON.parse(localStorage.getItem('tl_prod_stats_'+periodKey)||'null');}catch(e){}
+    if(statsData?.advisors){
+      const excludeCodes=new Set([record.first?.code,record.second?.code].filter(Boolean));
+      const ranked=Object.values(statsData.advisors)
+        .filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name)&&!excludeCodes.has(a.code)&&(a.actualPremium||0)>0)
+        .sort((a,b)=>(b.actualPremium||0)-(a.actualPremium||0));
+      if(ranked.length){
+        const t=ranked[0];
+        thirdRecord={code:t.code,name:t.name||_regUsers[t.code]?.name||t.code,photo:_regUsers[t.code]?.photo||null,note:'',ntu4:t.ntu4Month??null,ntu15:t.ntu15Month??null,persistency:t.persistency??null};
+      }
+    }
+  }
+  const _card=(r,cls,medal,posLabel)=>r?`
     <div class="podium-col">
       <div class="top3-card ${cls}">
         <div style="position:relative;width:52px;margin:0 auto 6px;">
@@ -4971,7 +4988,14 @@ function renderTop3(){
         ${r.note?`<div style="font-size:10px;color:${cls==='gold'?'#92400e':'#6b7280'};margin-top:3px;">${r.note}</div>`:''}
         <div class="top3-metrics">${r.ntu4!=null?`<span>4M NTU ${r.ntu4}%</span>`:''}${r.ntu15!=null?`<span>15M NTU ${r.ntu15}%</span>`:''}${r.persistency!=null?`<span>Pers ${r.persistency}%</span>`:''}</div>
       </div>
-    </div>`:`<div class="podium-col"></div>`;
+    </div>`:`
+    <div class="podium-col">
+      <div class="top3-card ${cls}" style="opacity:0.45;border-style:dashed;">
+        <div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}margin:0 auto 6px;">${medal}</div>
+        <div class="top3-name" style="color:#9ca3af;">3rd Place</div>
+        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">To be confirmed</div>
+      </div>
+    </div>`;
   el.innerHTML=`
     <div class="full-card" style="margin-bottom:12px;padding:14px 0 0;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 14px;">
@@ -4981,7 +5005,7 @@ function renderTop3(){
       <div class="podium-wrap">
         ${_card(record.second,'silver','🥈','2')}
         ${_card(record.first, 'gold',  '🥇','1')}
-        ${_card(record.third, 'bronze','🥉','3')}
+        ${_card(thirdRecord, 'bronze','🥉','3')}
       </div>
     </div>`;
 }
