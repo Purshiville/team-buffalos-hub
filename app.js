@@ -30,6 +30,15 @@ const SYSTEM_PROMPT=`You are the Team Buffalos business assistant — a knowledg
 - Minimum client income: nett > R5,000/month.
 - Poor performance consequences: Stage 1 Performance Review → Stage 2 Commission Split Drop → Stage 3 Demotion → Stage 4 Termination.
 
+## QUARTERLY BONUS INCENTIVE (Quality Service Bonus)
+All 4 criteria must be met simultaneously. NTU = 4-month NTU rate.
+- Tier 1: 120 cases | R315 000 API | NTU ≤14% | Persistency ≥78% → R15 000 bonus
+- Tier 2:  90 cases | R235 000 API | NTU ≤14% | Persistency ≥74% → R10 000 bonus
+- Tier 3:  60 cases | R160 000 API | NTU ≤14% | Persistency ≥72% →  R6 000 bonus
+- Tier 4:  45 cases | R120 000 API | NTU ≤14% | Persistency ≥70% →  R3 500 bonus
+- Tier 5:  30 cases |  R80 000 API | NTU ≤14% | Persistency ≥68% →  R2 000 bonus
+- Tier 0 (Stop Order 0–6 months): 30 cases | R80 000 API | NTU ≤14% | Stop Order ≤14% → R1 000 bonus
+
 ## THE 12 STEPS TO GET PAID
 1. Map the area (Google Maps: schools, SAPS, clinics, hospitals, correctional services, municipalities)
 2. Visit the facility (go to HR/Payroll first, build gatekeeper rapport)
@@ -538,7 +547,7 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952']); // Rivaldo Rossouw — left team
+const REVOKED_CODES = new Set(['SKA313952','SKA311460']); // Rivaldo Rossouw — left team; Carlo Crusi — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
