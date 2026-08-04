@@ -282,7 +282,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Hollard Life: 0860 333 118 | customerservice@hollard.co.za
 - Hollard MLM: 0860 000 789 | lifeclientservice@hollard.co.za
 - Hollard Specialist (Regent): 0860 543 346 · 0861 051 729 | Hlamendments@hollard.co.za
-- King Price Life: 0860 505 050
+- King Price Life: 0860 505 050 | clientservices@kingprice.co.za
 - Liberty: 0860 456 789 | info@liberty.co.za
 - Lion of Africa: 0860 663 247 | lionlifenb@lionlife.co.za
 - Metropolitan: 0860 724 724 | info@metropolitan.co.za
