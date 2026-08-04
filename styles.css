@@ -450,7 +450,7 @@ body::before {
 .fsp-card{background:#fff;border:1px solid #e8e4db;border-left:4px solid #0d1f3c;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;}
 .fsp-name{font-size:13px;font-weight:700;color:#0d1f3c;}
 .fsp-num{font-size:12px;font-weight:700;color:#c9922a;font-family:monospace;}
-.fsp-email{font-size:11px;color:#6b7280;word-break:break-all;}.fsp-wa{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:11px;font-weight:700;background:#25D366;color:#fff;padding:3px 10px;border-radius:20px;text-decoration:none;white-space:nowrap;width:fit-content;}.fsp-wa:active{background:#1ebe5d;}
+.fsp-email{font-size:11px;color:#6b7280;word-break:break-all;}.fsp-wa{display:inline-flex;align-items:center;gap:4px;margin-top:5px;font-size:11px;font-weight:700;background:#25D366;color:#fff;padding:3px 10px;border-radius:20px;text-decoration:none;white-space:nowrap;width:fit-content;}.fsp-wa:active{background:#1ebe5d;}.fsp-portal{display:inline-flex;align-items:center;gap:4px;margin-top:3px;font-size:11px;font-weight:700;background:#0d1f3c;color:#fff;padding:3px 10px;border-radius:20px;text-decoration:none;white-space:nowrap;width:fit-content;}.fsp-portal:active{background:#1a3560;}
 .fsp-email-link{color:#0d7cf2;text-decoration:underline;cursor:pointer;transition:color .15s;}
 .fsp-email-link:hover{color:#c9922a;}
 #emailTypeOverlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9000;display:flex;align-items:center;justify-content:center;}
