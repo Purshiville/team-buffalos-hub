@@ -1350,3 +1350,17 @@ body::before {
   }
 
 /* END GUIDE STYLES */
+
+/* ── NOTICE ACKNOWLEDGMENT REACTIONS ── */
+.notice-ack-row{display:flex;gap:6px;padding:8px 0 4px;flex-wrap:wrap;}
+.notice-ack-btn{display:inline-flex;align-items:center;gap:3px;background:#f4f2ed;border:1px solid #e5e7eb;border-radius:20px;padding:4px 10px;font-size:13px;cursor:pointer;transition:all .15s;color:#374151;}
+.notice-ack-btn:hover{background:#e8e4db;border-color:#c9922a;}
+.notice-ack-active{background:#fdf6ed;border-color:#c9922a;color:#92400e;font-weight:700;}
+.notice-ack-count{font-size:11px;font-weight:700;color:#6b7280;}
+.notice-ack-active .notice-ack-count{color:#92400e;}
+
+/* ── GAP-TO-TARGET ON PROD STATS CARD ── */
+.prod-stats-card .gap-line{font-size:11px;color:#6b7280;padding:6px 0 2px;line-height:1.5;}
+
+/* ── DAILY TIP ITEM ── */
+.brief-item .tip-rotate{font-size:11px;color:#6b7280;font-style:italic;}

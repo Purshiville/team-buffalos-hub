@@ -342,7 +342,12 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Unlock PDF: Tools → Case & Documentation → Unlock PDF — remove passwords from one or multiple PDFs at once. Upload PDFs, enter each PDF's individual password, unlock and download. Handles multiple files simultaneously.
 - Cancellation Pack Builder: Tools → Case & Documentation → Cancellation Pack Builder — the complete replacement and cancellation workflow tool. Expand the 8-step "Replacement & Cancellation Process Guide" at the top to walk through the full process with your client (roles: advisor, client, back office, HR/payroll, new insurer). Below the guide: each insurer's required cancellation form (AL9, own form, or own letter) and a Pack Builder to merge all documents per insurer into one PDF. Also accessible from Quick Access on the Home screen.
 - Claim Pack Builder: Tools → Case & Documentation → Claim Pack Builder — step-by-step guide and document merger for processing death or disability claims. Contact Anelisa Tanda (066 128 5500) for all claim follow-up.
-- Referral Tracker: Tools → Client & Field → Referral Tracker — track client referrals (1 Name = 2 Names). Log the date and time you contacted each referral plus notes. Status tracking: In pipeline / Contacted / Converted / Lost.
+- Referral Tracker: Tools → Client & Field → Referral Tracker — track client referrals (1 Name = 2 Names). Log the date and time you contacted each referral plus notes. Status tracking: In pipeline / Contacted / Submitted to IMP / Converted / Lost. Stats header shows total, submitted, converted, and overall conversion rate. Each source client shows their own conversion rate.
+- Conversion Funnel: Tools → Client & Field → Conversion Funnel — track your appointments, presentations, submissions, and approvals per production period. Submissions auto-fill from your stats. Shows conversion rate between each stage and your overall close rate. Manager can view any advisor's funnel.
+- Notice Acknowledgments: Advisors can react to notice board notices with 👍 ✅ 💪 — tap to acknowledge, tap again to remove. Manager receives an inbox notification the first time you acknowledge a notice. Your own reaction is highlighted.
+- Notice Reply: Tap any notice in your Inbox to open it. Advisors can reply directly to the manager from within the notice modal — type your message and tap "Send reply to Percy".
+- Daily Tip: Home → Daily Brief shows a rotating sales/compliance/mindset tip each day (cycles through 30 tips by day of year), plus the day-of-week motivation prompt.
+- Auto cut-off notices: When the production cut-off is 5, 3, or 1 day away, the hub automatically posts a notice to all advisors. Manager only needs to log in — no manual posting required.
 
 ## HUB HOW-TO — TECHNICAL QUESTIONS
 When an advisor asks how to do something on the hub, direct them to the right feature:
@@ -429,7 +434,7 @@ function buildSystemPrompt(){
   const managerSection=isOps?MANAGER_ONLY:'';
   const now=new Date();
   const todayISO=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0')+'-'+(''+now.getDate()).padStart(2,'0');
-  const bookingCtx=`\n\n## CALENDAR BOOKING\nToday is ${todayISO}. When the advisor asks you to book, schedule, set, or create an appointment in their Herd Calendar / Field Diary, reply naturally confirming the details AND append this block at the very end of your response (replace values, omit empty optional fields):\n[BOOK_APPT:{"title":"Appointment title","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","location":"Location","notes":"Notes","type":"visit"}]\ntype must be one of: visit, presentation, gatekeeper, close, planning, admin, other.\nIf the advisor hasn't given you enough detail (especially date), ask before including the block. Never guess a date.\n\n## ADDING REFERRALS\nWhen the advisor asks to add, log, or capture a referral, confirm the details naturally AND append at the end:\n[ADD_REFERRAL:{"name":"Full Name","phone":"082 123 4567","facility":"Facility or station name","referredBy":"Name of referring client","relation":"colleague"}]\nrelation must be one of: spouse, colleague, family, friend. If name or referredBy is missing, ask first.\n\n## HUB NAVIGATION\nWhen the advisor says "go to", "open", "take me to", "show me", or "navigate to" a section, reply with one short confirmation line AND add at the very end: [NAVIGATE:pageid]\nPage IDs: hub (Home), termcal (Herd Calendar), referrals (Referral Tracker), prospectmap (Prospect Map), worksites (Worksite Pipeline), roa (ROA Generator), policyreview (Policy Summary), qlink (QLink Calculator), unlockpdf (Unlock PDF), canpack (Merge Docs), cancellations (Cancellation Pack Builder), replguide (Replacement Guide), replpresentation (Client Presentation), guides (Resources & Training), mainguide (The Advisor Guide — full in-hub guide), directory (Directory), fitproper (Fit & Proper), standard (The Standard), fica (FICA Checklist), forms (FSP Forms), claimpack (Claim Pack Builder).`;
+  const bookingCtx=`\n\n## CALENDAR BOOKING\nToday is ${todayISO}. When the advisor asks you to book, schedule, set, or create an appointment in their Herd Calendar / Field Diary, reply naturally confirming the details AND append this block at the very end of your response (replace values, omit empty optional fields):\n[BOOK_APPT:{"title":"Appointment title","date":"YYYY-MM-DD","startTime":"HH:MM","endTime":"HH:MM","location":"Location","notes":"Notes","type":"visit"}]\ntype must be one of: visit, presentation, gatekeeper, close, planning, admin, other.\nIf the advisor hasn't given you enough detail (especially date), ask before including the block. Never guess a date.\n\n## ADDING REFERRALS\nWhen the advisor asks to add, log, or capture a referral, confirm the details naturally AND append at the end:\n[ADD_REFERRAL:{"name":"Full Name","phone":"082 123 4567","facility":"Facility or station name","referredBy":"Name of referring client","relation":"colleague"}]\nrelation must be one of: spouse, colleague, family, friend. If name or referredBy is missing, ask first.\n\n## HUB NAVIGATION\nWhen the advisor says "go to", "open", "take me to", "show me", or "navigate to" a section, reply with one short confirmation line AND add at the very end: [NAVIGATE:pageid]\nPage IDs: hub (Home), termcal (Herd Calendar), referrals (Referral Tracker), convfunnel (Conversion Funnel), prospectmap (Prospect Map), worksites (Worksite Pipeline), roa (ROA Generator), policyreview (Policy Summary), qlink (QLink Calculator), unlockpdf (Unlock PDF), canpack (Merge Docs), cancellations (Cancellation Pack Builder), replguide (Replacement Guide), replpresentation (Client Presentation), guides (Resources & Training), mainguide (The Advisor Guide — full in-hub guide), directory (Directory), fitproper (Fit & Proper), standard (The Standard), fica (FICA Checklist), forms (FSP Forms), claimpack (Claim Pack Builder).`;
   const base=SYSTEM_PROMPT+userCtx+managerSection+bookingCtx;
   if(!_guideCache.content)return base;
   return base+'\n\n---\nTEAM BUFFALOS GUIDE (live — use as primary knowledge source):\n\n'+_guideCache.content;
@@ -477,6 +482,38 @@ const FP_CATEGORIES=[
 const QLINK_DATES={'202604':[{d:'2026-03-12'},{d:'2026-03-16'},{d:'2026-03-19'},{d:'2026-03-23'}],'202605':[{d:'2026-04-13'},{d:'2026-04-16'},{d:'2026-04-20'},{d:'2026-04-23'}],'202606':[{d:'2026-05-11'},{d:'2026-05-14'},{d:'2026-05-18'},{d:'2026-05-21'}],'202607':[{d:'2026-06-11'},{d:'2026-06-15'},{d:'2026-06-18'},{d:'2026-06-22'}],'202608':[{d:'2026-07-13'},{d:'2026-07-16'},{d:'2026-07-20'},{d:'2026-07-23'}],'202609':[{d:'2026-08-13'},{d:'2026-08-17'},{d:'2026-08-20'},{d:'2026-08-24'}],'202610':[{d:'2026-09-10'},{d:'2026-09-14'},{d:'2026-09-17'},{d:'2026-09-21'}],'202611':[{d:'2026-10-12'},{d:'2026-10-15'},{d:'2026-10-19'},{d:'2026-10-22'}],'202612':[{d:'2026-11-05'},{d:'2026-11-09'},{d:'2026-11-12'},{d:'2026-11-16'},{d:'2026-11-19'}]};
 const PROD_CUTOFFS=[{opens:'2026-01-24',cutoff:'2026-02-20'},{opens:'2026-02-21',cutoff:'2026-03-20'},{opens:'2026-03-21',cutoff:'2026-04-17'},{opens:'2026-04-18',cutoff:'2026-05-22'},{opens:'2026-05-23',cutoff:'2026-06-19'},{opens:'2026-06-20',cutoff:'2026-07-24'},{opens:'2026-07-25',cutoff:'2026-08-21'},{opens:'2026-08-22',cutoff:'2026-09-18'},{opens:'2026-09-19',cutoff:'2026-10-23'},{opens:'2026-10-24',cutoff:'2026-11-20'},{opens:'2026-11-21',cutoff:'2026-12-04'}];
 const PAYMENT_DATES=[1,15,20,25,26,29,30,31];
+const DAILY_TIPS=[
+  `<b>Tip:</b> Always open with a budget question — "How much are you currently spending on insurance?" anchors the conversation before you reveal premiums.`,
+  `<b>Tip:</b> Pre-close before you reveal the premium. Say "Assuming the amount works for your budget, are you happy to go ahead?" — it turns price into a formality.`,
+  `<b>Tip:</b> The silent close is powerful. After presenting the premium, say nothing. Let the client respond first.`,
+  `<b>Tip:</b> People don't buy products — they buy security for their family. Sell the feeling, not the policy.`,
+  `<b>Tip:</b> Always confirm the debit order date before leaving. A confirmed debit order = a collected first premium.`,
+  `<b>Tip:</b> The Value Funeral Plan has no waiting period for accidental death. Lead with this when clients worry about gaps.`,
+  `<b>Tip:</b> ILC (Immediate Life Cover) has NO waiting period — natural OR accidental. Your strongest option for clients nervous about replacement gaps.`,
+  `<b>Tip:</b> AIO's Enhanced Priority pays DOUBLE for accidental death. Make sure the client AND family know this at the signing.`,
+  `<b>Tip:</b> Escalation premium grows every year — your commission grows with it. Remind clients it keeps pace with inflation.`,
+  `<b>Tip:</b> Stop Order vs DebiCheck: a 96% vs 45% collection rate. That gap is the difference between a policy that pays and one that lapses.`,
+  `<b>Tip:</b> A signed ROA protects you, your client, and the advice you gave. Never skip it — even for a small policy.`,
+  `<b>Tip:</b> FICA docs must be collected before the appointment ends — getting them later drops conversion rate significantly.`,
+  `<b>Tip:</b> Keep replacement schedules for 5 years. A claim on a replaced policy years later will require proof you acted correctly.`,
+  `<b>Tip:</b> The 6-month natural death waiting period on a replacement can be waived by the NEW insurer if you include proof of cancellation. Always send it in the pack.`,
+  `<b>Tip:</b> The ROA isn't paperwork — it's your legal shield. Fill it out like a claims examiner will read it one day.`,
+  `<b>Tip:</b> A birthday call is not just nice — clients who hear from their advisor on their birthday are far less likely to cancel. Use the hub's birthday alerts.`,
+  `<b>Tip:</b> When a client wants to cancel, ask: "Has something changed financially, or were you approached about a replacement?" That answer tells you exactly which objection to handle.`,
+  `<b>Tip:</b> A policy turning 1 year old has a cashback benefit. Call the client — it's the best retention conversation you'll have all month.`,
+  `<b>Tip:</b> Never let a pending lapse client go cold. Three days of no contact doubles the chance of cancellation.`,
+  `<b>Tip:</b> A client asking about competitor products hasn't decided to leave yet. That question is an invitation to re-sell your own policy.`,
+  `<b>Tip:</b> Your first appointment of the day sets your energy for all the others. Make it your best one.`,
+  `<b>Tip:</b> Rejection is redirection. Every "no" narrows the field and moves you closer to the next "yes."`,
+  `<b>Tip:</b> Top advisors plan their week on Sunday. What's your focus for this week?`,
+  `<b>Tip:</b> The Standard says 15 cases and R10,000 premium. But a buffalo doesn't stop at the minimum — it charges past it.`,
+  `<b>Tip:</b> Consistency beats talent. Three solid appointments a day beats one great week and three bad ones.`,
+  `<b>Tip:</b> The best time to ask for a referral is immediately after the client signs — trust is at its peak.`,
+  `<b>Tip:</b> "Who else at your workplace had the same worries you had before today?" — the softest referral question you can ask.`,
+  `<b>Tip:</b> One client with four referrals is worth five cold appointments. Treat referrals as your lifeblood.`,
+  `<b>Tip:</b> Log every referral in the hub immediately. A name with no notes is forgotten within 48 hours.`,
+  `<b>Tip:</b> A referred client stays longer — they were pre-sold by the person who referred them. Prioritise converting referrals first.`,
+];
 const KEY_CONTACTS=[{name:'Jacques du Preez',role:'Regional Executive',num:'082 551 8170'},{name:'Michael',role:'Branch Manager',num:'083 440 9098'},{name:'Anelisa',role:'Servicing & Claims',num:'066 128 5500'},{name:'Lynn',role:'Accounts & Billing',num:'084 429 6131'},{name:'Carleen',role:'Key Individual',num:'082 496 8536'},{name:'Reane',role:'Servicing & Queries',num:'084 965 0997'},{name:'Zuki',role:'Cancellations',num:'079 752 1191'},{name:'Randmore',role:'',nums:['082 659 4445','041 582 2066','071 897 1855']}];
 
 let chatHistory=[],currentUser=null,currentModal=null;
@@ -1176,7 +1213,7 @@ function enterHub(user){
       renderNoticeBoard();
       renderDailyBrief();
       renderTop3();
-      if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();}
+      if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();checkAutoNotice();}
     }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();renderDailyBrief();});
     window.startNoticeListener();
     if(window.startTop3Listener)window.startTop3Listener();
@@ -1469,6 +1506,33 @@ async function saveAdvisorStats(){
     if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);}
   }
 }
+function checkAutoNotice(){
+  if(!currentUser||(!currentUser.isManager&&!currentUser.isOps))return;
+  const today=new Date();
+  const todayStr=today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  const entry=PROD_CUTOFFS.find(p=>p.cutoff>=todayStr&&p.opens<=todayStr)||PROD_CUTOFFS.find(p=>p.cutoff>todayStr);
+  if(!entry)return;
+  const cutoffDate=new Date(entry.cutoff+'T20:00:00');
+  const daysLeft=Math.ceil((cutoffDate-today)/86400000);
+  const THRESHOLDS=[5,3,1];
+  if(!THRESHOLDS.includes(daysLeft))return;
+  const storageKey='tl_autonotice_'+entry.cutoff+'_d'+daysLeft;
+  if(localStorage.getItem(storageKey))return;
+  const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const cd=new Date(entry.cutoff);
+  const cutoffLabel=cd.getDate()+' '+MONTHS[cd.getMonth()];
+  const urgency=daysLeft===1?'urgent':daysLeft===3?'reminder':'info';
+  const icon=daysLeft===1?'🚨':daysLeft===3?'⚠️':'📋';
+  const title=`${icon} ${daysLeft} day${daysLeft!==1?'s':''} left — production cut-off ${daysLeft===1?'TOMORROW':'on '+cutoffLabel}`;
+  const body=daysLeft===1
+    ?`All cases must be captured on Connect Me by 20:00 tomorrow (${cutoffLabel}). No late submissions. Check your stats now.`
+    :daysLeft===3
+    ?`Production cut-off is on ${cutoffLabel} at 20:00 — ${daysLeft} days to go. Review your pipeline and push outstanding cases.`
+    :`Production cut-off on ${cutoffLabel} at 20:00. ${daysLeft} days remain — plan your week to hit your targets.`;
+  postNotice(urgency,title,body,'ALL','').then(()=>{
+    try{localStorage.setItem(storageKey,'1');}catch(e){}
+  }).catch(()=>{});
+}
 function initStatsListener(){
   const now=new Date();
   const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
@@ -1519,7 +1583,13 @@ function renderProdStats(data,period){
     const ntu15Chip=_chip(my.ntu15Month,'15M NTU',my.ntu15Month<15);
     const persChip=_chip(my.persistency,'Pers',my.persistency>65);
     const chips=(ntu4Chip||ntu15Chip||persChip)?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid #f4f2ed;">${ntu4Chip}${ntu15Chip}${persChip}</div>`:'';
-    personalEl.innerHTML=`<div class="prod-stats-card"><div class="prod-stats-hd"><div class="prod-stats-title">📊 My Production — ${periodLabel}</div><div class="prod-stats-period">Updated by ${my.updatedBy||'manager'}</div></div><div class="prod-stat-row"><div class="prod-stat-cell"><div class="prod-stat-label">Cases</div><div class="prod-stat-val" style="color:${cc};">${my.actualCases}</div><div class="prod-stat-target">of ${my.targetCases} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${cp}%;background:${cc};"></div></div><div class="prod-stat-pct" style="color:${cc};">${cp}%</div></div><div class="prod-stat-cell"><div class="prod-stat-label">Risk Premium</div><div class="prod-stat-val" style="color:${pc};font-size:${my.actualPremium>=10000?'16px':'20px'};">R${my.actualPremium.toLocaleString()}</div><div class="prod-stat-target">of R${my.targetPremium.toLocaleString()} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${pp}%;background:${pc};"></div></div><div class="prod-stat-pct" style="color:${pc};">${pp}%</div></div></div>${chips}</div>`;
+    const cGap=Math.max(0,(my.targetCases||0)-(my.actualCases||0));
+    const pGap=Math.max(0,(my.targetPremium||0)-(my.actualPremium||0));
+    const bothHit=cGap===0&&pGap===0;
+    const gapHtml=bothHit
+      ?`<div style="text-align:center;font-size:12px;font-weight:700;color:#16a34a;padding:8px 0 2px;">🎯 Both targets hit — great work!</div>`
+      :`<div style="font-size:11px;color:#6b7280;padding:6px 0 2px;">${cGap>0?`Need <b style="color:#dc2626;">${cGap} more case${cGap!==1?'s':''}</b>`:'✓ Cases done'}${cGap>0&&pGap>0?' & ':''}${pGap>0?`<b style="color:#dc2626;">R${pGap.toLocaleString()} more premium</b>`:''}${!bothHit?' to hit both targets':''}</div>`;
+    personalEl.innerHTML=`<div class="prod-stats-card"><div class="prod-stats-hd"><div class="prod-stats-title">📊 My Production — ${periodLabel}</div><div class="prod-stats-period">Updated by ${my.updatedBy||'manager'}</div></div><div class="prod-stat-row"><div class="prod-stat-cell"><div class="prod-stat-label">Cases</div><div class="prod-stat-val" style="color:${cc};">${my.actualCases}</div><div class="prod-stat-target">of ${my.targetCases} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${cp}%;background:${cc};"></div></div><div class="prod-stat-pct" style="color:${cc};">${cp}%</div></div><div class="prod-stat-cell"><div class="prod-stat-label">Risk Premium</div><div class="prod-stat-val" style="color:${pc};font-size:${my.actualPremium>=10000?'16px':'20px'};">R${my.actualPremium.toLocaleString()}</div><div class="prod-stat-target">of R${my.targetPremium.toLocaleString()} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${pp}%;background:${pc};"></div></div><div class="prod-stat-pct" style="color:${pc};">${pp}%</div></div></div>${gapHtml}${chips}</div>`;
   } else {
     personalEl.style.display='none';
   }
@@ -2013,13 +2083,39 @@ function _showNoticeModal(msg){
   overlay.style.display='flex';
   const dt=msg.sentAt?.toDate?msg.sentAt.toDate():(msg.sentAt?new Date(msg.sentAt):new Date());
   const dateStr=dt.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()]+' '+dt.getFullYear();
+  const isOps=currentUser&&(currentUser.isManager||currentUser.isOps);
+  const replyHtml=!isOps?`<div style="margin-top:16px;border-top:1px solid #f4f2ed;padding-top:12px;">
+    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px;">↩ Reply to manager</div>
+    <textarea id="_noticeReplyInput" placeholder="Type your reply here..." style="width:100%;padding:9px 12px;font-size:13px;border:1px solid #e5e7eb;border-radius:8px;background:#f9f9f9;resize:vertical;min-height:64px;font-family:inherit;box-sizing:border-box;"></textarea>
+    <button onclick="sendNoticeReply('${msg.id}','${(msg.title||'').replace(/'/g,'&#39;')}')" style="margin-top:8px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:12px;font-weight:700;cursor:pointer;width:100%;">Send reply to Percy</button>
+    <div id="_noticeReplySent" style="display:none;text-align:center;color:#16a34a;font-size:12px;font-weight:700;margin-top:6px;">✓ Reply sent</div>
+  </div>`:'';
   document.getElementById('_noticeModalBox').innerHTML=`
     <button onclick="document.getElementById('_noticeModalOverlay').remove()" style="position:absolute;top:12px;right:14px;background:none;border:none;font-size:20px;color:#9ca3af;cursor:pointer;line-height:1;">✕</button>
     <div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;">${msg.fromName||'Management'} · ${dateStr}</div>
     <div style="font-size:16px;font-weight:700;color:#0d1f3c;margin-bottom:10px;line-height:1.4;">${msg.title||''}</div>
     ${msg.body?`<div style="font-size:13px;color:#374151;line-height:1.7;white-space:pre-wrap;">${msg.body}</div>`:''}
     ${msg.link?`<a href="${msg.link}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:6px;margin-top:14px;background:#0d1f3c;color:#fff;padding:9px 16px;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;">🔗 Open link</a>`:''}
+    ${replyHtml}
   `;
+}
+async function sendNoticeReply(noticeId,noticeTitle){
+  if(!currentUser)return;
+  const input=document.getElementById('_noticeReplyInput');
+  if(!input)return;
+  const text=input.value.trim();
+  if(!text)return;
+  const sentEl=document.getElementById('_noticeReplySent');
+  if(window.FB_READY&&window.FB.sendInbox){
+    await window.FB.sendInbox({
+      to:'PURSHIVILLE',from:currentUser.code,fromName:currentUser.name,
+      title:`↩ Reply from ${currentUser.name}`,
+      body:`Re: "${noticeTitle}"\n\n${text}`,
+      type:'message'
+    }).catch(()=>{});
+  }
+  input.value='';
+  if(sentEl){sentEl.style.display='block';setTimeout(()=>{sentEl.style.display='none';},3000);}
 }
 async function sendManagerInboxMessage(){
   const to=document.getElementById('inboxComposeTo').value;
@@ -2934,6 +3030,7 @@ function showPage(p){
   if(p==='reinstatement'){reinstInit();}
   if(p==='fica'){ficaSetMode(_ficaMode||'nb');}
   if(p==='worksites')csoInit();
+  if(p==='convfunnel')convFunnelInit();
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   if(p==='replpresentation'){replPresentationInit();}
@@ -3962,6 +4059,17 @@ function _buildNoticeCard(n,isOps,allComments,isArchived){
   const dateStr=dt.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dt.getMonth()]+' '+dt.getFullYear()+' · '+String(dt.getHours()).padStart(2,'0')+':'+String(dt.getMinutes()).padStart(2,'0');
   const comments=allComments[n.id]||[];
   const commentsHtml=comments.map(c=>`<div class="notice-comment"><div class="notice-comment-author">${c.author} <span class="notice-comment-meta">· ${c.at?c.at.slice(0,10):''}</span></div><div class="notice-comment-text">${c.text}</div></div>`).join('');
+  // Reactions — stored per-notice per-user in localStorage
+  let allAcks={};try{allAcks=JSON.parse(localStorage.getItem('tl_notice_acks')||'{}');}catch(e){}
+  const nAcks=allAcks[n.id]||{};
+  const myAck=currentUser?nAcks[currentUser.code]:null;
+  const ACK_EMOJIS=['👍','✅','💪'];
+  const ackBtns=ACK_EMOJIS.map(e=>{
+    const count=Object.values(nAcks).filter(v=>v===e).length;
+    const isMe=myAck===e;
+    return`<button class="notice-ack-btn${isMe?' notice-ack-active':''}" onclick="ackNotice('${n.id}','${e}')">${e}${count>0?` <span class="notice-ack-count">${count}</span>`:''}</button>`;
+  }).join('');
+  const ackWhoHtml=isOps&&Object.keys(nAcks).length?`<div style="font-size:10px;color:#9ca3af;margin-top:4px;">Acknowledged: ${Object.entries(nAcks).map(([code,emoji])=>`${_advisorNameMap[code]||code} ${emoji}`).join(' · ')}</div>`:'';
   return`<div class="notice-card ${n.type}"${isArchived?' style="opacity:0.75;"':''}>
     <div class="notice-card-hdr">
       <span class="notice-type-icon">${NOTICE_ICONS[n.type]||'📌'}</span>
@@ -3970,6 +4078,8 @@ function _buildNoticeCard(n,isOps,allComments,isArchived){
     </div>
     ${n.body?`<div class="notice-body-text">${n.body}</div>`:''}
     ${n.link?`<a class="notice-link-btn" href="${n.link}" target="_blank" rel="noopener noreferrer">🔗 Open link</a>`:''}
+    <div class="notice-ack-row">${ackBtns}</div>
+    ${ackWhoHtml}
     <div class="notice-meta">Posted by ${n.postedBy} · ${dateStr}${isOps?` · <a href="#" onclick="event.preventDefault();deleteNotice('${n.id}')" style="color:#dc2626;font-weight:600;">Delete</a>`:''}</div>
     <div class="notice-comments">
       ${commentsHtml}
@@ -3979,6 +4089,25 @@ function _buildNoticeCard(n,isOps,allComments,isArchived){
       </div>
     </div>
   </div>`;
+}
+function ackNotice(noticeId,emoji){
+  if(!currentUser)return;
+  let allAcks={};try{allAcks=JSON.parse(localStorage.getItem('tl_notice_acks')||'{}');}catch(e){}
+  if(!allAcks[noticeId])allAcks[noticeId]={};
+  const prev=allAcks[noticeId][currentUser.code];
+  if(prev===emoji){delete allAcks[noticeId][currentUser.code];}
+  else{
+    allAcks[noticeId][currentUser.code]=emoji;
+    // Notify manager on first ack so they can see who reacted
+    if(prev===undefined&&window.FB_READY&&window.FB.sendInbox){
+      const notices=getNotices();const n=notices.find(x=>x.id===noticeId);
+      window.FB.sendInbox({to:'PURSHIVILLE',from:currentUser.code,fromName:currentUser.name,
+        title:`${emoji} ${currentUser.name} acknowledged a notice`,
+        body:n?`"${n.title}"`:noticeId,type:'message'}).catch(()=>{});
+    }
+  }
+  try{localStorage.setItem('tl_notice_acks',JSON.stringify(allAcks));}catch(e){}
+  renderNoticeBoard();
 }
 
 function renderNoticeBoard(){
@@ -5281,6 +5410,10 @@ function renderDailyBrief(){
   const dow=today.getDay();
   const dayTips={1:'<b>Monday:</b> Set the week\'s targets with your team first thing.',2:'<b>Tuesday:</b> Mid-week push — check pipeline and follow up on quotes.',3:'<b>Wednesday:</b> Ideal day for school visits and presentations.',4:'<b>Thursday:</b> Review submissions in progress before Friday.',5:'<b>Friday:</b> Confirm all cases are on Connect Me before end of day.',6:'<b>Saturday:</b> Quieter day — great time to plan next week.',0:'<b>Sunday:</b> Rest and prepare — week starts tomorrow.'};
   if(dayTips[dow])items.push({icon:'💡',text:dayTips[dow]});
+  // Rotating tip of the day (cycles through DAILY_TIPS by day of year)
+  const _doy=Math.floor((today-new Date(today.getFullYear(),0,0))/(86400000));
+  const _tip=DAILY_TIPS[_doy%DAILY_TIPS.length];
+  if(_tip)items.push({icon:'🌟',text:_tip});
 
   el.innerHTML=`<div class="brief-card">
     <div class="brief-title">📋 Daily Brief — ${DAYS[dow]}, ${d} ${MONTHS[m]} ${y}</div>
@@ -8999,7 +9132,7 @@ async function _deleteSavedPRReview(id){
 // ── REFERRAL TRACKER ────────────────────────────────────────────────────────
 function getReferrals(){try{return JSON.parse(localStorage.getItem('tl_referrals')||'[]');}catch(e){return[];}}
 function saveReferrals(d){localStorage.setItem('tl_referrals',JSON.stringify(d));}
-const REF_STATUS_LABELS={pipeline:'In pipeline',contacted:'Contacted',converted:'Converted',lost:'Lost'};
+const REF_STATUS_LABELS={pipeline:'In pipeline',contacted:'Contacted',submitted:'Submitted to IMP',converted:'Converted',lost:'Lost'};
 function _fmtContactDT(dt){
   if(!dt)return'';
   try{const d=new Date(dt);return d.toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'})+' '+d.toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'});}catch(e){return dt;}
@@ -9058,22 +9191,32 @@ function renderReferrals(){
   // stats
   const statsEl=document.getElementById('refStats');
   if(statsEl){
-    const total=refs.length;const conv=refs.filter(r=>r.status==='converted').length;const pipe=refs.filter(r=>r.status==='pipeline').length;
+    const total=refs.length;const conv=refs.filter(r=>r.status==='converted').length;
+    const subm=refs.filter(r=>r.status==='submitted').length;
+    const pipe=refs.filter(r=>r.status==='pipeline'||r.status==='contacted').length;
+    const convRate=total>0?Math.round((conv/total)*100):0;
     statsEl.innerHTML=[
       {label:'Total referrals',val:total,col:'#0d1f3c'},
+      {label:'Submitted to IMP',val:subm,col:'#7c3aed'},
       {label:'Converted',val:conv,col:'#16a34a'},
-      {label:'In pipeline',val:pipe,col:'#d97706'},
-    ].map(s=>`<div style="background:#fff;border:1px solid #e8e4db;border-radius:12px;padding:12px;text-align:center;"><div style="font-size:22px;font-weight:800;color:${s.col};">${s.val}</div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">${s.label}</div></div>`).join('');
+      {label:'Conv. rate',val:convRate+'%',col:convRate>=30?'#16a34a':convRate>=15?'#d97706':'#dc2626'},
+    ].map(s=>`<div style="background:#fff;border:1px solid #e8e4db;border-radius:12px;padding:10px;text-align:center;"><div style="font-size:20px;font-weight:800;color:${s.col};">${s.val}</div><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">${s.label}</div></div>`).join('');
   }
   const el=document.getElementById('refList');if(!el)return;
   if(!refs.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:2rem;">No referrals logged yet — add your first referral above.</div>';return;}
   // group by referredBy
   const byClient={};refs.forEach(r=>{if(!byClient[r.referredBy])byClient[r.referredBy]=[];byClient[r.referredBy].push(r);});
   el.innerHTML=Object.entries(byClient).map(([client,list])=>{
-    const count=list.length;const colBadge=count>=2?'#dcfce7':'#fef9ec';const colTxt=count>=2?'#166534':'#92400e';
+    const count=list.length;
+    const cConv=list.filter(r=>r.status==='converted').length;
+    const cSubm=list.filter(r=>r.status==='submitted').length;
+    const srcRate=count>0?Math.round((cConv/count)*100):0;
+    const colBadge=count>=2?'#dcfce7':'#fef9ec';const colTxt=count>=2?'#166534':'#92400e';
+    const srcTag=cConv>0?`<span style="font-size:10px;font-weight:700;color:#16a34a;margin-left:6px;">${cConv} converted (${srcRate}%)</span>`:
+                 cSubm>0?`<span style="font-size:10px;font-weight:700;color:#7c3aed;margin-left:6px;">${cSubm} in IMP</span>`:'';
     return`<div class="full-card" style="margin-bottom:12px;padding:0;overflow:hidden;">
       <div style="padding:10px 16px;background:#f8f7f4;display:flex;align-items:center;justify-content:space-between;">
-        <div style="font-size:13px;font-weight:700;color:#0d1f3c;">From: ${client}</div>
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px;"><span style="font-size:13px;font-weight:700;color:#0d1f3c;">From: ${client}</span>${srcTag}</div>
         <div style="background:${colBadge};color:${colTxt};font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;">${count} referral${count!==1?'s':''} ${count>=2?'✓':''}</div>
       </div>
       ${list.map(r=>`<div style="padding:10px 16px;border-top:1px solid #f4f2ed;">
@@ -9092,6 +9235,118 @@ function renderReferrals(){
   }).join('');
 }
 // ── END REFERRAL TRACKER ────────────────────────────────────────────────────
+
+// ── CONVERSION FUNNEL TRACKER ────────────────────────────────────────────────
+function _convPeriodKey(){
+  const now=new Date();
+  const todayStr=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  const entry=PROD_CUTOFFS.find(p=>todayStr>=p.opens&&todayStr<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>todayStr);
+  if(entry){const d=new Date(entry.cutoff);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+  return now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+}
+function convGetData(code,period){
+  try{return JSON.parse(localStorage.getItem('tl_funnel_'+code+'_'+period)||'{}');}catch(e){return{};}
+}
+function convSaveData(code,period,data){
+  try{localStorage.setItem('tl_funnel_'+code+'_'+period,JSON.stringify(data));}catch(e){}
+}
+let _convPeriod=null,_convCode=null;
+function convFunnelInit(){
+  if(!currentUser)return;
+  const isOps=currentUser.isManager||currentUser.isOps;
+  _convPeriod=_convPeriodKey();
+  _convCode=isOps?(document.getElementById('convAdvisorSel')?.value||currentUser.code):currentUser.code;
+  // show/populate advisor selector for manager
+  const mgrRow=document.getElementById('convMgrAdvisorRow');
+  if(mgrRow)mgrRow.style.display=isOps?'block':'none';
+  const sel=document.getElementById('convAdvisorSel');
+  if(sel&&isOps){
+    if(!sel.options.length){
+      sel.innerHTML=ADVISOR_LIST.filter(a=>!REVOKED_CODES.has(a.code)).map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
+    }
+    _convCode=sel.value||currentUser.code;
+  }
+  // period selector
+  const pSel=document.getElementById('convPeriodSel');
+  if(pSel&&!pSel.options.length){
+    const periods=PROD_CUTOFFS.map(p=>{const d=new Date(p.cutoff);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return{k,label:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear()};});
+    pSel.innerHTML=periods.map(p=>`<option value="${p.k}"${p.k===_convPeriod?' selected':''}>${p.label}</option>`).join('');
+  }
+  renderConvFunnel();
+}
+function convFunnelChange(){
+  const pSel=document.getElementById('convPeriodSel');
+  const aSel=document.getElementById('convAdvisorSel');
+  if(pSel)_convPeriod=pSel.value;
+  if(aSel)_convCode=aSel.value;
+  renderConvFunnel();
+}
+function convUpdateField(field){
+  if(!_convCode||!_convPeriod)return;
+  const val=parseInt(document.getElementById('conv_'+field)?.value)||0;
+  const data=convGetData(_convCode,_convPeriod);
+  data[field]=val;
+  convSaveData(_convCode,_convPeriod,data);
+  renderConvFunnel();
+}
+function renderConvFunnel(){
+  const el=document.getElementById('convFunnelDisplay');if(!el)return;
+  if(!_convCode||!_convPeriod){el.innerHTML='';return;}
+  const data=convGetData(_convCode,_convPeriod);
+  // Pull submissions from prod stats if available
+  const prodKey='tl_prod_stats_'+_convPeriod;
+  let statsSubmissions=null;
+  try{const s=JSON.parse(localStorage.getItem(prodKey)||'null');if(s?.advisors?.[_convCode])statsSubmissions=s.advisors[_convCode].actualCases;}catch(e){}
+  const visits=data.visits||0;
+  const quotes=data.quotes||0;
+  const subs=statsSubmissions!==null?statsSubmissions:(data.submissions||0);
+  const approvals=data.approvals||0;
+  const STAGES=[
+    {label:'Appointments / Visits',icon:'🏫',val:visits,field:'visits',note:'Field visits & worksite appointments'},
+    {label:'Quotes / Presentations',icon:'📋',val:quotes,field:'quotes',note:'Clients who received a full product presentation'},
+    {label:'Cases Submitted',icon:'📤',val:subs,field:'submissions',note:statsSubmissions!==null?'From your production stats (auto-filled)':'Cases captured on Connect Me / IMP'},
+    {label:'Cases Approved',icon:'✅',val:approvals,field:'approvals',note:'Cases approved and active'},
+  ];
+  const maxVal=Math.max(visits,quotes,subs,approvals,1);
+  const funnelHtml=STAGES.map((s,i)=>{
+    const pct=Math.round((s.val/maxVal)*100);
+    const conv=i>0&&STAGES[i-1].val>0?Math.round((s.val/STAGES[i-1].val)*100):null;
+    const barColor=i===0?'#0d1f3c':i===1?'#7c3aed':i===2?'#c9922a':'#16a34a';
+    const isAutoFilled=s.field==='submissions'&&statsSubmissions!==null;
+    return`<div style="margin-bottom:12px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:16px;">${s.icon}</span>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${s.label}</div>
+            <div style="font-size:10px;color:#9ca3af;">${s.note}</div>
+          </div>
+        </div>
+        <div style="text-align:right;">
+          ${isAutoFilled
+            ?`<div style="font-size:20px;font-weight:800;color:${barColor};">${s.val}</div><div style="font-size:9px;color:#16a34a;">auto</div>`
+            :`<input type="number" id="conv_${s.field}" min="0" value="${s.val}" onchange="convUpdateField('${s.field}')" style="width:60px;text-align:center;font-size:18px;font-weight:800;color:${barColor};border:none;border-bottom:2px solid ${barColor};background:transparent;outline:none;padding:2px 0;">`
+          }
+        </div>
+      </div>
+      <div style="background:#f4f2ed;border-radius:20px;height:10px;overflow:hidden;">
+        <div style="width:${pct}%;height:10px;border-radius:20px;background:${barColor};transition:width .4s;"></div>
+      </div>
+      ${conv!==null?`<div style="font-size:10px;color:${conv>=70?'#16a34a':conv>=50?'#d97706':'#dc2626'};font-weight:700;margin-top:3px;text-align:right;">↓ ${conv}% conversion from previous stage</div>`:''}
+    </div>`;
+  }).join('');
+  // Overall close rate
+  const closeRate=visits>0?Math.round((approvals/visits)*100):0;
+  const closeLabel=closeRate>=30?'Excellent':closeRate>=20?'Good':closeRate>=10?'Average':'Below target';
+  const closeColor=closeRate>=30?'#16a34a':closeRate>=20?'#c9922a':'#dc2626';
+  el.innerHTML=`<div style="margin-bottom:16px;">${funnelHtml}</div>
+    <div style="background:linear-gradient(135deg,#0d1f3c,#1b3460);border-radius:14px;padding:14px 16px;text-align:center;">
+      <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Overall close rate (visits → approvals)</div>
+      <div style="font-size:32px;font-weight:900;color:${closeColor};">${closeRate}%</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.7);margin-top:2px;">${closeLabel}</div>
+    </div>`;
+}
+// ── END CONVERSION FUNNEL TRACKER ────────────────────────────────────────────
 
 // ── MERGE DOCS & SIGNATURE ───────────────────────────────────────────────────
 let _mdFiles=[];
