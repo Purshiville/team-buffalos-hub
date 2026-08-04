@@ -547,13 +547,13 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952','SKA311460']); // Rivaldo Rossouw — left team; Carlo Crusi — removed
+const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
 // Established advisors (were on the team before the hub launched) never get the badge.
 // All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
-const _ESTABLISHED_CODES=new Set(['SKA312009','SKA310185','SKA310194','SKA312741','SKA310889','SKA313162','SKA313936','SKA315109','SKA313383','SKA315568','SKA315496','SKA315759']);
+const _ESTABLISHED_CODES=new Set(['SKA312009','SKA310185','SKA312741','SKA310889','SKA313162','SKA313936','SKA315109','SKA313383','SKA315568','SKA315496','SKA315759']);
 function _newBadge(code){
   if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
@@ -567,7 +567,6 @@ function _newBadge(code){
 const APPROVED_CODES = new Set([
   'SKA312009', // Adrian Roelfse
   'SKA310185', // Benjamin Bothma
-  'SKA310194', // Stefan Bekker
   'SKA312741', // Joshua Pretorius
   'SKA310889', // Lwahluma Mtsulwana
   'SKA313162', // Ivan Davies
@@ -585,7 +584,6 @@ const APPROVED_CODES = new Set([
 const ADVISOR_LIST = [
   {code:'SKA312009', name:'Adrian Roelfse'},
   {code:'SKA310185', name:'Benjamin Bothma'},
-  {code:'SKA310194', name:'Stefan Bekker'},
   {code:'SKA312741', name:'Joshua Pretorius'},
   {code:'SKA310889', name:'Lwahluma Mtsulwana'},
   {code:'SKA313162', name:'Ivan Davies'},
