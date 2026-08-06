@@ -5069,6 +5069,17 @@ function saveTop3Data(d){localStorage.setItem('tl_top3',JSON.stringify(d));}
 
 function renderTop3(){
   const el=document.getElementById('hubTop3');if(!el)return;
+  // Sync Firebase user photos before rendering so remote profile photos are available
+  if(window.FB_READY&&window.FB.getAllUsers){
+    window.FB.getAllUsers().then(fbUsers=>{
+      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
+      _renderTop3Inner(el);
+    }).catch(()=>_renderTop3Inner(el));
+  } else {
+    _renderTop3Inner(el);
+  }
+}
+function _renderTop3Inner(el){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const now=new Date();
   // Show previous month's winners (awards published after month end)
@@ -5086,9 +5097,12 @@ function renderTop3(){
   try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+usedKey)||'null');}catch(e){}
   if(!_gapStats)try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+periodKey)||'null');}catch(e){}
   const _fillGaps=r=>{
-    if(!r||!_gapStats?.advisors)return r;
-    const s=_gapStats.advisors[r.code];if(!s)return r;
-    return{...r,ntu4:r.ntu4!=null?r.ntu4:(s.ntu4Month??null),ntu15:r.ntu15!=null?r.ntu15:(s.ntu15Month??null),persistency:r.persistency!=null?r.persistency:(s.persistency??null)};
+    if(!r)return r;
+    // For registered advisors, never use a stale saved photo — use their profile photo or nothing
+    const photo=r.code in _regUsers?(_regUsers[r.code]?.photo||null):r.photo;
+    if(!_gapStats?.advisors)return{...r,photo};
+    const s=_gapStats.advisors[r.code];if(!s)return{...r,photo};
+    return{...r,photo,ntu4:r.ntu4!=null?r.ntu4:(s.ntu4Month??null),ntu15:r.ntu15!=null?r.ntu15:(s.ntu15Month??null),persistency:r.persistency!=null?r.persistency:(s.persistency??null)};
   };
   const _ring={gold:'border:3px solid #f59e0b;box-shadow:0 0 0 2px #fef9c3,0 0 10px rgba(245,158,11,0.45);',silver:'border:3px solid #9ca3af;box-shadow:0 0 0 2px #f1f5f9,0 0 10px rgba(156,163,175,0.4);',bronze:'border:3px solid #cd7f32;box-shadow:0 0 0 2px #fff7ed,0 0 10px rgba(180,83,9,0.35);'};
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
