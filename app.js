@@ -11169,6 +11169,7 @@ function _diaryFilterTypeOptions(){
     {v:'visit',l:'School Visit'},
     {v:'presentation',l:'Presentation'},
     {v:'gatekeeper',l:'Meet Gatekeeper'},
+    {v:'appt_meeting',l:'Meeting'},
     {v:'close',l:'Close'},
     {v:'planning',l:'Planning'},
     {v:'admin',l:'Admin'},
