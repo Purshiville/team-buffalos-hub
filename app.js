@@ -5115,8 +5115,8 @@ function renderTop3(){
     <div class="podium-col">
       <div class="top3-card ${cls}">
         <div style="position:relative;width:52px;margin:0 auto 6px;">
-          ${(r.photo||_regUsers[r.code]?.photo)
-            ?`<img src="${r.photo||_regUsers[r.code].photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`
+          ${(_regUsers[r.code]?.photo||r.photo)
+            ?`<img src="${_regUsers[r.code]?.photo||r.photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`
             :`<div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}">${medal}</div>`
           }
           <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${posLabel}</div>
@@ -5161,7 +5161,7 @@ function saveTop3Awards(){
   const getNum=id=>{const v=parseFloat((document.getElementById(id)?.value||'').replace('%','').trim());return isNaN(v)?null:v;};
   const existing=getTop3Data();const existingRec=existing[periodKey]||{};
   const registeredUsers=getUsers();
-  const getPhoto=(inputId,pos,code)=>document.getElementById(inputId)?._b64||existingRec[pos]?.photo||registeredUsers[code]?.photo||null;
+  const getPhoto=(inputId,pos,code)=>document.getElementById(inputId)?._b64||(existingRec[pos]?.code===code?existingRec[pos]?.photo:null)||registeredUsers[code]?.photo||null;
   const todayStr2=new Date().toISOString().slice(0,10);
   const curPeriod=PROD_CUTOFFS.find(p=>todayStr2>=p.opens&&todayStr2<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>todayStr2);
   const record={
