@@ -584,13 +584,13 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed
+const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
 // Established advisors (were on the team before the hub launched) never get the badge.
 // All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
-const _ESTABLISHED_CODES=new Set(['SKA312009','SKA310185','SKA312741','SKA310889','SKA313162','SKA313936','SKA315109','SKA313383','SKA315568','SKA315496','SKA315759']);
+const _ESTABLISHED_CODES=new Set(['SKA312009','SKA310185','SKA312741','SKA310889','SKA313162','SKA313936','SKA315109','SKA313383','SKA315568','SKA315759']);
 function _newBadge(code){
   if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
@@ -610,7 +610,6 @@ const APPROVED_CODES = new Set([
   'SKA313936', // Brian Steve Boucher
   'SKA315109', // Roger Pretorius
   'SKA315568', // Stefan Barnard
-  'SKA315496', // Litha Qashani
   'SKA315759', // Lutho Mphahlele
   'SKA313383', // Kevin Kruger
   'SKA316161', // Micaiah Coltman
@@ -629,7 +628,6 @@ const ADVISOR_LIST = [
   {code:'SKA315109', name:'Roger Pretorius'},
   {code:'SKA315568', name:'Stefan Barnard'},
   {code:'SKA313383', name:'Kevin Kruger'},
-  {code:'SKA315496', name:'Litha Qashani'},
   {code:'SKA315759', name:'Lutho Mphahlele'},
   {code:'SKA316161', name:'Micaiah Coltman'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
@@ -5096,10 +5094,12 @@ function _renderTop3Inner(el){
   let _gapStats=null;
   try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+usedKey)||'null');}catch(e){}
   if(!_gapStats)try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+periodKey)||'null');}catch(e){}
+  const _knownCodes=new Set(ADVISOR_LIST.map(a=>a.code));
   const _fillGaps=r=>{
     if(!r)return r;
-    // For registered advisors, never use a stale saved photo — use their profile photo or nothing
-    const photo=r.code in _regUsers?(_regUsers[r.code]?.photo||null):r.photo;
+    // For any known advisor (registered or in ADVISOR_LIST), never use a stale saved photo
+    const isKnown=r.code in _regUsers||_knownCodes.has(r.code);
+    const photo=isKnown?(_regUsers[r.code]?.photo||null):r.photo;
     if(!_gapStats?.advisors)return{...r,photo};
     const s=_gapStats.advisors[r.code];if(!s)return{...r,photo};
     return{...r,photo,ntu4:r.ntu4!=null?r.ntu4:(s.ntu4Month??null),ntu15:r.ntu15!=null?r.ntu15:(s.ntu15Month??null),persistency:r.persistency!=null?r.persistency:(s.persistency??null)};
