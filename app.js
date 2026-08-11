@@ -5390,7 +5390,10 @@ function renderDailyBrief(){
   const todayEvs=diaryGetEvents().filter(e=>e.date===todayKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
   todayEvs.sort((a,b)=>(a.startTime||'').localeCompare(b.startTime||''));
   if(todayEvs.length){
-    items.push({icon:'🗓️',onclick:`showPage('termcal')`,text:`<b>${todayEvs.length} appointment${todayEvs.length>1?'s':''} today:</b> `+todayEvs.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(', ')});
+    const _MAX=5,_rest=todayEvs.length-_MAX;
+    const _apptRows=todayEvs.slice(0,_MAX).map(e=>`<div style="display:flex;gap:6px;align-items:baseline;padding:2px 0;border-bottom:1px solid #f4f2ed;">${e.startTime?`<span style="font-size:11px;font-weight:700;color:#6b7280;min-width:38px;flex-shrink:0;">${e.startTime.slice(0,5)}</span>`:'<span style="min-width:38px;flex-shrink:0;"></span>'}<span style="font-size:12px;color:#374151;line-height:1.4;">${isOps?`<span style="color:#0d1f3c;font-weight:600;">${e.advisorName}</span> — `:''}<span style="color:#1f2937;">${e.title}</span></span></div>`).join('');
+    const _moreHtml=_rest>0?`<div style="font-size:11px;color:#9ca3af;padding-top:4px;">+${_rest} more — <span style="color:#c9922a;font-weight:600;">view calendar</span></div>`:'';
+    items.push({icon:'🗓️',onclick:`showPage('termcal')`,text:`<b>${todayEvs.length} appointment${todayEvs.length>1?'s':''} today</b> <span style="font-size:10px;color:#c9922a;font-weight:600;float:right;">View all ›</span><div style="margin-top:6px;">${_apptRows}${_moreHtml}</div>`});
   } else {
     items.push({icon:'🗓️',text:`No appointments for today. <span onclick="showPage('termcal')" style="color:#c9922a;font-weight:600;cursor:pointer;text-decoration:underline;">📅 Add an appointment</span>`});
   }
@@ -5400,7 +5403,9 @@ function renderDailyBrief(){
   const tmrwEvs=diaryGetEvents().filter(e=>e.date===tomorrowKey&&(isOps||(e.advisorCode===currentUser.code||e.advisorCode==='ALL')));
   const tmrwSlice=tmrwEvs.slice(0,3);
   if(tmrwSlice.length){
-    items.push({icon:'🔮',onclick:`showBriefBlowup('tomorrow')`,text:`<b>Tomorrow:</b> `+tmrwSlice.map(e=>(isOps?`${e.advisorName} — `:'')+`${e.title}${e.startTime?' at '+e.startTime.slice(0,5):''}`).join(' · ')+(tmrwEvs.length>3?` +${tmrwEvs.length-3} more`:'')});
+    const _tmrwRows=tmrwSlice.map(e=>`<div style="display:flex;gap:6px;align-items:baseline;padding:2px 0;border-bottom:1px solid #f4f2ed;">${e.startTime?`<span style="font-size:11px;font-weight:700;color:#6b7280;min-width:38px;flex-shrink:0;">${e.startTime.slice(0,5)}</span>`:'<span style="min-width:38px;flex-shrink:0;"></span>'}<span style="font-size:12px;color:#374151;">${isOps?`<span style="color:#0d1f3c;font-weight:600;">${e.advisorName}</span> — `:''}<span style="color:#1f2937;">${e.title}</span></span></div>`).join('');
+    const _tmrwMore=tmrwEvs.length>3?`<div style="font-size:11px;color:#9ca3af;padding-top:4px;">+${tmrwEvs.length-3} more — <span style="color:#c9922a;font-weight:600;">view calendar</span></div>`:'';
+    items.push({icon:'🔮',onclick:`showBriefBlowup('tomorrow')`,text:`<b>Tomorrow</b> <span style="font-size:10px;color:#c9922a;font-weight:600;float:right;">View all ›</span><div style="margin-top:6px;">${_tmrwRows}${_tmrwMore}</div>`});
   } else {
     items.push({icon:'🔮',onclick:`showBriefBlowup('tomorrow')`,text:`<b>Nothing scheduled for tomorrow</b> — tap to add`});
   }
