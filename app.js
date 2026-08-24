@@ -1583,26 +1583,48 @@ function renderProdStats(data,period){
     const gapHtml=bothHit
       ?`<div style="text-align:center;font-size:12px;font-weight:700;color:#16a34a;padding:8px 0 2px;">🎯 Both targets hit — great work!</div>`
       :`<div style="font-size:11px;color:#6b7280;padding:6px 0 2px;">${cGap>0?`Need <b style="color:#dc2626;">${cGap} more case${cGap!==1?'s':''}</b>`:'✓ Cases done'}${cGap>0&&pGap>0?' & ':''}${pGap>0?`<b style="color:#dc2626;">R${pGap.toLocaleString()} more premium</b>`:''}${!bothHit?' to hit both targets':''}</div>`;
-    let paceHtml='';
+    let paceHtml='',_daysElapsed=0,_daysRem=0;
     const _pEntry=PROD_CUTOFFS.find(p=>p.cutoff.startsWith(period));
     const _today=new Date();_today.setHours(0,0,0,0);
     const _cutoffD=_pEntry?new Date(_pEntry.cutoff):null;
-    if(_pEntry&&_cutoffD&&_today<=_cutoffD&&!bothHit){
+    const _isPeriodLive=_pEntry&&_cutoffD&&_today<=_cutoffD;
+    if(_isPeriodLive){
       const _opensD=new Date(_pEntry.opens);_opensD.setDate(_opensD.getDate()-1);
-      const _daysElapsed=_countWorkdays(_opensD,_today);
-      const _daysRem=_countWorkdays(_today,_cutoffD);
-      if(_daysRem>0){
-        const _cNeedDay=cGap>0?(cGap/_daysRem).toFixed(1):null;
-        const _pNeedDay=pGap>0?Math.ceil(pGap/_daysRem):null;
-        const _parts=[];
-        if(_cNeedDay)_parts.push(`<b style="color:#0d1f3c;">${_cNeedDay}</b> case/day`);
-        if(_pNeedDay)_parts.push(`<b style="color:#0d1f3c;">R${_pNeedDay.toLocaleString()}</b>/day`);
-        if(_parts.length)paceHtml=`<div style="font-size:11px;color:#6b7280;padding:4px 0 2px;">📅 <b>${_daysRem}</b> working day${_daysRem!==1?'s':''} left — need ${_parts.join(' & ')} to hit targets</div>`;
-      }
+      _daysElapsed=_countWorkdays(_opensD,_today);
+      _daysRem=_countWorkdays(_today,_cutoffD);
+    }
+    if(_isPeriodLive&&!bothHit&&_daysRem>0){
+      const _cNeedDay=cGap>0?(cGap/_daysRem).toFixed(1):null;
+      const _pNeedDay=pGap>0?Math.ceil(pGap/_daysRem):null;
+      const _parts=[];
+      if(_cNeedDay)_parts.push(`<b style="color:#0d1f3c;">${_cNeedDay}</b> case/day`);
+      if(_pNeedDay)_parts.push(`<b style="color:#0d1f3c;">R${_pNeedDay.toLocaleString()}</b>/day`);
+      if(_parts.length)paceHtml=`<div style="font-size:11px;color:#6b7280;padding:4px 0 2px;">📅 <b>${_daysRem}</b> working day${_daysRem!==1?'s':''} left — need ${_parts.join(' & ')} to hit targets</div>`;
     }
     personalEl.innerHTML=`<div class="prod-stats-card"><div class="prod-stats-hd"><div class="prod-stats-title">📊 My Production — ${periodLabel}</div><div class="prod-stats-period">Updated by ${my.updatedBy||'manager'}</div></div><div class="prod-stat-row"><div class="prod-stat-cell"><div class="prod-stat-label">Cases</div><div class="prod-stat-val" style="color:${cc};">${my.actualCases}</div><div class="prod-stat-target">of ${my.targetCases} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${cp}%;background:${cc};"></div></div><div class="prod-stat-pct" style="color:${cc};">${cp}%</div></div><div class="prod-stat-cell"><div class="prod-stat-label">Risk Premium</div><div class="prod-stat-val" style="color:${pc};font-size:${my.actualPremium>=10000?'16px':'20px'};">R${my.actualPremium.toLocaleString()}</div><div class="prod-stat-target">of R${my.targetPremium.toLocaleString()} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${pp}%;background:${pc};"></div></div><div class="prod-stat-pct" style="color:${pc};">${pp}%</div></div></div>${gapHtml}${paceHtml}${chips}</div>`;
+    // Advisor pace chips — prominent row above personal card
+    const _chipsEl=document.getElementById('hubPaceChips');
+    if(_chipsEl){
+      const _isAdv=!currentUser.isManager&&!currentUser.isOps;
+      if(_isAdv&&_isPeriodLive&&_daysRem>0){
+        const _cNeedC=cGap>0?(cGap/_daysRem).toFixed(1):null;
+        const _pNeedC=pGap>0?Math.ceil(pGap/_daysRem):null;
+        const _cPace=_daysElapsed>0?((my.actualCases||0)/_daysElapsed):0;
+        const _onTrk=cGap===0||(_cNeedC!=null&&_cPace>=parseFloat(_cNeedC));
+        const _ac=bothHit?'#16a34a':_onTrk?'#92400e':'#dc2626';
+        const _ab=bothHit?'#f0fdf4':_onTrk?'#fffbeb':'#fef2f2';
+        const _ab2=bothHit?'#86efac':_onTrk?'#fcd34d':'#fca5a5';
+        const _c=(icon,txt)=>`<div onclick="document.getElementById('hubProdStats')?.scrollIntoView({behavior:'smooth',block:'nearest'})" style="display:inline-flex;align-items:center;gap:5px;padding:9px 16px;border-radius:20px;background:${_ab};border:1.5px solid ${_ab2};cursor:pointer;font-size:12px;font-weight:700;color:${_ac};white-space:nowrap;">${icon} ${txt}</div>`;
+        _chipsEl.style.display='block';
+        _chipsEl.innerHTML=`<div style="display:flex;gap:8px;flex-wrap:wrap;">${[_c('📅',`${_daysRem} day${_daysRem!==1?'s':''} left`),_cNeedC?_c('📋',`${_cNeedC} cases/day`):_c('📋','✓ Cases done'),_pNeedC?_c('💰',`R${_pNeedC.toLocaleString()}/day`):_c('💰','✓ Premium done')].join('')}</div>`;
+      } else {
+        _chipsEl.style.display='none';
+      }
+    }
   } else {
     personalEl.style.display='none';
+    const _chipsEl2=document.getElementById('hubPaceChips');
+    if(_chipsEl2)_chipsEl2.style.display='none';
   }
 
   // ── Rankings ──
