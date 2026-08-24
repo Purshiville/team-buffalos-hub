@@ -1542,6 +1542,12 @@ function initStatsListener(){
     renderStatsManagerPreview(window._currentPeriodStats||{advisors:{}});
   }
 }
+function _countWorkdays(from,to){
+  let count=0;const d=new Date(+from);d.setDate(d.getDate()+1);
+  const end=new Date(+to);
+  while(d<=end){const dow=d.getDay();if(dow!==0&&dow!==6)count++;d.setDate(d.getDate()+1);}
+  return count;
+}
 function renderProdStats(data,period){
   const personalEl=document.getElementById('hubProdStats');
   const teamEl=document.getElementById('hubTeamStats');
@@ -1577,7 +1583,24 @@ function renderProdStats(data,period){
     const gapHtml=bothHit
       ?`<div style="text-align:center;font-size:12px;font-weight:700;color:#16a34a;padding:8px 0 2px;">🎯 Both targets hit — great work!</div>`
       :`<div style="font-size:11px;color:#6b7280;padding:6px 0 2px;">${cGap>0?`Need <b style="color:#dc2626;">${cGap} more case${cGap!==1?'s':''}</b>`:'✓ Cases done'}${cGap>0&&pGap>0?' & ':''}${pGap>0?`<b style="color:#dc2626;">R${pGap.toLocaleString()} more premium</b>`:''}${!bothHit?' to hit both targets':''}</div>`;
-    personalEl.innerHTML=`<div class="prod-stats-card"><div class="prod-stats-hd"><div class="prod-stats-title">📊 My Production — ${periodLabel}</div><div class="prod-stats-period">Updated by ${my.updatedBy||'manager'}</div></div><div class="prod-stat-row"><div class="prod-stat-cell"><div class="prod-stat-label">Cases</div><div class="prod-stat-val" style="color:${cc};">${my.actualCases}</div><div class="prod-stat-target">of ${my.targetCases} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${cp}%;background:${cc};"></div></div><div class="prod-stat-pct" style="color:${cc};">${cp}%</div></div><div class="prod-stat-cell"><div class="prod-stat-label">Risk Premium</div><div class="prod-stat-val" style="color:${pc};font-size:${my.actualPremium>=10000?'16px':'20px'};">R${my.actualPremium.toLocaleString()}</div><div class="prod-stat-target">of R${my.targetPremium.toLocaleString()} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${pp}%;background:${pc};"></div></div><div class="prod-stat-pct" style="color:${pc};">${pp}%</div></div></div>${gapHtml}${chips}</div>`;
+    let paceHtml='';
+    const _pEntry=PROD_CUTOFFS.find(p=>p.cutoff.startsWith(period));
+    const _today=new Date();_today.setHours(0,0,0,0);
+    const _cutoffD=_pEntry?new Date(_pEntry.cutoff):null;
+    if(_pEntry&&_cutoffD&&_today<=_cutoffD&&!bothHit){
+      const _opensD=new Date(_pEntry.opens);_opensD.setDate(_opensD.getDate()-1);
+      const _daysElapsed=_countWorkdays(_opensD,_today);
+      const _daysRem=_countWorkdays(_today,_cutoffD);
+      if(_daysRem>0){
+        const _cNeedDay=cGap>0?(cGap/_daysRem).toFixed(1):null;
+        const _pNeedDay=pGap>0?Math.ceil(pGap/_daysRem):null;
+        const _parts=[];
+        if(_cNeedDay)_parts.push(`<b style="color:#0d1f3c;">${_cNeedDay}</b> case/day`);
+        if(_pNeedDay)_parts.push(`<b style="color:#0d1f3c;">R${_pNeedDay.toLocaleString()}</b>/day`);
+        if(_parts.length)paceHtml=`<div style="font-size:11px;color:#6b7280;padding:4px 0 2px;">📅 <b>${_daysRem}</b> working day${_daysRem!==1?'s':''} left — need ${_parts.join(' & ')} to hit targets</div>`;
+      }
+    }
+    personalEl.innerHTML=`<div class="prod-stats-card"><div class="prod-stats-hd"><div class="prod-stats-title">📊 My Production — ${periodLabel}</div><div class="prod-stats-period">Updated by ${my.updatedBy||'manager'}</div></div><div class="prod-stat-row"><div class="prod-stat-cell"><div class="prod-stat-label">Cases</div><div class="prod-stat-val" style="color:${cc};">${my.actualCases}</div><div class="prod-stat-target">of ${my.targetCases} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${cp}%;background:${cc};"></div></div><div class="prod-stat-pct" style="color:${cc};">${cp}%</div></div><div class="prod-stat-cell"><div class="prod-stat-label">Risk Premium</div><div class="prod-stat-val" style="color:${pc};font-size:${my.actualPremium>=10000?'16px':'20px'};">R${my.actualPremium.toLocaleString()}</div><div class="prod-stat-target">of R${my.targetPremium.toLocaleString()} target</div><div class="prod-stat-bar-wrap"><div class="prod-stat-bar" style="width:${pp}%;background:${pc};"></div></div><div class="prod-stat-pct" style="color:${pc};">${pp}%</div></div></div>${gapHtml}${paceHtml}${chips}</div>`;
   } else {
     personalEl.style.display='none';
   }
@@ -1622,6 +1645,44 @@ function renderProdStats(data,period){
   teamEl.innerHTML=
     `<div class="team-stats-card" style="margin-bottom:10px;"><div class="team-stats-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">💰 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${totalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${totalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th><th>vs Target</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📋 ${periodLabel}</div><div style="color:#fff;font-size:14px;font-weight:700;">Most Cases</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">${totalCases} cases</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th><th>vs Target</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
+  // Manager daily pace table
+  const _paceEl=document.getElementById('hubDailyPace');
+  if(_paceEl){
+    const _isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
+    if(_isMgr&&advisors.length){
+      const _pe=PROD_CUTOFFS.find(p=>p.cutoff.startsWith(period));
+      const _td2=new Date();_td2.setHours(0,0,0,0);
+      const _cd2=_pe?new Date(_pe.cutoff):null;
+      const _isPCur=_pe&&_cd2&&_td2<=_cd2;
+      if(_isPCur){
+        const _opD=new Date(_pe.opens);_opD.setDate(_opD.getDate()-1);
+        const _dEl=_countWorkdays(_opD,_td2);
+        const _dRm=_countWorkdays(_td2,_cd2);
+        const _rows=advisors.sort((a,b)=>(_advisorNameMap[a.code]||a.name).localeCompare(_advisorNameMap[b.code]||b.name)).map(a=>{
+          const _cg=Math.max(0,(a.targetCases||0)-(a.actualCases||0));
+          const _pg=Math.max(0,(a.targetPremium||0)-(a.actualPremium||0));
+          const cPace=_dEl>0?((a.actualCases||0)/_dEl).toFixed(1):'—';
+          const cNeed=_dRm>0&&_cg>0?(_cg/_dRm).toFixed(1):null;
+          const pNeed=_dRm>0&&_pg>0?'R'+Math.ceil(_pg/_dRm).toLocaleString():null;
+          const onTrack=_cg===0||(cNeed!=null&&_dEl>0&&parseFloat(cPace)>=parseFloat(cNeed));
+          const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${_cg===0?'#16a34a':onTrack?'#c9922a':'#dc2626'};margin-right:4px;vertical-align:middle;flex-shrink:0;"></span>`;
+          const n=_advisorNameMap[a.code]||a.name;const firstName=n.split(' ').pop();
+          return`<tr><td style="padding:6px 8px;font-size:12px;font-weight:600;color:#0d1f3c;white-space:nowrap;">${dot}${firstName}</td>`+
+            `<td style="padding:6px 8px;font-size:11px;color:#374151;text-align:center;">${a.actualCases||0}/${a.targetCases||0}</td>`+
+            `<td style="padding:6px 8px;font-size:11px;color:#6b7280;text-align:center;">${cPace}/day</td>`+
+            `<td style="padding:6px 8px;font-size:11px;font-weight:700;color:${cNeed==null?'#16a34a':'#dc2626'};text-align:center;">${cNeed==null?'✓':cNeed+'/day'}</td>`+
+            `<td style="padding:6px 8px;font-size:11px;font-weight:700;color:${pNeed==null?'#16a34a':'#dc2626'};text-align:center;">${pNeed==null?'✓':pNeed+'/day'}</td>`+
+            `</tr>`;
+        }).join('');
+        _paceEl.style.display='block';
+        _paceEl.innerHTML=`<div class="team-stats-card"><div class="team-stats-hd" style="display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;">📅 ${_dRm} working day${_dRm!==1?'s':''} left</div><div style="color:#fff;font-size:14px;font-weight:700;">Daily Pace to Target</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#c4b5fd;font-size:10px;font-weight:700;">${_dEl} day${_dEl!==1?'s':''} elapsed</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>Advisor</th><th>Cases</th><th>Pace</th><th>Need/day</th><th>Prem/day</th></tr></thead><tbody>${_rows}</tbody></table></div></div>`;
+      } else {
+        _paceEl.style.display='none';
+      }
+    } else {
+      _paceEl.style.display='none';
+    }
+  }
   if(typeof updateNtuHubAlert==='function')updateNtuHubAlert();
 }
 function renderStatsManagerPreview(data){
