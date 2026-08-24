@@ -584,13 +584,13 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed
+const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759','SKA315568','SKA313162']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed; Stefan Barnard — removed; Ivan Davies — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
 // Established advisors (were on the team before the hub launched) never get the badge.
 // All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
-const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313162','SKA313936','SKA315109','SKA313383','SKA315568']);
+const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313936','SKA315109','SKA313383']);
 function _newBadge(code){
   if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
@@ -604,10 +604,8 @@ function _newBadge(code){
 const APPROVED_CODES = new Set([
   'SKA310185', // Benjamin Bothma
   'SKA312741', // Joshua Pretorius
-  'SKA313162', // Ivan Davies
   'SKA313936', // Brian Steve Boucher
   'SKA315109', // Roger Pretorius
-  'SKA315568', // Stefan Barnard
   'SKA313383', // Kevin Kruger
   'SKA316161', // Micaiah Coltman
   'PURSHIVILLE',
@@ -618,10 +616,8 @@ const APPROVED_CODES = new Set([
 const ADVISOR_LIST = [
   {code:'SKA310185', name:'Benjamin Bothma'},
   {code:'SKA312741', name:'Joshua Pretorius'},
-  {code:'SKA313162', name:'Ivan Davies'},
   {code:'SKA313936', name:'Brian Steve Boucher'},
   {code:'SKA315109', name:'Roger Pretorius'},
-  {code:'SKA315568', name:'Stefan Barnard'},
   {code:'SKA313383', name:'Kevin Kruger'},
   {code:'SKA316161', name:'Micaiah Coltman'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
