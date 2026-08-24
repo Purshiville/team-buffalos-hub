@@ -6555,7 +6555,7 @@ function qlinkClear(){
   qlinkCalc();
 }
 
-const FSP_LIST=['1Life','Absa Life','Absa Lipco','Assupol','Assupol Prosperity (MHA)','AVBOB','Capital Legacy','Centriq / The Unlimited','Channel Life / Sanlam Sky','Clientele','Discovery Funeral','Discovery Life','Emerald Life','FNB Life','Guard Risk','Hollard Life','Hollard MLM','Hollard Specialist','King Price Life','Legalwise','Liberty','Lion of Africa','Metropolitan','Momentum','Nedbank Life','Old Mutual Life','Old Mutual Group Schemes','Old Mutual Protect','Outsurance','RMA','Safrican','Sanlam Life','Sanlam Sky','Standard Bank','Workerslife','Other (type manually)'];
+const FSP_LIST=['1Life','Absa Life','Absa Lipco','Assupol','Assupol Prosperity (MHA)','AVBOB','Capital Legacy','Centriq / The Unlimited','Channel Life / Sanlam Sky','Clientele','Discovery Funeral','Discovery Life','Emerald Life','FNB Life','Guard Risk','Hollard Life','Hollard MLM','Hollard Specialist','King Price Life','Legalwise','Liberty','Lion of Africa','Metropolitan','Momentum','Nedbank Life','Old Mutual Life','Old Mutual Group Schemes','Old Mutual Protect','Outsurance','Platinum Life','RMA','Safrican','Sanlam Life','Sanlam Sky','Standard Bank','Workerslife','Other (type manually)'];
 const _FSP_ALIAS={
   'legal':'Workerslife','legal plan':'Workerslife','wl legal':'Workerslife','workerslife legal':'Workerslife',
   'workers life':'Workerslife','wl':'Workerslife','wl funeral':'Workerslife',
