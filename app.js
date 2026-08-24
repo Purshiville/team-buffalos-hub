@@ -1336,7 +1336,7 @@ function doLogout(reason){
   if(_precanUnsub){_precanUnsub();_precanUnsub=null;}
   const inboxBtn=document.getElementById('inboxBtn');if(inboxBtn)inboxBtn.style.display='none';
   const chatBtn=document.getElementById('chatBtn');if(chatBtn)chatBtn.style.display='none';
-  window._inboxMsgs=[];window._myChats=[];
+  window._inboxMsgs=[];window._myChats=[];window._hubSelectedPeriod=null;
   currentUser=null;chatHistory=[];
   try{localStorage.removeItem('tl_session');}catch(e){}
   if(reason!=='inactivity'&&reason!=='connection_lost'){try{localStorage.removeItem('tl_remember');}catch(e){}}
@@ -1542,6 +1542,35 @@ function initStatsListener(){
     renderStatsManagerPreview(window._currentPeriodStats||{advisors:{}});
   }
 }
+function renderHubPeriodBar(){
+  const el=document.getElementById('hubPeriodBar');
+  if(!el||!currentUser)return;
+  const todayStr=new Date().toISOString().slice(0,10);
+  const curEntry=PROD_CUTOFFS.find(p=>todayStr>=p.opens&&todayStr<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>todayStr);
+  if(!curEntry){el.style.display='none';return;}
+  const _cd=new Date(curEntry.cutoff);
+  const curPeriod=_cd.getFullYear()+'-'+String(_cd.getMonth()+1).padStart(2,'0');
+  const MN=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const opts=PROD_CUTOFFS
+    .filter(p=>p.cutoff<=curEntry.cutoff)
+    .map(p=>{const d=new Date(p.cutoff);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return{k,label:MN[d.getMonth()]+' '+d.getFullYear(),isCur:k===curPeriod};})
+    .filter(o=>{
+      if(o.isCur)return true;
+      try{const d=JSON.parse(localStorage.getItem('tl_prod_stats_'+o.k)||'null');return!!(d&&Object.keys(d?.advisors||{}).length);}catch(e){return false;}
+    })
+    .reverse();
+  if(opts.length<=1){el.style.display='none';return;}
+  const sel=window._hubSelectedPeriod||curPeriod;
+  el.style.display='block';
+  el.innerHTML=`<div style="display:flex;align-items:center;gap:8px;padding:0 0 8px;"><span style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;white-space:nowrap;">📅 Period</span><select onchange="hubChangePeriod(this.value)" style="flex:1;font-size:12px;font-weight:700;color:#0d1f3c;padding:7px 10px;border-radius:10px;border:1.5px solid #e5e7eb;background:#fff;cursor:pointer;">${opts.map(o=>`<option value="${o.k}"${o.k===sel?' selected':''}>${o.label}${o.isCur?' (Current)':''}</option>`).join('')}</select></div>`;
+}
+function hubChangePeriod(period){
+  window._hubSelectedPeriod=period;
+  let stored=null;
+  try{stored=JSON.parse(localStorage.getItem('tl_prod_stats_'+period)||'null');}catch(e){}
+  renderProdStats(stored||{advisors:{}},period);
+  renderHubPeriodBar();
+}
 function _countWorkdays(from,to){
   let count=0;const d=new Date(+from);d.setDate(d.getDate()+1);
   const end=new Date(+to);
@@ -1549,6 +1578,8 @@ function _countWorkdays(from,to){
   return count;
 }
 function renderProdStats(data,period){
+  // If user has pinned a specific period in the hub filter, ignore live Firebase pushes for other periods
+  if(window._hubSelectedPeriod&&window._hubSelectedPeriod!==period)return;
   const personalEl=document.getElementById('hubProdStats');
   const teamEl=document.getElementById('hubTeamStats');
   if(!personalEl||!teamEl||!currentUser)return;
@@ -1706,6 +1737,7 @@ function renderProdStats(data,period){
     }
   }
   if(typeof updateNtuHubAlert==='function')updateNtuHubAlert();
+  renderHubPeriodBar();
 }
 function renderStatsManagerPreview(data){
   const el=document.getElementById('statsManagerPreview');
@@ -3070,7 +3102,7 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
