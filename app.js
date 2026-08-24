@@ -1494,6 +1494,37 @@ async function saveAdvisorStats(){
     if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);}
   }
 }
+function editAdvisorStats(code){
+  const sel=document.getElementById('statsAdvisorSelect');
+  if(sel){sel.value=code;loadStatsForAdvisor();}
+  const fields=document.getElementById('statsInputFields');
+  if(fields){fields.style.display='block';setTimeout(()=>fields.scrollIntoView({behavior:'smooth',block:'nearest'}),80);}
+}
+async function deleteAdvisorStats(code){
+  const period=getStatsPeriod();
+  const name=_advisorNameMap[code]||code;
+  if(!confirm(`Remove ${name}'s stats for ${formatPeriodLabel(period)}?\n\nThis cannot be undone.`))return;
+  if(window.FB_READY){
+    try{
+      await window.FB.deleteAdvisorStats(period,code);
+      const _k='tl_prod_stats_'+period;
+      let _s={advisors:{}};try{_s=JSON.parse(localStorage.getItem(_k)||'{"advisors":{}}')}catch(e){}
+      if(_s.advisors)delete _s.advisors[code];
+      localStorage.setItem(_k,JSON.stringify(_s));
+      if(typeof renderYTDStats==='function')renderYTDStats();
+      showAlert(`${name}'s stats removed.`,'success');
+    }catch(e){showAlert('Error: '+e.message,'error');}
+  } else {
+    const _k='tl_prod_stats_'+period;
+    let _s={advisors:{}};try{_s=JSON.parse(localStorage.getItem(_k)||'{"advisors":{}}')}catch(e){}
+    if(_s.advisors)delete _s.advisors[code];
+    localStorage.setItem(_k,JSON.stringify(_s));
+    window._currentPeriodStats=_s;
+    renderProdStats(_s,period);
+    renderStatsManagerPreview(_s);
+    if(typeof renderYTDStats==='function')renderYTDStats();
+  }
+}
 function checkAutoNotice(){
   if(!currentUser||(!currentUser.isManager&&!currentUser.isOps))return;
   const today=new Date();
@@ -1750,7 +1781,7 @@ function renderStatsManagerPreview(data){
       const cp=a.targetCases?Math.round(a.actualCases/a.targetCases*100):0;
       const c=cp>=100?'#16a34a':cp>=70?'#c9922a':'#dc2626';
       const displayName=_advisorNameMap[a.code]||a.name;
-      return`<div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;padding:8px 10px;background:#f9f9f9;border-radius:8px;"><div style="font-weight:700;color:#0d1f3c;">${displayName}</div><div style="display:flex;gap:14px;"><span style="font-weight:700;color:${c};">${a.actualCases}/${a.targetCases} cases</span><span style="color:#6b7280;">R${a.actualPremium.toLocaleString()}/R${a.targetPremium.toLocaleString()}</span></div></div>`;
+      return`<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:8px 10px;background:#f9f9f9;border-radius:8px;"><div style="font-weight:700;color:#0d1f3c;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${displayName}</div><span style="font-weight:700;color:${c};white-space:nowrap;">${a.actualCases}/${a.targetCases}</span><span style="color:#6b7280;white-space:nowrap;">R${a.actualPremium.toLocaleString()}</span><button onclick="editAdvisorStats('${a.code}')" title="Edit" style="flex-shrink:0;background:#e0e7ff;border:none;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:12px;color:#3730a3;font-weight:700;line-height:1;">✏️</button><button onclick="deleteAdvisorStats('${a.code}')" title="Delete" style="flex-shrink:0;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;padding:4px 8px;font-size:12px;color:#dc2626;font-weight:700;line-height:1;">🗑️</button></div>`;
     }).join('')+'</div>';
 }
 function getYTDStats(){
