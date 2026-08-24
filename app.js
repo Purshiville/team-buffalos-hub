@@ -1379,11 +1379,13 @@ function formatPeriodLabel(period){
 function openStatsModal(){
   const overlay=document.getElementById('statsModalOverlay');
   if(overlay){overlay.style.display='flex';}
-  const now=new Date();
+  const _ts=new Date().toISOString().slice(0,10);
+  const _pe=PROD_CUTOFFS.find(p=>_ts>=p.opens&&_ts<=p.cutoff)||PROD_CUTOFFS.find(p=>p.cutoff>_ts);
+  const _pd=_pe?new Date(_pe.cutoff):new Date();
   const mo=document.getElementById('statsPeriodMonth');
   const yr=document.getElementById('statsPeriodYear');
-  if(mo)mo.value=('0'+(now.getMonth()+1)).slice(-2);
-  if(yr)yr.value=String(now.getFullYear());
+  if(mo)mo.value=('0'+(_pd.getMonth()+1)).slice(-2);
+  if(yr)yr.value=String(_pd.getFullYear());
   populateStatsAdvisorSelect();
   refreshStatsPeriod();
   populateTop3Selects();
