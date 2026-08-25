@@ -8495,11 +8495,17 @@ IDENTIFY POLICY TYPE — use one of these exact values or combinations:
 - "Disability" — disability cover, income protection, temporary/permanent disability
 - "Dread Disease" — critical illness, severe illness, dread disease cover
 - "Accidental Death" — personal accident, accidental death only policy
-- For combined cover use plus sign: "Life + Funeral", "Life + Disability", "Life + Disability + Dread Disease" etc.
-- Default to "Life" only if truly unclear.
+- "Retirement" — retirement annuity (RA), pension fund, provident fund, preservation fund
+- "Investment" — endowment policy, savings plan, investment plan, unit trust-linked policy, education policy
+- For combined risk cover use plus sign: "Life + Funeral", "Life + Disability", "Life + Disability + Dread Disease" etc.
+- Default to "Life" only if truly unclear and it is definitely a risk policy with a fixed death benefit.
+
+CRITICAL — FUND VALUE vs COVER:
+- "Fund value" / "surrender value" / "investment value" / "accumulated value" / "maturity value" / "account value" / "benefit reserve" → these are NEVER cover amounts. Put them in fund_value at the policy level. Do NOT put them in any life's "cover" field.
+- "Sum assured" / "death benefit" / "life cover" / "cover amount" / "insured amount" / "total benefit" — these are risk cover amounts → put in life's "cover" field.
+- For Retirement and Investment type policies: the "cover" field for all lives should be 0 unless there is a SEPARATE fixed risk death benefit clearly stated apart from the investment/savings value. The fund_value field must contain the current investment/fund/surrender value.
 
 NORMALISE terminology:
-- "Sum assured" / "benefit amount" / "cover amount" / "insured amount" / "total benefit" / "death benefit" → cover per life
 - "Premium waiver" / "waiver of premium" / "no more premiums" / "premium protector" / "payor benefit" / "APW" / "breadwinner's benefit" / "breadwinner benefit" / "BW benefit" → no_more_premiums: true
 - "Accidental death benefit" / "ADB" / "double accident" / "double indemnity" / "personal accident" → accident_double: true
 - "Funeral benefit" / "burial benefit" / "funeral cover" / "final expenses" / "funeral plan" → burial: true
@@ -8520,10 +8526,10 @@ Also:
 - Any exclusions, waiting periods, high-risk notes → add to red_flags. Write each red flag as a plain-language sentence a non-expert client can understand — max 25 words, no insurance jargon. Good example: "This policy has a 6-month waiting period for illness-related deaths — only accidental deaths are covered in the first 6 months."
 - Any beneficiary with NO cover (no sum assured) → include in lives with cover: 0 and is_beneficiary_only: true
 - extra: remaining benefits not captured above, semicolon-separated; empty string if none
-- IMPORTANT: Do NOT list the same person twice. If any non-Main life entry shares the same first name AND/OR the same date of birth as the Main life, omit the duplicate entirely. Do not list the same family member under two different relationship labels.
+- DEDUPLICATION: Do NOT list the same person twice within the same policy. If any non-Main life shares the same date of birth OR the same first name as the Main life, omit the duplicate. Do not list the same person under two different relationship labels.
 
 Return this exact structure:
-{"insurer":"","policy_number":null,"start_date":null,"plan_name":"","policy_type":"Funeral","premium":0,"benefits":{"cashback":false,"payment_holiday":false,"no_more_premiums":false,"accident_double":false,"burial":false,"paid_up":false,"extra":""},"in_arrears":false,"lives":[{"name":null,"relationship":"Main","dob":null,"gender":null,"cover":0,"is_beneficiary_only":false}],"red_flags":[]}
+{"insurer":"","policy_number":null,"start_date":null,"plan_name":"","policy_type":"Funeral","premium":0,"fund_value":null,"benefits":{"cashback":false,"payment_holiday":false,"no_more_premiums":false,"accident_double":false,"burial":false,"paid_up":false,"extra":""},"in_arrears":false,"lives":[{"name":null,"relationship":"Main","dob":null,"gender":null,"cover":0,"is_beneficiary_only":false}],"red_flags":[]}
 
 Use null for unknown strings, 0 for unknown numbers, false for unknown booleans.`;
 
@@ -8859,33 +8865,68 @@ function _prAutoFillNotes(){
   notesEl.value=(existing?existing+'\n\n':'')+notes.join('\n\n');
 }
 
+const _PR_SAVINGS_TYPES=['Retirement','Investment','Savings','Endowment'];
+function _prIsSavings(p){return _PR_SAVINGS_TYPES.some(t=>(p.policy_type||'').includes(t));}
+function _prNormFirst(n){return((n||'').toLowerCase().match(/[a-z]+/)||[''])[0];}
+
 function _prBuildLivesMap(policies){
-  const map={};
+  // Two-index dedup: DOB-keyed (strongest) + first-name-keyed (fallback)
+  const byDob={};   // 'rel|dob' → entry
+  const byName={};  // 'rel|normFirst' → entry
+  const ordered=[];
+
+  const findEntry=(rel,dob,name)=>{
+    if(dob){const dk=rel+'|dob:'+dob;if(byDob[dk])return{entry:byDob[dk],dk};}
+    const nk=rel+'|name:'+_prNormFirst(name);
+    if(byName[nk])return{entry:byName[nk],nk};
+    return null;
+  };
+  const registerEntry=(entry,rel,dob,name)=>{
+    if(dob){byDob[rel+'|dob:'+dob]=entry;}
+    byName[rel+'|name:'+_prNormFirst(name)]=entry;
+  };
+
   policies.forEach((p,pIdx)=>{
-    // Find main life DOB and surname for duplicate detection
     const mainLife=(p.lives||[]).find(l=>l.relationship==='Main');
     const mainDob=mainLife?.dob||'';
-    const mainSurname=(mainLife?.name||'').split(' ').pop().toLowerCase();
+    const mainFirst=_prNormFirst(mainLife?.name);
+    const mainSurname=(mainLife?.name||'').toLowerCase().split(/\s+/).pop();
+
     (p.lives||[]).forEach(life=>{
-      // Skip if this non-Main life appears to be the policyholder listed again
-      if(life.relationship!=='Main'&&mainDob&&life.dob===mainDob){
-        const ln=(life.name||'').toLowerCase(),mn=(mainLife?.name||'').toLowerCase();
-        const lifeFirst=ln.split(/\s+/)[0],mainFirst=mn.split(/\s+/)[0];
-        if((mainFirst&&lifeFirst&&mainFirst===lifeFirst)||(mainSurname&&ln.split(/\s+/).pop()===mainSurname))return;
+      const rel=life.relationship||'Other';
+      // Skip: non-Main life is the Main life listed again (same DOB or same first name + surname)
+      if(rel!=='Main'&&mainDob&&life.dob===mainDob){
+        const lf=_prNormFirst(life.name);
+        const ls=(life.name||'').toLowerCase().split(/\s+/).pop();
+        if((mainFirst&&lf&&mainFirst===lf)||(mainSurname&&ls===mainSurname))return;
       }
-      const key=(life.name||'')+'|'+(life.relationship||'')+'|'+(life.dob||'');
-      if(!map[key])map[key]={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:!!life.is_beneficiary_only,totalCover:0};
-      map[key].policies[pIdx]=life.cover||0;
-      if(!life.is_beneficiary_only)map[key].totalCover+=(life.cover||0);
+      const found=findEntry(rel,life.dob,life.name);
+      let entry;
+      if(found){
+        entry=found.entry;
+        // Fill in missing details from this occurrence
+        if(!entry.name&&life.name)entry.name=life.name;
+        if(!entry.dob&&life.dob){entry.dob=life.dob;byDob[rel+'|dob:'+life.dob]=entry;}
+        if(!entry.gender&&life.gender)entry.gender=life.gender;
+      } else {
+        entry={relationship:rel,name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:!!life.is_beneficiary_only,totalCover:0};
+        ordered.push(entry);
+        registerEntry(entry,rel,life.dob,life.name);
+      }
+      const cover=life.cover||0;
+      entry.policies[pIdx]=cover;
+      // Exclude savings/retirement/investment policy amounts from risk cover total
+      if(!life.is_beneficiary_only&&!_prIsSavings(p))entry.totalCover+=cover;
     });
   });
+
   const relOrder=['Main','Spouse','Child','Parent','Sibling','Uncle','Aunt','Cousin','Nephew','Niece','In-Law','Extended','Other'];
-  return Object.values(map).sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
+  return ordered.sort((a,b)=>{const ai=relOrder.indexOf(a.relationship);const bi=relOrder.indexOf(b.relationship);return(ai===-1?99:ai)-(bi===-1?99:bi);});
 }
 
 function _prTypeBadge(type,forPdf){
   if(!type)return'—';
-  const colors={'Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626'};
+  const colors={'Funeral':'#7c3aed','Life':'#1d4ed8','Disability':'#047857','Dread Disease':'#b45309','Accidental Death':'#dc2626','Retirement':'#0f766e','Investment':'#0369a1','Savings':'#0369a1','Endowment':'#0369a1'};
   let bg='#6b7280';
   for(const[k,c]of Object.entries(colors)){if(type.includes(k)){bg=c;break;}}
   if(forPdf)return`<span style="background:${bg};color:#fff;font-size:8px;font-weight:700;padding:2px 6px;border-radius:8px;white-space:nowrap;">${type}</span>`;
@@ -8953,17 +8994,24 @@ function renderPRSummary(){
     const tdS=`padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;vertical-align:middle;${bg}`;
     const extra=b.extra&&b.extra!=='—'?`<div style="font-size:9px;color:#6b7280;margin-top:2px;">${b.extra}</div>`:'';
     const benefCells=BENEF.map(bc=>{const has=!!b[bc.key];return`<td style="padding:6px 8px;border:1px solid ${has?'#bbf7d0':'#e5e7eb'};font-size:11px;text-align:center;background:${has?'#dcfce7':'#f9fafb'};color:${has?'#166534':'#9ca3af'};font-weight:700;">${has?'✓':'—'}</td>`;}).join('');
-    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}<div style="font-size:9px;color:#9ca3af;font-family:monospace;margin-top:1px;">${p.policy_number||''}</div></td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}${extra}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${benefCells}<td style="${tdS}text-align:center;"><span style="background:${scoreClr};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">${score}/${BENEF.length}</span></td></tr>`;
+    const fundNote=_prIsSavings(p)&&p.fund_value?`<div style="font-size:9px;color:#0369a1;margin-top:2px;font-weight:600;">Fund value: ${_prFmtR(p.fund_value)}</div>`:'';
+    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}<div style="font-size:9px;color:#9ca3af;font-family:monospace;margin-top:1px;">${p.policy_number||''}</div></td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}${extra}${fundNote}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${benefCells}<td style="${tdS}text-align:center;"><span style="background:${scoreClr};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">${score}/${BENEF.length}</span></td></tr>`;
   }).join('');
 
   // Lives rows
-  const phCols=policies.map((p,i)=>`<th style="${thC}min-width:80px;">${p.policy_number||'P'+(i+1)}</th>`).join('');
+  const phCols=policies.map((p,i)=>{
+    const isSav=_prIsSavings(p);
+    const hdr=isSav?`<span style="font-size:9px;color:#a5f3fc;">Fund Value</span><br><span style="font-size:9px;font-weight:400;">${p.policy_number||'P'+(i+1)}</span>`:(p.policy_number||'P'+(i+1));
+    return`<th style="${thC}min-width:80px;${isSav?'background:#0f766e;':''}">${hdr}</th>`;
+  }).join('');
   const livesRows=allLives.map(life=>{
     const {bg:rowBg,label:rowLabel}=_prLiveBg(life);
     const bgStyle=rowBg?`background:${rowBg};`:'';
     const cells=policies.map((p,pIdx)=>{
       const c=life.policies[pIdx];
-      return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
+      const isSav=_prIsSavings(p);
+      const cellExtra=isSav?'color:#6b7280;font-style:italic;':'';
+      return`<td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;text-align:center;${bgStyle}${cellExtra}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;
     }).join('');
     const badge=rowLabel?` <span style="background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;">${rowLabel}</span>`:'';
     return`<tr><td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;${bgStyle}">${life.relationship}${badge}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;${bgStyle}">${life.name||''}</td><td style="padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;font-family:monospace;${bgStyle}">${life.dob||''} ${life.gender?'('+life.gender+')':''}</td>${cells}</tr>`;
@@ -9035,13 +9083,14 @@ function generatePRPdf(){
     const arr=p.in_arrears?'<br><span style="color:#dc2626;font-size:7px;font-weight:800;">&#9888; ARREARS</span>':'';
     const bg=i%2===0?'':'background:#fafafa;';
     const extra=b.extra&&b.extra!=='—'&&b.extra?`<div style="font-size:7px;color:#9ca3af;margin-top:1px;">${b.extra}</div>`:'';
+    const fundNote=_prIsSavings(p)&&p.fund_value?`<div style="font-size:7px;color:#0369a1;margin-top:1px;font-weight:600;">Fund value: ${_prFmtR(p.fund_value)}</div>`:'';
     const benefCells=BENEF.map(bc=>{
       const has=!!b[bc.key];
       return`<td class="ctr" style="${bg}background:${has?'#dcfce7':'#f4f4f5'};color:${has?'#166534':'#a1a1aa'};font-size:9px;font-weight:800;border:1px solid ${has?'#bbf7d0':'#e4e4e7'};">${has?'&#10003;':'&#8212;'}</td>`;
     }).join('');
     return`<tr>
       <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;"><div style="font-size:9px;font-weight:700;color:#0d1f3c;">${p.insurer||'—'}${arr}</div><div style="font-size:7px;color:#9ca3af;font-family:monospace;margin-top:1px;">${p.policy_number||''}</div></td>
-      <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-size:9px;">${p.plan_name||'—'}${extra}</td>
+      <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-size:9px;">${p.plan_name||'—'}${extra}${fundNote}</td>
       <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-size:8px;">${p.start_date||'—'}</td>
       <td class="ctr" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;">${_prTypeBadge(p.policy_type,true)}</td>
       <td class="num" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-weight:700;font-size:9px;">${_prFmtR(p.premium||0)}</td>
@@ -9049,11 +9098,18 @@ function generatePRPdf(){
       <td class="ctr" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;"><span style="background:${scoreClr};color:#fff;font-size:8px;font-weight:800;padding:2px 7px;border-radius:8px;">${score}/${BENEF.length}</span></td>
     </tr>`;
   }).join('');
-  const phCols=policies.map((p,i)=>`<th class="ctr">${p.insurer||'P'+(i+1)}<br><span style="font-size:7px;font-weight:400;">${p.policy_number||''}</span></th>`).join('');
+  const phCols=policies.map((p,i)=>{
+    const isSav=_prIsSavings(p);
+    return`<th class="ctr" style="${isSav?'background:#0f766e;':''}">${isSav?'<span style="font-size:7px;color:#a5f3fc;">Fund Value</span><br>':''}<span style="font-size:7px;font-weight:400;">${p.insurer||'P'+(i+1)}</span></th>`;
+  }).join('');
   const livesRows=allLives.map(life=>{
     const {bg:rowBg,label:rowLabel}=_prLiveBg(life);
     const bgStyle=rowBg?`background:${rowBg};`:'';
-    const cells=policies.map((p,pIdx)=>{const c=life.policies[pIdx];return`<td class="ctr" style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):'&#8212;'}</td>`;}).join('');
+    const cells=policies.map((p,pIdx)=>{
+      const c=life.policies[pIdx];
+      const isSav=_prIsSavings(p);
+      return`<td class="ctr" style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;${isSav?'color:#6b7280;font-style:italic;':''}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):'&#8212;'}</td>`;
+    }).join('');
     const tag=rowLabel?` <span class="no-cover-badge">${rowLabel}</span>`:'';
     return`<tr><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${life.relationship}${tag}</td><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;font-weight:600;">${life.name||'—'}</td><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${life.dob||'—'}${life.gender?' ('+life.gender+')':''}</td>${cells}</tr>`;
   }).join('');
