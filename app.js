@@ -784,18 +784,13 @@ function updatePrecanHubAlert(){
         </div>`;
       } else {
         const _pcRows=getTracker('precan');
-        const _fn=(currentUser.name.split(' ')[0]).toLowerCase();
-        const _myCase=_pcRows.find(r=>r.advisor&&r.advisor.toLowerCase().includes(_fn));
+        const _myCase=_pcRows.find(r=>(r.advisorCode&&r.advisorCode===currentUser.code)||(r.advisor&&r.advisor.toLowerCase().includes((currentUser.name.split(' ')[0]).toLowerCase())));
         if(_myCase){
           el.style.background='linear-gradient(135deg,#fef2f2,#fff5f5)';el.style.border='1.5px solid #fca5a5';el.style.borderLeft='4px solid #dc2626';el.style.animation='glow 2s infinite';el.style.cursor='pointer';
           el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
           el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">🚨</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">You are on today's pre-cancellation list!</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">${_myCase.client||'Check the sheet'}${_myCase.product?' — '+_myCase.product:''} · Contact your client before 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
-        } else if(_pcRows.length>0){
-          el.style.background='linear-gradient(135deg,#f0fdf4,#f8fff8)';el.style.border='1.5px solid #86efac';el.style.animation='none';el.style.cursor='default';el.onclick=null;
-          el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">✅</span><div><div style="font-size:13px;font-weight:700;color:#166534;">You're not on today's pre-can list</div><div style="font-size:11px;color:#15803d;margin-top:2px;">No cases logged against your name — keep it up</div></div></div>`;
         } else {
-          el.style.cursor='pointer';
-          el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
+          el.style.cursor='pointer';el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
           el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚠️</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">Pre-Cancellations — Check if you're on the list</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">Tap to open the Pavlov sheet · Deadline 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
         }
       }
@@ -7720,7 +7715,9 @@ function saveModal(){
   if(currentModal==='precan'){
     const rows=getTracker('precan');
     const _id='precan_'+Date.now();
-    const _pr={_id,advisor:v('m_advisor'),client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted')};
+    const _advName=v('m_advisor');
+    const _advCode=(ADVISOR_LIST.find(a=>a.name===_advName)||{}).code||'';
+    const _pr={_id,advisor:_advName,advisorCode:_advCode,client:v('m_client'),policy:v('m_policy'),product:v('m_product'),risk:v('m_risk'),status:v('m_status'),submitted:v('m_submitted')};
     rows.push(_pr);
     saveTracker('precan',rows);
     if(window.FB_READY&&window.FB.savePrecanCase)window.FB.savePrecanCase(_id,_pr).catch(()=>{});
