@@ -10690,25 +10690,17 @@ async function mdBuild(compress,onProg){
     const bytes=await f.arrayBuffer();
     const isPdf=f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf');
     if(isPdf){
-      if(compress){
-        let pages;
-        try{pages=await mdRasterizePdf(bytes,1.0,0.60);}catch(e){showAlert('Could not compress '+f.name+' — skipped.','error');continue;}
-        for(const pg of pages){
-          try{
-            const img=await merged.embedJpg(new Uint8Array(pg.ab));
-            const sc=Math.min(A4W/pg.w,A4H/pg.h,1);
-            const pw=pg.w*sc,ph=pg.h*sc;
-            const p=merged.addPage([A4W,A4H]);
-            p.drawImage(img,{x:(A4W-pw)/2,y:(A4H-ph)/2,width:pw,height:ph});
-          }catch(e){/* skip */}
-        }
-      } else {
-        let src;
-        try{src=await PDFDocument.load(new Uint8Array(bytes),{ignoreEncryption:true});}catch(e){showAlert('Could not read '+f.name+' — skipped.','error');continue;}
+      const rScale=compress?1.0:1.5,rQ=compress?0.60:0.82;
+      let pages;
+      try{pages=await mdRasterizePdf(bytes,rScale,rQ);}catch(e){showAlert('Could not read '+f.name+' — skipped.','error');continue;}
+      for(const pg of pages){
         try{
-          const copied=await merged.copyPages(src,src.getPageIndices());
-          copied.forEach(p=>merged.addPage(p));
-        }catch(e){showAlert('Could not copy pages from '+f.name+' — skipped.','error');}
+          const img=await merged.embedJpg(new Uint8Array(pg.ab));
+          const sc=Math.min(A4W/pg.w,A4H/pg.h,1);
+          const pw=pg.w*sc,ph=pg.h*sc;
+          const p=merged.addPage([A4W,A4H]);
+          p.drawImage(img,{x:(A4W-pw)/2,y:(A4H-ph)/2,width:pw,height:ph});
+        }catch(e){/* skip */}
       }
     } else {
       try{
