@@ -13126,9 +13126,13 @@ async function cpBuild(){
       const file=_cpFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
-        const pages=await merged.copyPages(src,src.getPageIndices());
-        pages.forEach(p=>merged.addPage(p));
+        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        for(const rp of rPages){
+          const img=await merged.embedJpg(new Uint8Array(rp.ab));
+          const sc=Math.min(595/rp.w,842/rp.h,1);
+          const pg=merged.addPage([595,842]);
+          pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
+        }
       } else {
         const pg=merged.addPage([595,842]);
         let img;
@@ -13284,9 +13288,13 @@ async function claimBuild(){
       const file=_claimFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
-        const pages=await merged.copyPages(src,src.getPageIndices());
-        pages.forEach(p=>merged.addPage(p));
+        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        for(const rp of rPages){
+          const img=await merged.embedJpg(new Uint8Array(rp.ab));
+          const sc=Math.min(595/rp.w,842/rp.h,1);
+          const pg=merged.addPage([595,842]);
+          pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
+        }
       } else {
         const pg=merged.addPage([595,842]);
         let img;
@@ -13396,9 +13404,13 @@ async function reinstBuild(){
       const file=_reinstFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const src=await PL.PDFDocument.load(buf,{ignoreEncryption:true});
-        const pages=await merged.copyPages(src,src.getPageIndices());
-        pages.forEach(p=>merged.addPage(p));
+        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        for(const rp of rPages){
+          const img=await merged.embedJpg(new Uint8Array(rp.ab));
+          const sc=Math.min(595/rp.w,842/rp.h,1);
+          const pg=merged.addPage([595,842]);
+          pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
+        }
       } else {
         const pg=merged.addPage([595,842]);
         let img;
