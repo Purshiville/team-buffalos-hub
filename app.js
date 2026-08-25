@@ -1446,12 +1446,13 @@ async function saveAdvisorStats(){
   const whitelisted=ADVISOR_LIST.find(a=>a.code===code);
   const user=users[code];
   const _pct=id=>{const v=(document.getElementById(id)?.value||'').replace('%','').trim();return v!==''?parseFloat(v):null;};
+  const _parsePrem=v=>{let s=(v||'').replace(/[R\s,]/g,'');if(/^\d+\.\d{3}$/.test(s))s=s.replace('.','');return Number(s)||0;};
   const data={
     code,name:user?.name||whitelisted?.name||code,
     targetCases:Number(document.getElementById('si_targetCases').value)||0,
     actualCases:Number(document.getElementById('si_actualCases').value)||0,
-    targetPremium:Number(document.getElementById('si_targetPrem').value)||0,
-    actualPremium:Number(document.getElementById('si_actualPrem').value)||0,
+    targetPremium:_parsePrem(document.getElementById('si_targetPrem').value),
+    actualPremium:_parsePrem(document.getElementById('si_actualPrem').value),
     ntu4Month:_pct('si_ntu4'),
     ntu15Month:_pct('si_ntu15'),
     persistency:_pct('si_persistency'),
