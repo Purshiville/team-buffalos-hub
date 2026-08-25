@@ -3122,6 +3122,12 @@ function wrapFspEmails(){
   });
 }
 function showPage(p){
+  // Guard: warn before leaving policyreview with in-progress work
+  if(window._currentPage==='policyreview'&&p!=='policyreview'){
+    const hasPRWork=_prLoaFile||(_prDocFiles&&_prDocFiles.length>0);
+    if(hasPRWork&&!confirm('You have an active Policy Review in progress.\n\nLeaving now will clear your uploaded documents and analysis. Are you sure you want to leave?')){return;}
+  }
+  window._currentPage=p;
   document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(el=>el.classList.remove('active'));
   const pg=document.getElementById('page-'+p);if(pg){pg.classList.add('active');pg.scrollTop=0;window.scrollTo(0,0);}
