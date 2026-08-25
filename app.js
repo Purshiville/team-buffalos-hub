@@ -8536,10 +8536,10 @@ NORMALISE terminology:
 Also:
 - "Inception date" / "commencement date" / "policy date" → start_date
 - Account in arrears, overdue premiums, lapsed → in_arrears: true AND add to red_flags
-- Any exclusions, waiting periods, high-risk notes → add to red_flags
+- Any exclusions, waiting periods, high-risk notes → add to red_flags. Write each red flag as a plain-language sentence a non-expert client can understand — max 25 words, no insurance jargon. Good example: "This policy has a 6-month waiting period for illness-related deaths — only accidental deaths are covered in the first 6 months."
 - Any beneficiary with NO cover (no sum assured) → include in lives with cover: 0 and is_beneficiary_only: true
 - extra: remaining benefits not captured above, semicolon-separated; empty string if none
-- IMPORTANT: Do NOT list the main policyholder twice under different relationship labels. If "Extended" or any non-Main life has the same name and date of birth as the Main life, omit that duplicate entry entirely.
+- IMPORTANT: Do NOT list the same person twice. If any non-Main life entry shares the same first name AND/OR the same date of birth as the Main life, omit the duplicate entirely. Do not list the same family member under two different relationship labels.
 
 Return this exact structure:
 {"insurer":"","policy_number":null,"start_date":null,"plan_name":"","policy_type":"Funeral","premium":0,"benefits":{"cashback":false,"payment_holiday":false,"no_more_premiums":false,"accident_double":false,"burial":false,"paid_up":false,"extra":""},"in_arrears":false,"lives":[{"name":null,"relationship":"Main","dob":null,"gender":null,"cover":0,"is_beneficiary_only":false}],"red_flags":[]}
@@ -8888,8 +8888,9 @@ function _prBuildLivesMap(policies){
     (p.lives||[]).forEach(life=>{
       // Skip if this non-Main life appears to be the policyholder listed again
       if(life.relationship!=='Main'&&mainDob&&life.dob===mainDob){
-        const lifeSurname=(life.name||'').split(' ').pop().toLowerCase();
-        if(mainSurname&&lifeSurname&&lifeSurname===mainSurname)return;
+        const ln=(life.name||'').toLowerCase(),mn=(mainLife?.name||'').toLowerCase();
+        const lifeFirst=ln.split(/\s+/)[0],mainFirst=mn.split(/\s+/)[0];
+        if((mainFirst&&lifeFirst&&mainFirst===lifeFirst)||(mainSurname&&ln.split(/\s+/).pop()===mainSurname))return;
       }
       const key=(life.name||'')+'|'+(life.relationship||'')+'|'+(life.dob||'');
       if(!map[key])map[key]={relationship:life.relationship||'Other',name:life.name||'',dob:life.dob||'',gender:life.gender||'',policies:{},isBeneficiaryOnly:!!life.is_beneficiary_only,totalCover:0};
@@ -8961,12 +8962,17 @@ function renderPRSummary(){
   const thBenef='padding:4px 8px;background:#1b3460;color:#f5d98b;text-align:center;border:1px solid #0d1f3c;font-size:10px;font-weight:700;letter-spacing:.5px;';
 
   // Policy rows
+  const BENEF=[{key:'cashback',lbl:'Cash Back'},{key:'no_more_premiums',lbl:'Prem. Waiver'},{key:'accident_double',lbl:'Dbl Accident'},{key:'burial',lbl:'Burial'},{key:'paid_up',lbl:'Paid Up'},{key:'payment_holiday',lbl:'Prem. Holiday'}];
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
-    const arr=p.in_arrears?` <span style="color:#dc2626;font-size:9px;font-weight:800;"> ⚠ ARREARS</span>`:'';
+    const score=BENEF.filter(bc=>b[bc.key]).length;
+    const scoreClr=score>=5?'#16a34a':score>=3?'#d97706':'#dc2626';
+    const arr=p.in_arrears?` <span style="color:#dc2626;font-size:9px;font-weight:800;">⚠ ARREARS</span>`:'';
     const bg=i%2===0?'':'background:#f9f9f9;';
     const tdS=`padding:6px 8px;border:1px solid #e5e7eb;font-size:11px;vertical-align:middle;${bg}`;
-    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}</td><td style="${tdS}font-family:monospace;">${p.policy_number||'—'}</td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td><td style="${tdS}text-align:center;">${tick(b.cashback)}</td><td style="${tdS}text-align:center;">${tick(b.payment_holiday)}</td><td style="${tdS}text-align:center;">${tick(b.no_more_premiums)}</td><td style="${tdS}text-align:center;">${b.accident_double?'✓':''}</td><td style="${tdS}text-align:center;">${tick(b.burial)}</td><td style="${tdS}text-align:center;">${tick(b.paid_up)}</td><td style="${tdS}font-size:10px;">${b.extra||'—'}</td></tr>`;
+    const extra=b.extra&&b.extra!=='—'?`<div style="font-size:9px;color:#6b7280;margin-top:2px;">${b.extra}</div>`:'';
+    const benefCells=BENEF.map(bc=>{const has=!!b[bc.key];return`<td style="padding:6px 8px;border:1px solid ${has?'#bbf7d0':'#e5e7eb'};font-size:11px;text-align:center;background:${has?'#dcfce7':'#f9fafb'};color:${has?'#166534':'#9ca3af'};font-weight:700;">${has?'✓':'—'}</td>`;}).join('');
+    return`<tr><td style="${tdS}">${p.insurer||'—'}${arr}<div style="font-size:9px;color:#9ca3af;font-family:monospace;margin-top:1px;">${p.policy_number||''}</div></td><td style="${tdS}">${p.start_date||'—'}</td><td style="${tdS}">${p.plan_name||'—'}${extra}</td><td style="${tdS}text-align:center;">${_prTypeBadge(p.policy_type,false)}</td><td style="${tdS}text-align:right;font-weight:700;">${_prFmtR(p.premium||0)}</td>${benefCells}<td style="${tdS}text-align:center;"><span style="background:${scoreClr};color:#fff;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">${score}/${BENEF.length}</span></td></tr>`;
   }).join('');
 
   // Lives rows
@@ -8989,12 +8995,19 @@ function renderPRSummary(){
     <div style="overflow-x:auto;margin-bottom:16px;">
       <table style="width:100%;border-collapse:collapse;">
         <thead>
-          <tr><th style="${th}min-width:110px;" rowspan="2">Policy</th><th style="${th}min-width:90px;" rowspan="2">Policy #</th><th style="${th}min-width:80px;" rowspan="2">Start date</th><th style="${th}min-width:130px;" rowspan="2">Plan name</th><th style="${th}min-width:90px;" rowspan="2">Type</th><th style="${th}min-width:75px;text-align:right;" rowspan="2">Premium</th><th colspan="7" style="${thBenef}">BENEFITS</th></tr>
-          <tr><th style="${thC}min-width:70px;">Cashback</th><th style="${thC}min-width:70px;">Payment holiday</th><th style="${thC}min-width:70px;">No more premiums</th><th style="${thC}min-width:70px;">Accident cover</th><th style="${thC}min-width:55px;">Burial</th><th style="${thC}min-width:55px;">Paid up</th><th style="${th}min-width:100px;">Extra</th></tr>
+          <tr><th style="${th}min-width:120px;" rowspan="2">Insurer</th><th style="${th}min-width:80px;" rowspan="2">Start Date</th><th style="${th}min-width:130px;" rowspan="2">Plan Name</th><th style="${th}min-width:90px;" rowspan="2">Type</th><th style="${th}min-width:80px;text-align:right;" rowspan="2">Premium</th><th colspan="7" style="${thBenef}">BENEFITS — green ✓ = included in this policy</th></tr>
+          <tr>${BENEF.map(bc=>`<th style="${thC}min-width:65px;">${bc.lbl}</th>`).join('')}<th style="${thC}min-width:55px;">Score</th></tr>
         </thead>
         <tbody>${policyRows}</tbody>
-        <tfoot><tr><td colspan="5" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
+        <tfoot><tr><td colspan="4" style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td style="padding:6px 8px;border:1px solid #e5e7eb;text-align:right;font-weight:800;color:#c9922a;font-size:14px;background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="border:1px solid #e5e7eb;background:#f4f2ed;"></td></tr></tfoot>
       </table>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px;font-size:10px;font-weight:600;">
+      <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:6px;padding:3px 10px;">✓ Green = policy has this benefit</span>
+      <span style="background:#f9fafb;color:#9ca3af;border:1px solid #e5e7eb;border-radius:6px;padding:3px 10px;">— Grey = not included</span>
+      <span style="background:#16a34a;color:#fff;border-radius:6px;padding:3px 10px;">Score 5–6: Comprehensive</span>
+      <span style="background:#d97706;color:#fff;border-radius:6px;padding:3px 10px;">Score 3–4: Moderate</span>
+      <span style="background:#dc2626;color:#fff;border-radius:6px;padding:3px 10px;">Score 1–2: Basic</span>
     </div>
     <div style="overflow-x:auto;margin-bottom:4px;">
       <table style="width:100%;border-collapse:collapse;">
@@ -9021,110 +9034,154 @@ function generatePRPdf(){
   const clientPhone=document.getElementById('prClientPhone').value.trim()||'—';
   const clientEmail=document.getElementById('prClientEmail').value.trim()||'—';
   const advisorNotes=document.getElementById('prAdvisorNotes').value.trim();
+  const advisorName=currentUser?.name||'Team Buffalos Advisor';
   const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
   const allLives=_prBuildLivesMap(policies);
   const totalPremium=policies.reduce((s,p)=>s+(p.premium||0),0);
   const noteGroups=_prPolicyNotesGroups(policies);
-  const tick=v=>v?'&#10003;':'';
-
-  const clientHdr=`<div class="client-grid"><div><div class="cl">Name</div><div class="cv">${clientName}</div></div><div><div class="cl">ID Number</div><div class="cv">${clientId}</div></div><div><div class="cl">Telephone</div><div class="cv">${clientPhone}</div></div><div><div class="cl">Email</div><div class="cv">${clientEmail}</div></div></div>`;
-  const pageHdr=(pg,ttl)=>`<div class="hdr"><div><div class="pg-label">Page ${pg}</div><h1>Team Buffalos — Policy Review Summary</h1><div class="sub">Generated ${today} &nbsp;|&nbsp; LOA on file &nbsp;|&nbsp; ${clientName} (${clientId})</div></div><div style="font-size:11px;font-weight:700;color:#0d1f3c;background:#f4f2ed;padding:6px 12px;border-radius:8px;">${ttl}</div></div>`;
-  const footer=`<div class="footer"><span>Team Buffalos &mdash; Policy Review &middot; ${today}</span><span>For internal use only. All figures must be verified against original policy documents.</span></div>`;
-
-  // Page 1 — Policy summary
+  const BENEF=[
+    {key:'cashback',label:'Cash Back'},
+    {key:'no_more_premiums',label:'Premium Waiver'},
+    {key:'accident_double',label:'Double Accident'},
+    {key:'burial',label:'Burial Cover'},
+    {key:'paid_up',label:'Paid Up'},
+    {key:'payment_holiday',label:'Premium Holiday'},
+  ];
   const policyRows=policies.map((p,i)=>{
     const b=p.benefits||{};
-    const arr=p.in_arrears?' <span style="color:#dc2626;font-weight:800;">&#9888; ARREARS</span>':'';
-    const bg=i%2===0?'':'background:#f9f9f9;';
-    return`<tr><td style="${bg}">${p.insurer||'—'}${arr}</td><td style="${bg}">${p.policy_number||'—'}</td><td style="${bg}">${p.start_date||'—'}</td><td style="${bg}">${p.plan_name||'—'}</td><td class="ctr" style="${bg}">${_prTypeBadge(p.policy_type,true)}</td><td class="num" style="${bg}">${_prFmtR(p.premium||0)}</td><td class="ctr" style="${bg}">${tick(b.cashback)}</td><td class="ctr" style="${bg}">${tick(b.payment_holiday)}</td><td class="ctr" style="${bg}">${tick(b.no_more_premiums)}</td><td class="ctr" style="${bg}">${b.accident_double?'&#10003;':''}</td><td class="ctr" style="${bg}">${tick(b.burial)}</td><td class="ctr" style="${bg}">${tick(b.paid_up)}</td><td style="${bg}font-size:8px;">${b.extra||'—'}</td></tr>`;
+    const score=BENEF.filter(bc=>b[bc.key]).length;
+    const scoreClr=score>=5?'#16a34a':score>=3?'#d97706':'#dc2626';
+    const arr=p.in_arrears?'<br><span style="color:#dc2626;font-size:7px;font-weight:800;">&#9888; ARREARS</span>':'';
+    const bg=i%2===0?'':'background:#fafafa;';
+    const extra=b.extra&&b.extra!=='—'&&b.extra?`<div style="font-size:7px;color:#9ca3af;margin-top:1px;">${b.extra}</div>`:'';
+    const benefCells=BENEF.map(bc=>{
+      const has=!!b[bc.key];
+      return`<td class="ctr" style="${bg}background:${has?'#dcfce7':'#f4f4f5'};color:${has?'#166534':'#a1a1aa'};font-size:9px;font-weight:800;border:1px solid ${has?'#bbf7d0':'#e4e4e7'};">${has?'&#10003;':'&#8212;'}</td>`;
+    }).join('');
+    return`<tr>
+      <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;"><div style="font-size:9px;font-weight:700;color:#0d1f3c;">${p.insurer||'—'}${arr}</div><div style="font-size:7px;color:#9ca3af;font-family:monospace;margin-top:1px;">${p.policy_number||''}</div></td>
+      <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-size:9px;">${p.plan_name||'—'}${extra}</td>
+      <td style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-size:8px;">${p.start_date||'—'}</td>
+      <td class="ctr" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;">${_prTypeBadge(p.policy_type,true)}</td>
+      <td class="num" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;font-weight:700;font-size:9px;">${_prFmtR(p.premium||0)}</td>
+      ${benefCells}
+      <td class="ctr" style="${bg}border:1px solid #e5e7eb;padding:4px 5px;"><span style="background:${scoreClr};color:#fff;font-size:8px;font-weight:800;padding:2px 7px;border-radius:8px;">${score}/${BENEF.length}</span></td>
+    </tr>`;
   }).join('');
-
-  // Page 2 — Lives
-  const phCols=policies.map((p,i)=>`<th class="ctr">${p.policy_number||'P'+(i+1)}</th>`).join('');
+  const phCols=policies.map((p,i)=>`<th class="ctr">${p.insurer||'P'+(i+1)}<br><span style="font-size:7px;font-weight:400;">${p.policy_number||''}</span></th>`).join('');
   const livesRows=allLives.map(life=>{
     const {bg:rowBg,label:rowLabel}=_prLiveBg(life);
     const bgStyle=rowBg?`background:${rowBg};`:'';
-    const cells=policies.map((p,pIdx)=>{const c=life.policies[pIdx];return`<td class="ctr" style="${bgStyle}">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):''}</td>`;}).join('');
+    const cells=policies.map((p,pIdx)=>{const c=life.policies[pIdx];return`<td class="ctr" style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${(c&&c>0)?'R '+c.toLocaleString('en-ZA'):'&#8212;'}</td>`;}).join('');
     const tag=rowLabel?` <span class="no-cover-badge">${rowLabel}</span>`:'';
-    return`<tr><td style="${bgStyle}">${life.relationship}${tag}</td><td style="${bgStyle}">${life.name||''}</td><td style="${bgStyle}">${life.dob||''} ${life.gender?'('+life.gender+')':''}</td>${cells}</tr>`;
+    return`<tr><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${life.relationship}${tag}</td><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;font-weight:600;">${life.name||'—'}</td><td style="${bgStyle}border:1px solid #e5e7eb;padding:3px 5px;">${life.dob||'—'}${life.gender?' ('+life.gender+')':''}</td>${cells}</tr>`;
   }).join('');
-
-  // Page 3 — Notes
-  const notesPage3=noteGroups.map(g=>`<div class="note-group"><div class="note-group-title">&#9888; ${g.label}</div>${g.notes.map(n=>`<div class="note-item">&#8226; ${n}</div>`).join('')}</div>`).join('');
-  const advisorBlock=advisorNotes?`<div class="notes-box"><div class="notes-title">Advisor Notes</div><div class="notes-body">${advisorNotes.replace(/\n/g,'<br>')}</div></div>`:'';
+  const flagsHtml=noteGroups.map(g=>`<div class="flag-card"><div class="flag-title">&#9888; ${g.label}</div>${g.notes.map(n=>`<div class="flag-item">&#8226; ${n}</div>`).join('')}</div>`).join('');
+  const advisorBlock=advisorNotes?`<div class="notes-box"><div class="notes-title">Advisor Recommendations</div><div class="notes-body">${advisorNotes.replace(/\n/g,'<br>')}</div></div>`:'';
   const hasNotes=noteGroups.length||advisorNotes;
-
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Policy Review — ${clientName}</title>
+  const footer=(pg)=>`<div class="footer"><span>Prepared for ${clientName} by ${advisorName} &mdash; Team Buffalos</span><span>Page ${pg} &middot; ${today} &middot; Verify all figures against original policy documents</span></div>`;
+  const pageHdr=(ttl,sub)=>`<div class="cover"><div><div class="cover-title">${ttl}</div><div class="cover-sub">${sub}</div></div><div style="text-align:right;"><div style="font-size:11px;font-weight:700;color:#fff;">${clientName}</div><div style="font-size:8px;color:rgba(255,255,255,0.6);margin-top:2px;">${clientId} &middot; ${today}</div></div></div>`;
+  const benefLegend=`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;font-size:7px;font-weight:700;">
+    <span style="background:#dcfce7;color:#166534;border:1px solid #bbf7d0;border-radius:3px;padding:2px 7px;">&#10003; Green = policy includes this benefit</span>
+    <span style="background:#f4f4f5;color:#a1a1aa;border:1px solid #e4e4e7;border-radius:3px;padding:2px 7px;">&#8212; Grey = benefit not included</span>
+    <span style="background:#16a34a;color:#fff;border-radius:3px;padding:2px 7px;">Score 5&#8211;6 = Comprehensive</span>
+    <span style="background:#d97706;color:#fff;border-radius:3px;padding:2px 7px;">Score 3&#8211;4 = Moderate</span>
+    <span style="background:#dc2626;color:#fff;border-radius:3px;padding:2px 7px;">Score 1&#8211;2 = Basic</span>
+  </div>`;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Policy Review &#8212; ${clientName}</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Arial,sans-serif;font-size:9px;color:#1a1a2e;padding:14px 18px;}
-.hdr{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;border-bottom:2px solid #0d1f3c;padding-bottom:8px;}
-.hdr h1{font-size:13px;font-weight:800;color:#0d1f3c;}
-.hdr .sub{font-size:8px;color:#6b7280;margin-top:2px;}
-.pg-label{font-size:8px;font-weight:700;color:#c9922a;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;}
-.client-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px 18px;font-size:9px;margin-bottom:10px;}
-.cl{color:#6b7280;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
-.cv{font-size:10px;font-weight:700;color:#0d1f3c;}
-.sec{font-size:9px;font-weight:800;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin:10px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;}
-table{width:100%;border-collapse:collapse;margin-bottom:12px;font-size:8px;}
+body{font-family:Arial,sans-serif;font-size:9px;color:#1a1a2e;padding:12px 16px;}
+.cover{background:#0d1f3c;border-radius:6px;padding:10px 16px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;}
+.cover-title{font-size:16px;font-weight:900;color:#f5d98b;letter-spacing:-0.3px;}
+.cover-sub{font-size:8px;color:rgba(255,255,255,0.65);margin-top:2px;}
+.client-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px 14px;font-size:9px;margin-bottom:10px;background:#f8f7f4;border-radius:5px;padding:7px 12px;}
+.cl{color:#9ca3af;font-size:7px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
+.cv{font-size:9px;font-weight:700;color:#0d1f3c;}
+.sec{font-size:8px;font-weight:800;color:#0d1f3c;text-transform:uppercase;letter-spacing:.5px;margin:8px 0 4px;border-bottom:1px solid #e5e7eb;padding-bottom:2px;}
+table{width:100%;border-collapse:collapse;margin-bottom:8px;font-size:8px;}
 th{background:#0d1f3c;color:#fff;padding:4px 5px;font-weight:700;text-align:left;white-space:nowrap;border:1px solid #1b3460;}
-.th-benef{background:#1b3460;color:#f5d98b;text-align:center;border:1px solid #0d1f3c;font-size:7px;font-weight:700;letter-spacing:.3px;}
-td{padding:3px 5px;border:1px solid #e5e7eb;vertical-align:middle;}
+.th-b{background:#1b3460;color:#f5d98b;text-align:center;font-size:7px;font-weight:700;border:1px solid #0d1f3c;}
+td{padding:3px 5px;vertical-align:middle;}
 .ctr{text-align:center;}
 .num{text-align:right;}
 .gold{color:#c9922a;font-size:11px;font-weight:800;}
-.no-cover-badge{background:#f59e0b;color:#fff;font-size:7px;font-weight:700;padding:1px 5px;border-radius:6px;margin-left:4px;}
-.note-group{background:#fef2f2;border:1px solid #fca5a5;border-radius:5px;padding:6px 9px;margin-bottom:8px;}
-.note-group-title{font-weight:800;color:#991b1b;font-size:9px;margin-bottom:3px;}
-.note-item{font-size:8px;color:#7f1d1d;padding:1px 0 1px 6px;}
-.notes-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:5px;padding:7px 9px;margin-bottom:8px;}
+.no-cover-badge{background:#f59e0b;color:#fff;font-size:7px;font-weight:700;padding:1px 5px;border-radius:5px;margin-left:4px;}
+.flag-card{background:#fef2f2;border:1px solid #fca5a5;border-left:3px solid #dc2626;border-radius:4px;padding:6px 9px;margin-bottom:7px;}
+.flag-title{font-weight:800;color:#991b1b;font-size:9px;margin-bottom:3px;}
+.flag-item{font-size:9px;color:#7f1d1d;padding:2px 0 2px 6px;line-height:1.5;}
+.notes-box{background:#f0f9ff;border:1px solid #bae6fd;border-radius:4px;padding:7px 9px;margin-bottom:7px;}
 .notes-title{font-weight:700;color:#075985;font-size:9px;margin-bottom:3px;}
 .notes-body{font-size:9px;color:#0d1f3c;line-height:1.6;}
-.footer{margin-top:10px;border-top:1px solid #e5e7eb;padding-top:5px;font-size:7px;color:#9ca3af;display:flex;justify-content:space-between;}
-.page-break{page-break-before:always;padding-top:14px;}
+.footer{margin-top:8px;border-top:1px solid #e5e7eb;padding-top:5px;font-size:7px;color:#9ca3af;display:flex;justify-content:space-between;}
+.page-break{page-break-before:always;padding-top:12px;}
 @media print{body{padding:8px 12px;}@page{margin:10mm;size:A4 landscape;}}
 *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
 </style></head><body>
 
-<!-- PAGE 1: POLICY SUMMARY -->
-${pageHdr(1,'Policy Summary')}
-${clientHdr}
-<div class="sec">Policy Summary</div>
+${pageHdr('Policy Review','An overview of your current insurance cover')}
+<div class="client-grid">
+  <div><div class="cl">Full Name</div><div class="cv">${clientName}</div></div>
+  <div><div class="cl">ID Number</div><div class="cv">${clientId}</div></div>
+  <div><div class="cl">Telephone</div><div class="cv">${clientPhone}</div></div>
+  <div><div class="cl">Email</div><div class="cv">${clientEmail}</div></div>
+  <div><div class="cl">Advisor</div><div class="cv">${advisorName}</div></div>
+</div>
+<div class="sec">Your Policies</div>
 <table>
   <thead>
-    <tr><th rowspan="2">Policy</th><th rowspan="2">Policy #</th><th rowspan="2">Start date</th><th rowspan="2">Plan name</th><th rowspan="2" class="ctr">Type</th><th rowspan="2" class="num">Premium</th><th colspan="7" class="th-benef">BENEFITS</th></tr>
-    <tr><th class="ctr">Cashback</th><th class="ctr">Payment holiday</th><th class="ctr">No more premiums</th><th class="ctr">Accident cover</th><th class="ctr">Burial</th><th class="ctr">Paid up</th><th>Extra</th></tr>
+    <tr>
+      <th rowspan="2">Insurer</th><th rowspan="2">Plan Name</th><th rowspan="2">Start Date</th>
+      <th rowspan="2" class="ctr">Type</th><th rowspan="2" class="num">Monthly Premium</th>
+      <th colspan="${BENEF.length+1}" class="th-b">BENEFITS &#8212; green &#10003; means this policy includes it</th>
+    </tr>
+    <tr>${BENEF.map(bc=>`<th class="ctr th-b" style="font-size:7px;">${bc.label}</th>`).join('')}<th class="ctr th-b" style="font-size:7px;">Score</th></tr>
   </thead>
   <tbody>${policyRows}</tbody>
-  <tfoot><tr><td colspan="5" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;">TOTAL MONTHLY PREMIUM</td><td class="num gold" style="background:#f4f2ed;">${_prFmtR(totalPremium)}</td><td colspan="7" style="background:#f4f2ed;"></td></tr></tfoot>
+  <tfoot><tr>
+    <td colspan="4" style="text-align:right;font-weight:700;color:#0d1f3c;background:#f4f2ed;border:1px solid #e5e7eb;padding:4px 5px;">TOTAL MONTHLY PREMIUM</td>
+    <td class="num gold" style="background:#f4f2ed;border:1px solid #e5e7eb;padding:4px 5px;">${_prFmtR(totalPremium)}</td>
+    <td colspan="${BENEF.length+1}" style="background:#f4f2ed;border:1px solid #e5e7eb;"></td>
+  </tr></tfoot>
 </table>
-${footer}
+${benefLegend}
+${footer(1)}
 
-<!-- PAGE 2: LIVES -->
 <div class="page-break">
-${pageHdr(2,'Lives &amp; Cover')}
-${clientHdr}
-<div class="sec">Lives Assured &amp; Cover per Policy</div>
+${pageHdr('Who Is Covered','All lives insured across your policies')}
+<div class="client-grid">
+  <div><div class="cl">Full Name</div><div class="cv">${clientName}</div></div>
+  <div><div class="cl">ID Number</div><div class="cv">${clientId}</div></div>
+  <div><div class="cl">Telephone</div><div class="cv">${clientPhone}</div></div>
+  <div><div class="cl">Email</div><div class="cv">${clientEmail}</div></div>
+  <div><div class="cl">Advisor</div><div class="cv">${advisorName}</div></div>
+</div>
+<div class="sec">Lives &amp; Cover Per Policy</div>
 <table>
-  <thead><tr><th>Relationship</th><th>Name</th><th>DOB (Gender)</th>${phCols}</tr></thead>
+  <thead><tr><th>Relationship</th><th>Name</th><th>Date of Birth</th>${phCols}</tr></thead>
   <tbody>${livesRows}</tbody>
 </table>
-<div style="display:flex;gap:6px;flex-wrap:wrap;font-size:8px;font-weight:700;">
-  <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:4px;padding:2px 8px;">Yellow = no cover</span>
-  <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:4px;padding:2px 8px;">Red = under R20 000</span>
-  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:4px;padding:2px 8px;">Green = R80 000&ndash;R100 000</span>
-  <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:4px;padding:2px 8px;">Amber = over R100 000</span>
+<div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;font-size:7px;font-weight:700;">
+  <span style="background:#fff8e1;border:1px solid #fde68a;border-radius:3px;padding:2px 7px;color:#92400e;">Yellow = no cover on this policy</span>
+  <span style="background:#fee2e2;border:1px solid #fca5a5;border-radius:3px;padding:2px 7px;color:#991b1b;">Red = cover under R20 000 &#8212; consider increasing</span>
+  <span style="background:#dcfce7;border:1px solid #86efac;border-radius:3px;padding:2px 7px;color:#166534;">Green = good cover (R80 000&#8211;R100 000)</span>
+  <span style="background:#fef3c7;border:1px solid #f59e0b;border-radius:3px;padding:2px 7px;color:#92400e;">Amber = high cover (over R100 000)</span>
 </div>
-${footer}
+${footer(2)}
 </div>
 
-<!-- PAGE 3: NOTES (only if there are notes) -->
 ${hasNotes?`<div class="page-break">
-${pageHdr(3,'Notes &amp; Advisor Comments')}
-${clientHdr}
-${noteGroups.length?`<div class="sec">Red Flags &amp; System Notes</div>${notesPage3}`:''}
-${advisorNotes?`<div class="sec">Advisor Notes</div>${advisorBlock}`:''}
-${footer}
+${pageHdr('Important Information','Things you should know about your current cover')}
+<div class="client-grid">
+  <div><div class="cl">Full Name</div><div class="cv">${clientName}</div></div>
+  <div><div class="cl">ID Number</div><div class="cv">${clientId}</div></div>
+  <div><div class="cl">Telephone</div><div class="cv">${clientPhone}</div></div>
+  <div><div class="cl">Email</div><div class="cv">${clientEmail}</div></div>
+  <div><div class="cl">Advisor</div><div class="cv">${advisorName}</div></div>
+</div>
+${noteGroups.length?`<div class="sec">Points to Note</div>${flagsHtml}`:''}
+${advisorBlock}
+${footer(3)}
 </div>`:''}
 
 <script>window.onload=()=>{window.print();}<\/script>
