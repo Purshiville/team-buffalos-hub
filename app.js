@@ -1770,6 +1770,7 @@ function renderProdStats(data,period){
   }
   if(typeof updateNtuHubAlert==='function')updateNtuHubAlert();
   renderHubPeriodBar();
+  renderTop3();
 }
 function renderStatsManagerPreview(data){
   const el=document.getElementById('statsManagerPreview');
@@ -5217,73 +5218,46 @@ function renderTop3(){
 function _renderTop3Inner(el){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
   const now=new Date();
-  // Show previous month's winners (awards published after month end)
+  const currentKey=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0');
   const prevMonth=new Date(now.getFullYear(),now.getMonth()-1,1);
   const periodKey=prevMonth.getFullYear()+'-'+(''+(prevMonth.getMonth()+1)).padStart(2,'0');
-  const currentKey=now.getFullYear()+'-'+(''+(now.getMonth()+1)).padStart(2,'0');
-  const data=getTop3Data();
-  const prevRec=data[periodKey];const curRec=data[currentKey];
-  const record=(curRec&&curRec.first?curRec:null)||(prevRec&&prevRec.first?prevRec:null);
-  if(!record){el.innerHTML='';return;}
-  const usedKey=(curRec&&curRec.first)?currentKey:periodKey;
+  // Use the hub period filter if set, otherwise find the most recent period with data
+  const tryKeys=window._hubSelectedPeriod
+    ?[window._hubSelectedPeriod]
+    :[currentKey,periodKey];
+  let statsData=null,usedKey=null;
+  for(const k of tryKeys){
+    let d=null;try{d=JSON.parse(localStorage.getItem('tl_prod_stats_'+k)||'null');}catch(e){}
+    if(Object.values(d?.advisors||{}).some(a=>!REVOKED_CODES.has(a.code)&&(a.actualPremium||0)>0)){statsData=d;usedKey=k;break;}
+  }
+  if(!statsData?.advisors){el.innerHTML='';return;}
+  const ranked=Object.values(statsData.advisors)
+    .filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name)&&(a.actualPremium||0)>0)
+    .sort((a,b)=>(b.actualPremium||0)-(a.actualPremium||0));
+  if(!ranked.length){el.innerHTML='';return;}
   const [yr,mo]=usedKey.split('-');
-  const label=record.period||(MONTHS[parseInt(mo)-1]+' '+yr);
-  let _gapStats=null;
-  try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+usedKey)||'null');}catch(e){}
-  if(!_gapStats)try{_gapStats=JSON.parse(localStorage.getItem('tl_prod_stats_'+periodKey)||'null');}catch(e){}
-  const _knownCodes=new Set(ADVISOR_LIST.map(a=>a.code));
-  const _fillGaps=r=>{
-    if(!r)return r;
-    // For any known advisor (registered or in ADVISOR_LIST), never use a stale saved photo
-    const isKnown=r.code in _regUsers||_knownCodes.has(r.code);
-    const photo=isKnown?(_regUsers[r.code]?.photo||null):r.photo;
-    if(!_gapStats?.advisors)return{...r,photo};
-    const s=_gapStats.advisors[r.code];if(!s)return{...r,photo};
-    return{...r,photo,ntu4:r.ntu4!=null?r.ntu4:(s.ntu4Month??null),ntu15:r.ntu15!=null?r.ntu15:(s.ntu15Month??null),persistency:r.persistency!=null?r.persistency:(s.persistency??null)};
-  };
+  const label=MONTHS[parseInt(mo)-1]+' '+yr;
+  const _regUsers=getUsers();
   const _ring={gold:'border:3px solid #f59e0b;box-shadow:0 0 0 2px #fef9c3,0 0 10px rgba(245,158,11,0.45);',silver:'border:3px solid #9ca3af;box-shadow:0 0 0 2px #f1f5f9,0 0 10px rgba(156,163,175,0.4);',bronze:'border:3px solid #cd7f32;box-shadow:0 0 0 2px #fff7ed,0 0 10px rgba(180,83,9,0.35);'};
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
   const _badgeCol={gold:'#f59e0b',silver:'#9ca3af',bronze:'#cd7f32'};
-  const _regUsers=getUsers();
-  // Resolve 3rd: if saved 3rd is missing or revoked, derive from production stats
-  let thirdRecord=record.third&&!REVOKED_CODES.has(record.third.code)?record.third:null;
-  if(!thirdRecord){
-    let statsData=null;
-    try{statsData=JSON.parse(localStorage.getItem('tl_prod_stats_'+usedKey)||'null');}catch(e){}
-    if(!statsData)try{statsData=JSON.parse(localStorage.getItem('tl_prod_stats_'+periodKey)||'null');}catch(e){}
-    if(statsData?.advisors){
-      const excludeCodes=new Set([record.first?.code,record.second?.code].filter(Boolean));
-      const ranked=Object.values(statsData.advisors)
-        .filter(a=>!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name)&&!excludeCodes.has(a.code)&&(a.actualPremium||0)>0)
-        .sort((a,b)=>(b.actualPremium||0)-(a.actualPremium||0));
-      if(ranked.length){
-        const t=ranked[0];
-        thirdRecord={code:t.code,name:t.name||_regUsers[t.code]?.name||t.code,photo:_regUsers[t.code]?.photo||null,note:'',ntu4:t.ntu4Month??null,ntu15:t.ntu15Month??null,persistency:t.persistency??null};
-      }
-    }
-  }
-  const _card=(r,cls,medal,posLabel)=>r?`
-    <div class="podium-col">
-      <div class="top3-card ${cls}">
-        <div style="position:relative;width:52px;margin:0 auto 6px;">
-          ${(_regUsers[r.code]?.photo||r.photo)
-            ?`<img src="${_regUsers[r.code]?.photo||r.photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`
-            :`<div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}">${medal}</div>`
-          }
-          <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${posLabel}</div>
-        </div>
-        <div class="top3-name">${r.name}${_newBadge(r.code)}</div>
-        ${r.note?`<div style="font-size:10px;color:${cls==='gold'?'#92400e':'#6b7280'};margin-top:3px;">${r.note}</div>`:''}
-        <div class="top3-metrics">${r.ntu4!=null?`<span>4M NTU ${r.ntu4}%</span>`:''}${r.ntu15!=null?`<span>15M NTU ${r.ntu15}%</span>`:''}${r.persistency!=null?`<span>Pers ${r.persistency}%</span>`:''}</div>
+  const _card=(a,cls,medal,posLabel)=>{
+    if(!a)return`<div class="podium-col"><div class="top3-card ${cls}" style="opacity:0.45;border-style:dashed;"><div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}margin:0 auto 6px;">${medal}</div><div class="top3-name" style="color:#9ca3af;">${posLabel==='3'?'3rd Place':'—'}</div></div></div>`;
+    const photo=_regUsers[a.code]?.photo||null;
+    const name=_regUsers[a.code]?.name||a.name||a.code;
+    const metrics=`<span>${a.actualCases}/${a.targetCases||'?'}</span><span>R${(a.actualPremium||0).toLocaleString()}</span><span style="color:#9ca3af;">R${(a.targetPremium||0).toLocaleString()}</span>`;
+    const ntuBits=[a.ntu4Month!=null?`4M NTU ${a.ntu4Month}%`:null,a.ntu15Month!=null?`15M NTU ${a.ntu15Month}%`:null,a.persistency!=null?`Pers ${a.persistency}%`:null].filter(Boolean);
+    const ntuLine=ntuBits.length?`<div class="top3-metrics" style="margin-top:3px;">${ntuBits.map(t=>`<span>${t}</span>`).join('')}</div>`:'';
+    return`<div class="podium-col"><div class="top3-card ${cls}">
+      <div style="position:relative;width:52px;margin:0 auto 6px;">
+        ${photo?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`:`<div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}">${medal}</div>`}
+        <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${posLabel}</div>
       </div>
-    </div>`:`
-    <div class="podium-col">
-      <div class="top3-card ${cls}" style="opacity:0.45;border-style:dashed;">
-        <div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}margin:0 auto 6px;">${medal}</div>
-        <div class="top3-name" style="color:#9ca3af;">3rd Place</div>
-        <div style="font-size:10px;color:#9ca3af;margin-top:2px;">To be confirmed</div>
-      </div>
-    </div>`;
+      <div class="top3-name">${name}${_newBadge(a.code)}</div>
+      <div class="top3-metrics">${metrics}</div>
+      ${ntuLine}
+    </div></div>`;
+  };
   el.innerHTML=`
     <div class="full-card" style="margin-bottom:12px;padding:14px 0 0;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;padding:0 14px;">
@@ -5291,9 +5265,9 @@ function _renderTop3Inner(el){
         <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:1px;">🏆 Advisors of the Month — ${label}</div>
       </div>
       <div class="podium-wrap">
-        ${_card(_fillGaps(record.second),'silver','🥈','2')}
-        ${_card(_fillGaps(record.first), 'gold',  '🥇','1')}
-        ${_card(_fillGaps(thirdRecord), 'bronze','🥉','3')}
+        ${_card(ranked[1]||null,'silver','🥈','2')}
+        ${_card(ranked[0]||null,'gold',  '🥇','1')}
+        ${_card(ranked[2]||null,'bronze','🥉','3')}
       </div>
     </div>`;
 }
