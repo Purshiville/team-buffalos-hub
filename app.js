@@ -2708,12 +2708,12 @@ async function loaFileSelected(input){
 }
 function loaIdCheck(){
   const val=(document.getElementById('loaIdInput')?.value||'').trim();
+  const ok=val.length>=6;
   const btn=document.getElementById('loaNextBtn');
   const note=document.getElementById('loaIdNote');
-  if(!btn)return;
-  const ok=val.length>=6;
-  btn.style.opacity=ok?'1':'.45'; btn.style.pointerEvents=ok?'auto':'none';
+  if(btn){btn.style.opacity=ok?'1':'.45';btn.style.pointerEvents=ok?'auto':'none';}
   if(note)note.style.color=ok?'#9ca3af':'#dc2626';
+  if(document.getElementById('loaWizOverlay'))loaWizUpdateCount();
 }
 function loaClientNext(){
   const name=(document.getElementById('loaClientName')?.value||'').trim();
@@ -2747,6 +2747,125 @@ function showLoaReminder(){
   setTimeout(()=>{if(t.parentElement)t.remove();},9000);
 }
 // ── END LOA CLIENT SESSION ────────────────────────────────────────────────
+
+// ── LOA EMAIL WIZARD (standalone tool) ────────────────────────────────────
+let _loaWizFsps=new Set();
+let _loaWizType='schedule';
+
+function showLoaEmailWizard(){
+  const ALL_FSPS=[...new Set([...Object.keys(FSP_SCHEDULE_EMAILS||{}),...Object.keys(FSP_REFUND_EMAILS||{})])].sort();
+  _loaWizFsps=new Set();
+  _loaWizType='schedule';
+  window._loaFile=null;
+  let ov=document.getElementById('loaWizOverlay');if(ov)ov.remove();
+  ov=document.createElement('div');
+  ov.id='loaWizOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
+  const chips=ALL_FSPS.map(n=>{
+    const sid='fspChip_'+n.replace(/[^a-z0-9]/gi,'_');
+    return`<button id="${sid}" onclick="loaWizToggle('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 11px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;
+  }).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.28);">
+    <h3 style="margin:0 0 3px;font-size:15px;font-weight:800;color:#0d1f3c;text-align:center;">✉️ LOA Email Request</h3>
+    <p style="margin:0 0 14px;font-size:11px;color:#6b7280;text-align:center;">Upload LOA — name &amp; ID fill automatically. Select insurers and generate.</p>
+    <div style="margin-bottom:12px;">
+      <input type="file" id="loaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*" style="display:none;" onchange="loaFileSelected(this)"/>
+      <input type="file" id="loaCamInput" accept="image/*" capture="environment" style="display:none;" onchange="loaFileSelected(this)"/>
+      <div style="display:flex;gap:6px;">
+        <button onclick="document.getElementById('loaFileInput').click()" id="loaFileBtn" style="flex:1;padding:9px 10px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;">📎 Tap to upload LOA</button>
+        <button onclick="document.getElementById('loaCamInput').click()" title="Take photo" style="padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:18px;cursor:pointer;">📷</button>
+      </div>
+      <div id="loaFileNote" style="font-size:10px;color:#9ca3af;margin-top:3px;">Downloads to your device when Gmail opens — attach it from Downloads.</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Client Full Name</label>
+        <input id="loaClientName" placeholder="e.g. Zanele Dlamini" value="${(_loaClient.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:7px 9px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;"/>
+      </div>
+      <div>
+        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">ID Number <span style="color:#dc2626;">★</span></label>
+        <input id="loaIdInput" placeholder="13-digit ID" value="${(_loaClient.idNumber||'').replace(/"/g,'&quot;')}" maxlength="13" inputmode="numeric" style="width:100%;padding:7px 9px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;font-family:monospace;" oninput="loaIdCheck()"/>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">Select Insurers — tap to add</div>
+      <div id="loaWizChips" style="display:flex;flex-wrap:wrap;gap:6px;">${chips}</div>
+    </div>
+    <div id="loaWizCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">No insurers selected yet.</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="loaWizTypeSched" onclick="loaWizSetType('schedule')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #0d1f3c;background:#f0f4ff;color:#0d1f3c;font-size:12px;font-weight:700;cursor:pointer;">📋 Schedule Request</button>
+      <button id="loaWizTypeRefund" onclick="loaWizSetType('refund')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;color:#9ca3af;font-size:12px;font-weight:700;cursor:pointer;">💰 Refund Request</button>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('loaWizOverlay').remove()" style="flex:1;padding:10px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button id="loaWizGenBtn" onclick="loaWizGenerate()" style="flex:2;padding:10px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:.45;pointer-events:none;">Generate Email →</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+  setTimeout(()=>loaWizUpdateCount(),50);
+}
+
+function loaWizToggle(name,sid){
+  if(_loaWizFsps.has(name))_loaWizFsps.delete(name);else _loaWizFsps.add(name);
+  const chip=document.getElementById(sid);
+  if(chip){
+    const sel=_loaWizFsps.has(name);
+    chip.style.background=sel?'#0d1f3c':'#f9fafb';
+    chip.style.color=sel?'#fff':'#374151';
+    chip.style.borderColor=sel?'#0d1f3c':'#e5e7eb';
+  }
+  loaWizUpdateCount();
+}
+
+function loaWizUpdateCount(){
+  const count=_loaWizFsps.size;
+  const note=document.getElementById('loaWizCount');
+  if(note)note.textContent=count?`${count} insurer${count===1?'':'s'} selected.`:'No insurers selected yet.';
+  const btn=document.getElementById('loaWizGenBtn');
+  if(btn){
+    const ok=count>0&&(document.getElementById('loaIdInput')?.value||'').trim().length>=6;
+    btn.style.opacity=ok?'1':'.45';btn.style.pointerEvents=ok?'auto':'none';
+  }
+}
+
+function loaWizSetType(type){
+  _loaWizType=type;
+  const s=document.getElementById('loaWizTypeSched');
+  const r=document.getElementById('loaWizTypeRefund');
+  if(s){s.style.border=type==='schedule'?'2px solid #0d1f3c':'2px solid #e5e7eb';s.style.background=type==='schedule'?'#f0f4ff':'#fff';s.style.color=type==='schedule'?'#0d1f3c':'#9ca3af';}
+  if(r){r.style.border=type==='refund'?'2px solid #c9922a':'2px solid #e5e7eb';r.style.background=type==='refund'?'#fffbeb':'#fff';r.style.color=type==='refund'?'#c9922a':'#9ca3af';}
+}
+
+function loaWizGenerate(){
+  const clientName=(document.getElementById('loaClientName')?.value||'').trim()||'[Full Name]';
+  const idNumber=(document.getElementById('loaIdInput')?.value||'').trim();
+  if(!idNumber||idNumber.length<6){alert('Please enter the client ID number.');return;}
+  if(!_loaWizFsps.size){alert('Please select at least one insurer.');return;}
+  saveLoaClient(clientName,idNumber);
+  const selected=[..._loaWizFsps];
+  const emailMap=_loaWizType==='schedule'?FSP_SCHEDULE_EMAILS:FSP_REFUND_EMAILS;
+  const emails=selected.map(n=>emailMap[n]).filter(Boolean);
+  const noEmail=selected.filter(n=>!emailMap[n]);
+  if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?'))return;
+  if(!emails.length){alert('No email addresses found for the selected companies.');return;}
+  const advisorName=currentUser?.name||'[Your Name]';
+  const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+  let subject,body;
+  if(_loaWizType==='schedule'){
+    subject=idNumber+' — Policy Schedule Request';
+    body=`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${idNumber}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`;
+  } else {
+    subject=idNumber+' — Premium Refund Request';
+    body=`Good day,\n\nOn behalf of ${clientName} (ID Number: ${idNumber}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
+  }
+  document.getElementById('loaWizOverlay')?.remove();
+  triggerLoaDownload();
+  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.open(url,'_blank');
+  showLoaReminder();
+}
+// ── END LOA EMAIL WIZARD ───────────────────────────────────────────────────
 
 function openGmailCompose(email, ccList, type){
   let subject, body;
