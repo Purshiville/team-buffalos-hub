@@ -2860,12 +2860,200 @@ function loaWizGenerate(){
     body=`Good day,\n\nOn behalf of ${clientName} (ID Number: ${idNumber}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
   }
   document.getElementById('loaWizOverlay')?.remove();
+  ltAddCase(clientName,'',idNumber,'','','',selected.map(n=>({name:n,emailSent:true,dateSent:new Date().toISOString().slice(0,10),referenceNumber:'',contractsReceived:false,comments:''})),true);
+  renderLoaTrackerWidget();
   triggerLoaDownload();
   const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   window.open(url,'_blank');
   showLoaReminder();
 }
 // ── END LOA EMAIL WIZARD ───────────────────────────────────────────────────
+
+// ── LOA SCHEDULE TRACKER ───────────────────────────────────────────────────
+function _ltKey(){return'tl_loatracker_'+(currentUser?.code||'_');}
+function getLTCases(){try{return JSON.parse(localStorage.getItem(_ltKey())||'[]');}catch(e){return[];}}
+function saveLTCases(d){try{localStorage.setItem(_ltKey(),JSON.stringify(d));}catch(e){}}
+function _ltGenId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+
+function ltAddCase(clientName,surname,idNumber,phone,department,facility,companies,emailSent){
+  const cases=getLTCases();
+  const now=new Date().toISOString().slice(0,10);
+  const entry={
+    _id:_ltGenId(),advisorCode:currentUser?.code||'',
+    clientName,surname,idNumber,phone:phone||'',department:department||'',facility:facility||'',
+    createdAt:now,
+    companies:companies.map(name=>({name,emailSent:!!emailSent,dateSent:emailSent?now:null,referenceNumber:'',contractsReceived:false,comments:''}))
+  };
+  cases.unshift(entry);
+  saveLTCases(cases);
+  if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(entry).catch(()=>{});
+  return entry;
+}
+
+function ltUpdateCompany(caseId,compIdx,field,value){
+  const cases=getLTCases();
+  const c=cases.find(x=>x._id===caseId);
+  if(!c||!c.companies[compIdx])return;
+  c.companies[compIdx][field]=value;
+  if(field==='emailSent'&&value&&!c.companies[compIdx].dateSent)c.companies[compIdx].dateSent=new Date().toISOString().slice(0,10);
+  saveLTCases(cases);
+  if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+}
+
+function ltDeleteCase(caseId){
+  if(!confirm('Remove this client from the tracker?'))return;
+  const cases=getLTCases().filter(x=>x._id!==caseId);
+  saveLTCases(cases);
+  renderLOATracker();
+  renderLoaTrackerWidget();
+}
+
+function renderLOATracker(){
+  const el=document.getElementById('loaTrackerContent');
+  if(!el)return;
+  const cases=getLTCases();
+
+  // Summary row
+  const total=cases.length;
+  const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
+  const contractsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
+  const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
+  const summaryHtml=`
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
+      ${[['Clients',total,'#0d1f3c'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],['Awaiting Contracts',contractsPending,contractsPending?'#d97706':'#6b7280'],['Fully Received',fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
+        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 8px;text-align:center;">
+          <div style="font-size:20px;font-weight:800;color:${clr};">${val}</div>
+          <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${lbl}</div>
+        </div>`).join('')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button onclick="showLTAddForm()" style="flex:1;padding:10px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">+ Add Client</button>
+      <button onclick="showLoaEmailWizard()" style="padding:10px 14px;background:#f4f2ed;color:#0d1f3c;border:1px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;" title="Generate LOA email">✉️ Email</button>
+    </div>`;
+
+  if(!cases.length){
+    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click + Add Client or use the ✉️ Email button to get started.</span></div>`;
+    return;
+  }
+
+  const rows=cases.map((c,ci)=>{
+    const allRecv=c.companies.length&&c.companies.every(co=>co.contractsReceived);
+    const headerBg=allRecv?'#f0fdf4':'#f8f7f4';
+    const compRows=c.companies.map((co,coIdx)=>{
+      const sid=`lt_sent_${c._id}_${coIdx}`;
+      const rid=`lt_recv_${c._id}_${coIdx}`;
+      const did=`lt_date_${c._id}_${coIdx}`;
+      const refid=`lt_ref_${c._id}_${coIdx}`;
+      const sentClr=co.emailSent?'#16a34a':'#9ca3af';
+      const recvClr=co.contractsReceived?'#16a34a':'#9ca3af';
+      return`<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:7px 10px;border-bottom:1px solid #f0f0f0;background:#fff;">
+        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${co.name}</div>
+        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+          <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
+          <button onclick="ltToggle('${c._id}',${coIdx},'contractsReceived',${!co.contractsReceived})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${recvClr};background:${co.contractsReceived?recvClr:'#fff'};color:${co.contractsReceived?'#fff':recvClr};font-size:10px;font-weight:700;cursor:pointer;">${co.contractsReceived?'✓ Received':'Pending'}</button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
+          <input type="date" value="${co.dateSent||''}" onchange="ltField('${c._id}',${coIdx},'dateSent',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Date sent"/>
+          <input type="text" value="${(co.referenceNumber||'').replace(/"/g,'&quot;')}" placeholder="Ref #" onchange="ltField('${c._id}',${coIdx},'referenceNumber',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Reference number"/>
+        </div>
+      </div>`;
+    }).join('');
+    return`<div style="background:${headerBg};border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px;">
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+            <span style="background:#0d1f3c;color:#f5d98b;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">#${ci+1}</span>
+            <span style="font-size:13px;font-weight:700;color:#0d1f3c;">${c.clientName||''} ${c.surname||''}</span>
+            ${allRecv?'<span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">✓ Complete</span>':''}
+          </div>
+          <div style="font-size:11px;color:#6b7280;margin-top:3px;">${c.idNumber||''}${c.phone?' · '+c.phone:''}${c.department?' · '+c.department:''}${c.facility?' · '+c.facility:''}</div>
+        </div>
+        <button onclick="ltDeleteCase('${c._id}')" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;flex-shrink:0;padding:0;">✕</button>
+      </div>
+      ${compRows}
+    </div>`;
+  }).join('');
+
+  el.innerHTML=summaryHtml+rows;
+}
+
+function ltToggle(caseId,compIdx,field,value){
+  ltUpdateCompany(caseId,compIdx,field,value);
+  renderLOATracker();
+  renderLoaTrackerWidget();
+}
+function ltField(caseId,compIdx,field,value){
+  ltUpdateCompany(caseId,compIdx,field,value);
+  renderLoaTrackerWidget();
+}
+
+function showLTAddForm(){
+  const ALL_FSPS=[...new Set([...Object.keys(FSP_SCHEDULE_EMAILS||{}),...Object.keys(FSP_REFUND_EMAILS||{})])].sort();
+  let selFsps=new Set();
+  let ov=document.getElementById('ltAddOverlay');if(ov)ov.remove();
+  ov=document.createElement('div');ov.id='ltAddOverlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
+  const chips=ALL_FSPS.map(n=>{const sid='ltChip_'+n.replace(/[^a-z0-9]/gi,'_');return`<button id="${sid}" onclick="ltAddToggleFsp('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;}).join('');
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <h3 style="margin:0 0 12px;font-size:14px;font-weight:800;color:#0d1f3c;">Add Client to Tracker</h3>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;">
+      ${[['ltFName','First Name',''],['ltSName','Surname',''],['ltId','ID Number','monospace'],['ltPhone','Phone',''],['ltDept','Department',''],['ltFac','Facility','']].map(([id,lbl,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${id}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
+    </div>
+    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Companies Insured With</div>
+    <div id="ltAddChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">${chips}</div>
+    <div id="ltAddCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">No companies selected.</div>
+    <div style="display:flex;gap:8px;">
+      <button onclick="document.getElementById('ltAddOverlay').remove()" style="flex:1;padding:9px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
+      <button id="ltAddSaveBtn" onclick="ltAddSave()" style="flex:2;padding:9px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Save Client</button>
+    </div>
+  </div>`;
+  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
+  document.body.appendChild(ov);
+  window._ltAddSelFsps=selFsps;
+  const nameF=document.getElementById('ltFName');if(nameF)nameF.focus();
+  if(_loaClient.name){const parts=_loaClient.name.trim().split(/\s+/);document.getElementById('ltFName').value=parts[0]||'';document.getElementById('ltSName').value=parts.slice(1).join(' ')||'';}
+  if(_loaClient.idNumber)document.getElementById('ltId').value=_loaClient.idNumber;
+}
+function ltAddToggleFsp(name,sid){
+  const s=window._ltAddSelFsps||(window._ltAddSelFsps=new Set());
+  if(s.has(name))s.delete(name);else s.add(name);
+  const chip=document.getElementById(sid);
+  if(chip){const sel=s.has(name);chip.style.background=sel?'#0d1f3c':'#f9fafb';chip.style.color=sel?'#fff':'#374151';chip.style.borderColor=sel?'#0d1f3c':'#e5e7eb';}
+  const note=document.getElementById('ltAddCount');
+  if(note){const n=s.size;note.textContent=n?`${n} compan${n===1?'y':'ies'} selected.`:'No companies selected.';}
+}
+function ltAddSave(){
+  const fn=(document.getElementById('ltFName')?.value||'').trim();
+  const sn=(document.getElementById('ltSName')?.value||'').trim();
+  const id=(document.getElementById('ltId')?.value||'').trim();
+  const sel=window._ltAddSelFsps?[...window._ltAddSelFsps]:[];
+  if(!fn&&!sn){alert('Please enter at least a client name.');return;}
+  if(!sel.length){alert('Please select at least one company.');return;}
+  ltAddCase(fn,sn,id,document.getElementById('ltPhone')?.value.trim(),document.getElementById('ltDept')?.value.trim(),document.getElementById('ltFac')?.value.trim(),sel,false);
+  document.getElementById('ltAddOverlay')?.remove();
+  renderLOATracker();
+  renderLoaTrackerWidget();
+}
+
+function renderLoaTrackerWidget(){
+  const el=document.getElementById('hubLoaTrackerWidget');
+  if(!el)return;
+  const cases=getLTCases();
+  if(!cases.length){el.style.display='none';return;}
+  const contractsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
+  const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
+  const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
+  el.style.display='block';
+  el.innerHTML=`<div onclick="showPage('loatracker')" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:800;color:#0d1f3c;">📋 Schedule Tracker</span>
+      ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':' s'} to send</span>`:''}
+      ${contractsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${contractsPending} contract${contractsPending===1?'':' s'} pending</span>`:''}
+      ${fullyDone?`<span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${fullyDone} complete</span>`:''}
+    </div>
+    <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
+  </div>`;
+}
 
 function openGmailCompose(email, ccList, type){
   let subject, body;
@@ -3260,7 +3448,7 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();renderLoaTrackerWidget();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
@@ -3293,6 +3481,7 @@ function showPage(p){
   if(p==='worksites')csoInit();
   if(p==='convfunnel')convFunnelInit();
   if(p==='policyreview'){renderPRSavedList();}
+  if(p==='loatracker'){renderLOATracker();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   if(p==='replpresentation'){replPresentationInit();}
   if(p==='meetingagenda'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');agendaRenderNotes();}
