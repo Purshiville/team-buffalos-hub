@@ -3031,17 +3031,29 @@ async function ltLoaFileSelected(input){
       r.onerror=rej;
       r.readAsDataURL(file);
     });
-    const prompt=`This is a Letter of Authority (LOA) or insurance document. Extract ONLY:
-1. The full name of the client/policyholder/life assured (first name + surname)
-2. The South African 13-digit ID number
+    const prompt=`This is a Letter of Authority (LOA) or insurance document.
 
-Reply with ONLY valid JSON, no explanation:
+Find the CLIENT/POLICYHOLDER/LIFE ASSURED (the person granting authority — NOT the financial adviser).
+
+Extract:
+1. Their given name(s) / first name(s)
+2. Their surname / family name
+3. Their South African ID number (13 digits — remove any spaces or dashes)
+
+Reply with ONLY valid JSON, no markdown, no explanation:
 {"firstName":"","surname":"","idNumber":""}
 
-If you cannot find a value leave it as empty string.`;
-    const raw=await callClaudeVision(b64,mediaType,prompt,256);
+Rules:
+- idNumber must be digits only, no spaces
+- If a name has an initial (e.g. "Nomfundo C. Baran"), put "Nomfundo C." as firstName and "Baran" as surname
+- If you cannot find a value, leave it as empty string`;
+    const raw=await callClaudeVision(b64,mediaType,prompt,512);
     let parsed={};
-    try{parsed=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');}catch(e){}
+    try{
+      const matches=[...raw.matchAll(/\{[^{}]*\}/g)];
+      const jsonStr=matches.length?matches[matches.length-1][0]:'{}';
+      parsed=JSON.parse(jsonStr);
+    }catch(e){}
     const fn=document.getElementById('ltFName');
     const sn=document.getElementById('ltSName');
     const idF=document.getElementById('ltId');
