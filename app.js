@@ -3020,36 +3020,41 @@ async function ltLoaFileSelected(input){
   if(!input.files||!input.files[0])return;
   const file=input.files[0];
   const btn=document.getElementById('ltLoaUploadBtn');
-  const fname=file.name.toLowerCase();
-  const isPdf=fname.endsWith('.pdf');
-  const isImg=/\.(jpe?g|png|heic|heif|webp|bmp)$/.test(fname);
-  if(!isPdf&&!isImg){if(btn)btn.innerHTML=`📎 Upload LOA — AI will fill name &amp; ID`;return;}
-  if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">${isPdf?'⏳ Reading LOA…':'📷 Scanning — may take ~10 sec…'}</span>`;
+  if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">⏳ Reading LOA…</span>`;
   try{
-    let text=isPdf?await _extractTextFromPDF(file):await _ocrImage(file);
-    let{name,idNumber}=_parseLoaDetails(text);
-    if(isPdf&&(!name||!idNumber)){
-      if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">📷 Scanning page — may take ~15 sec…</span>`;
-      try{
-        const blob=await _pdfFirstPageToBlob(file);
-        const ocrText=await _ocrImage(blob);
-        const parsed=_parseLoaDetails(ocrText);
-        if(!name&&parsed.name)name=parsed.name;
-        if(!idNumber&&parsed.idNumber)idNumber=parsed.idNumber;
-      }catch(e2){console.warn('LOA OCR fallback:',e2);}
-    }
-    if(name){
-      const parts=name.trim().split(/\s+/);
-      const fn=document.getElementById('ltFName');
-      const sn=document.getElementById('ltSName');
-      if(fn)fn.value=parts[0]||'';
-      if(sn)sn.value=parts.slice(1).join(' ')||'';
-    }
-    if(idNumber){const f=document.getElementById('ltId');if(f)f.value=idNumber;}
-    if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${file.name}</span>`;
+    const fname=file.name.toLowerCase();
+    const isPdf=fname.endsWith('.pdf');
+    let mediaType=isPdf?'application/pdf':file.type||'image/jpeg';
+    const b64=await new Promise((res,rej)=>{
+      const r=new FileReader();
+      r.onload=()=>res(r.result.split(',')[1]);
+      r.onerror=rej;
+      r.readAsDataURL(file);
+    });
+    const prompt=`This is a Letter of Authority (LOA) or insurance document. Extract ONLY:
+1. The full name of the client/policyholder/life assured (first name + surname)
+2. The South African 13-digit ID number
+
+Reply with ONLY valid JSON, no explanation:
+{"firstName":"","surname":"","idNumber":""}
+
+If you cannot find a value leave it as empty string.`;
+    const raw=await callClaudeVision(b64,mediaType,prompt,256);
+    let parsed={};
+    try{parsed=JSON.parse(raw.match(/\{[\s\S]*\}/)?.[0]||'{}');}catch(e){}
+    const fn=document.getElementById('ltFName');
+    const sn=document.getElementById('ltSName');
+    const idF=document.getElementById('ltId');
+    if(parsed.firstName&&fn)fn.value=parsed.firstName;
+    if(parsed.surname&&sn)sn.value=parsed.surname;
+    if(parsed.idNumber&&idF)idF.value=parsed.idNumber;
+    const found=parsed.firstName||parsed.surname||parsed.idNumber;
+    if(btn)btn.innerHTML=found
+      ?`<span style="color:#059669;font-weight:700;">✅ ${file.name}</span>`
+      :`<span style="color:#d97706;font-weight:600;">⚠️ Could not read details — fill in manually</span>`;
   }catch(e){
     console.warn('ltLoaFileSelected error:',e);
-    if(btn)btn.innerHTML=`<span style="color:#dc2626;font-weight:600;">❌ Could not read file — fill in manually</span>`;
+    if(btn)btn.innerHTML=`<span style="color:#dc2626;font-weight:600;">❌ Error reading file — fill in manually</span>`;
   }
 }
 function ltAddToggleFsp(name,sid){
