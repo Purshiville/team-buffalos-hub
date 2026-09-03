@@ -3047,8 +3047,8 @@ function renderLoaTrackerWidget(){
   el.innerHTML=`<div onclick="showPage('loatracker')" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;">
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <span style="font-size:13px;font-weight:800;color:#0d1f3c;">📋 Schedule Tracker</span>
-      ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':' s'} to send</span>`:''}
-      ${contractsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${contractsPending} contract${contractsPending===1?'':' s'} pending</span>`:''}
+      ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':'s'} to send</span>`:''}
+      ${contractsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${contractsPending} contract${contractsPending===1?'':'s'} pending</span>`:''}
       ${fullyDone?`<span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${fullyDone} complete</span>`:''}
     </div>
     <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
