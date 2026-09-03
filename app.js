@@ -2995,7 +2995,9 @@ function showLTAddForm(){
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
   const chips=ALL_FSPS.map(n=>{const sid='ltChip_'+n.replace(/[^a-z0-9]/gi,'_');return`<button id="${sid}" onclick="ltAddToggleFsp('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;}).join('');
   ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
-    <h3 style="margin:0 0 12px;font-size:14px;font-weight:800;color:#0d1f3c;">Add Client to Tracker</h3>
+    <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">Add Client to Tracker</h3>
+    <input type="file" id="ltLoaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*" style="display:none;" onchange="ltLoaFileSelected(this)"/>
+    <button onclick="document.getElementById('ltLoaFileInput').click()" id="ltLoaUploadBtn" style="width:100%;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;margin-bottom:10px;box-sizing:border-box;">📎 Upload LOA — AI will fill name &amp; ID</button>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;">
       ${[['ltFName','First Name',''],['ltSName','Surname',''],['ltId','ID Number','monospace'],['ltPhone','Phone',''],['ltDept','Department',''],['ltFac','Facility','']].map(([id,lbl,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${id}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
     </div>
@@ -3013,6 +3015,42 @@ function showLTAddForm(){
   const nameF=document.getElementById('ltFName');if(nameF)nameF.focus();
   if(_loaClient.name){const parts=_loaClient.name.trim().split(/\s+/);document.getElementById('ltFName').value=parts[0]||'';document.getElementById('ltSName').value=parts.slice(1).join(' ')||'';}
   if(_loaClient.idNumber)document.getElementById('ltId').value=_loaClient.idNumber;
+}
+async function ltLoaFileSelected(input){
+  if(!input.files||!input.files[0])return;
+  const file=input.files[0];
+  const btn=document.getElementById('ltLoaUploadBtn');
+  const fname=file.name.toLowerCase();
+  const isPdf=fname.endsWith('.pdf');
+  const isImg=/\.(jpe?g|png|heic|heif|webp|bmp)$/.test(fname);
+  if(!isPdf&&!isImg){if(btn)btn.innerHTML=`📎 Upload LOA — AI will fill name &amp; ID`;return;}
+  if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">${isPdf?'⏳ Reading LOA…':'📷 Scanning — may take ~10 sec…'}</span>`;
+  try{
+    let text=isPdf?await _extractTextFromPDF(file):await _ocrImage(file);
+    let{name,idNumber}=_parseLoaDetails(text);
+    if(isPdf&&(!name||!idNumber)){
+      if(btn)btn.innerHTML=`<span style="color:#6b7280;font-weight:600;">📷 Scanning page — may take ~15 sec…</span>`;
+      try{
+        const blob=await _pdfFirstPageToBlob(file);
+        const ocrText=await _ocrImage(blob);
+        const parsed=_parseLoaDetails(ocrText);
+        if(!name&&parsed.name)name=parsed.name;
+        if(!idNumber&&parsed.idNumber)idNumber=parsed.idNumber;
+      }catch(e2){console.warn('LOA OCR fallback:',e2);}
+    }
+    if(name){
+      const parts=name.trim().split(/\s+/);
+      const fn=document.getElementById('ltFName');
+      const sn=document.getElementById('ltSName');
+      if(fn)fn.value=parts[0]||'';
+      if(sn)sn.value=parts.slice(1).join(' ')||'';
+    }
+    if(idNumber){const f=document.getElementById('ltId');if(f)f.value=idNumber;}
+    if(btn)btn.innerHTML=`<span style="color:#059669;font-weight:700;">✅ ${file.name}</span>`;
+  }catch(e){
+    console.warn('ltLoaFileSelected error:',e);
+    if(btn)btn.innerHTML=`<span style="color:#dc2626;font-weight:600;">❌ Could not read file — fill in manually</span>`;
+  }
 }
 function ltAddToggleFsp(name,sid){
   const s=window._ltAddSelFsps||(window._ltAddSelFsps=new Set());
