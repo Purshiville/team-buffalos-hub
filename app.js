@@ -2790,23 +2790,51 @@ function ltDeleteCase(caseId){
   if(!confirm('Remove this client from the tracker?'))return;
   const cases=getLTCases().filter(x=>x._id!==caseId);
   saveLTCases(cases);
+  if(window.FB_READY&&window.FB.deleteLoaTrackerCase)window.FB.deleteLoaTrackerCase(caseId).catch(()=>{});
+  renderLOATracker();
+  renderLoaTrackerWidget();
+}
+function ltSetContractStatus(caseId,compIdx,status){
+  const cases=getLTCases();
+  const c=cases.find(x=>x._id===caseId);
+  if(!c||!c.companies[compIdx])return;
+  c.companies[compIdx].contractStatus=status;
+  c.companies[compIdx].contractsReceived=(status==='received');
+  saveLTCases(cases);
+  if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
   renderLOATracker();
   renderLoaTrackerWidget();
 }
 
-function renderLOATracker(){
+async function renderLOATracker(){
   const el=document.getElementById('loaTrackerContent');
   if(!el)return;
-  const cases=getLTCases();
+  const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
+  let cases=getLTCases();
+  // Manager: load all advisors from Firebase
+  if(isMgr&&window.FB_READY&&window.FB.getAllLoaTrackerCases){
+    try{
+      const fbAll=await window.FB.getAllLoaTrackerCases();
+      if(fbAll&&fbAll.length){
+        // Merge: Firebase is source of truth, local is fallback
+        const byId={};
+        cases.forEach(c=>byId[c._id]=c);
+        fbAll.forEach(c=>byId[c._id]=c);
+        cases=Object.values(byId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      }
+    }catch(e){console.warn('FB getAllLoaTrackerCases failed',e);}
+  }
 
+  const _ltStatus=co=>co.contractStatus||(co.contractsReceived?'received':'none');
   // Summary row
   const total=cases.length;
-  const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
-  const contractsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
-  const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
+  const emailsPending=cases.filter(c=>!c.isNewBusiness).reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
+  const contractsPending=cases.filter(c=>!c.isNewBusiness).reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&_ltStatus(co)!=='received').length,0);
+  const fullyDone=cases.filter(c=>!c.isNewBusiness&&c.companies.length&&c.companies.every(co=>_ltStatus(co)==='received')).length;
+  const newBizCount=cases.filter(c=>c.isNewBusiness).length;
   const summaryHtml=`
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;">
-      ${[['Clients',total,'#0d1f3c'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],['Awaiting Contracts',contractsPending,contractsPending?'#d97706':'#6b7280'],['Fully Received',fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;">
+      ${[['Clients',total,'#0d1f3c'],['New Business',newBizCount,newBizCount?'#92400e':'#6b7280'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],['Awaiting Contracts',contractsPending,contractsPending?'#d97706':'#6b7280'],['Fully Received',fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 8px;text-align:center;">
           <div style="font-size:20px;font-weight:800;color:${clr};">${val}</div>
           <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${lbl}</div>
@@ -2821,37 +2849,53 @@ function renderLOATracker(){
     return;
   }
 
+  const _statusCfg={
+    none:{label:'🔴 Not Received',bg:'#fee2e2',clr:'#dc2626',border:'#dc2626'},
+    inprogress:{label:'🟠 In Progress',bg:'#fff7ed',clr:'#d97706',border:'#d97706'},
+    received:{label:'🟢 Received',bg:'#dcfce7',clr:'#16a34a',border:'#16a34a'},
+  };
   const rows=cases.map((c,ci)=>{
-    const allRecv=c.companies.length&&c.companies.every(co=>co.contractsReceived);
-    const headerBg=allRecv?'#f0fdf4':'#f8f7f4';
-    const compRows=c.companies.map((co,coIdx)=>{
+    const st=co=>_ltStatus(co);
+    const allRecv=!c.isNewBusiness&&c.companies.length&&c.companies.every(co=>st(co)==='received');
+    const headerBg=c.isNewBusiness?'#fffbeb':allRecv?'#f0fdf4':'#f8f7f4';
+    const advisorLabel=isMgr?`<span style="background:#e0e7ff;color:#3730a3;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">${_advisorNameMap[c.advisorCode]||c.advisorCode||'Unknown'}</span>`:'';
+    const compRows=c.isNewBusiness?`<div style="padding:10px 12px;font-size:12px;color:#92400e;font-style:italic;background:#fffbeb;">🆕 New Business — no existing policies. Add companies later if needed via ✏️ Edit.</div>`
+      :c.companies.map((co,coIdx)=>{
       const sentClr=co.emailSent?'#16a34a':'#9ca3af';
-      const recvClr=co.contractsReceived?'#16a34a':'#9ca3af';
+      const coStatus=st(co);
+      const scfg=_statusCfg[coStatus]||_statusCfg.none;
       return`<div style="padding:7px 10px;border-bottom:1px solid #f0f0f0;background:#fff;">
-        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;">
-          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${co.name}</div>
-          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-            <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
-            <button onclick="ltToggle('${c._id}',${coIdx},'contractsReceived',${!co.contractsReceived})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${recvClr};background:${co.contractsReceived?recvClr:'#fff'};color:${co.contractsReceived?'#fff':recvClr};font-size:10px;font-weight:700;cursor:pointer;">${co.contractsReceived?'✓ Received':'Pending'}</button>
+        <div style="display:flex;align-items:flex-start;gap:6px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:120px;">
+            <div style="font-size:12px;font-weight:700;color:#0d1f3c;margin-bottom:4px;">${co.name}</div>
+            <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">
+              <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
+              <button onclick="ltSetContractStatus('${c._id}',${coIdx},'none')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='none'?'#dc2626':'#e5e7eb'};background:${coStatus==='none'?'#dc2626':'#fff'};color:${coStatus==='none'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🔴 No</button>
+              <button onclick="ltSetContractStatus('${c._id}',${coIdx},'inprogress')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='inprogress'?'#d97706':'#e5e7eb'};background:${coStatus==='inprogress'?'#d97706':'#fff'};color:${coStatus==='inprogress'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🟠 Progress</button>
+              <button onclick="ltSetContractStatus('${c._id}',${coIdx},'received')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='received'?'#16a34a':'#e5e7eb'};background:${coStatus==='received'?'#16a34a':'#fff'};color:${coStatus==='received'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🟢 Received</button>
+            </div>
           </div>
-          <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
-            <input type="date" value="${co.dateSent||''}" onchange="ltField('${c._id}',${coIdx},'dateSent',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Date sent"/>
-            <input type="text" value="${(co.referenceNumber||'').replace(/"/g,'&quot;')}" placeholder="Ref #" onchange="ltField('${c._id}',${coIdx},'referenceNumber',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Reference number"/>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:110px;">
+            <input type="date" value="${co.dateSent||''}" onchange="ltField('${c._id}',${coIdx},'dateSent',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;box-sizing:border-box;" title="Date sent"/>
+            <input type="text" value="${(co.referenceNumber||'').replace(/"/g,'&quot;')}" placeholder="Ref #" onchange="ltField('${c._id}',${coIdx},'referenceNumber',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;box-sizing:border-box;" title="Reference number"/>
           </div>
         </div>
-        <textarea placeholder="Notes for ${co.name}…" onchange="ltField('${c._id}',${coIdx},'comments',this.value)" style="width:100%;margin-top:5px;padding:5px 7px;font-size:11px;border:1px solid #e5e7eb;border-radius:6px;background:#f9f9f9;box-sizing:border-box;resize:vertical;min-height:32px;color:#374151;">${(co.comments||'').replace(/</g,'&lt;')}</textarea>
+        <textarea placeholder="Notes — turnaround time, delays, what was sent to client…" onchange="ltField('${c._id}',${coIdx},'comments',this.value)" style="width:100%;margin-top:5px;padding:5px 7px;font-size:11px;border:1px solid ${scfg.border};border-radius:6px;background:${scfg.bg};box-sizing:border-box;resize:vertical;min-height:32px;color:#374151;">${(co.comments||'').replace(/</g,'&lt;')}</textarea>
       </div>`;
     }).join('');
     const notesHtml=c.notes?`<div style="font-size:11px;color:#6b7280;font-style:italic;padding:6px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa;">📝 ${c.notes.replace(/</g,'&lt;')}</div>`:'';
+    const subLine=[c.idNumber,c.phone,c.department,c.facility,c.town].filter(Boolean).join(' · ');
     return`<div style="background:${headerBg};border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span style="background:#0d1f3c;color:#f5d98b;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">#${ci+1}</span>
             <span style="font-size:13px;font-weight:700;color:#0d1f3c;">${c.clientName||''} ${c.surname||''}</span>
+            ${c.isNewBusiness?'<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">🆕 New Business</span>':''}
             ${allRecv?'<span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">✓ Complete</span>':''}
+            ${advisorLabel}
           </div>
-          <div style="font-size:11px;color:#6b7280;margin-top:3px;">${c.idNumber||''}${c.phone?' · '+c.phone:''}${c.department?' · '+c.department:''}${c.facility?' · '+c.facility:''}</div>
+          ${subLine?`<div style="font-size:11px;color:#6b7280;margin-top:3px;">${subLine}</div>`:''}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;">
           <button onclick="showLTAddForm('${c._id}')" style="background:none;border:1px solid #e5e7eb;color:#6b7280;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Edit">✏️</button>
@@ -2912,15 +2956,25 @@ function showLTAddForm(caseId){
     <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">${isEdit?'✏️ Edit Client':'📋 New Schedule Request'}</h3>
     ${uploadHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;">
-      ${[['ltFName','First Name',v(existing?.clientName),''],['ltSName','Surname',v(existing?.surname),''],['ltId','ID Number',v(existing?.idNumber),'monospace'],['ltPhone','Phone',v(existing?.phone),''],['ltDept','Department',v(existing?.department),''],['ltFac','Facility',v(existing?.facility),'']].map(([fid,lbl,val,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${fid}" value="${val}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
+      ${[['ltFName','First Name',v(existing?.clientName),''],['ltSName','Surname',v(existing?.surname),''],['ltId','ID Number',v(existing?.idNumber),'monospace'],['ltPhone','Phone',v(existing?.phone),''],['ltDept','Department',v(existing?.department),''],['ltFac','Facility',v(existing?.facility),''],['ltTown','Town / City',v(existing?.town),'']].map(([fid,lbl,val,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${fid}" value="${val}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
     </div>
     <div style="margin-bottom:10px;">
       <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Notes</label>
       <textarea id="ltNotes" rows="2" placeholder="General notes about this case…" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;resize:vertical;">${v(existing?.notes)}</textarea>
     </div>
-    <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Companies Insured With</div>
-    <div id="ltAddChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">${chips}</div>
-    <div id="ltAddCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">${selCount?`${selCount} compan${selCount===1?'y':'ies'} selected.`:'No companies selected.'}</div>
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;cursor:pointer;padding:8px 10px;background:#fef9ec;border:1px solid #f5d98b;border-radius:8px;">
+      <input type="checkbox" id="ltNewBiz" ${existing?.isNewBusiness?'checked':''} onchange="ltToggleNewBiz(this.checked)" style="width:16px;height:16px;accent-color:#c9922a;cursor:pointer;"/>
+      <span style="font-size:12px;font-weight:700;color:#92400e;">🆕 New Business — no existing policies (prospect only, no email)</span>
+    </label>
+    <div id="ltCompaniesSection" style="${existing?.isNewBusiness?'display:none':''}">
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Companies Insured With</div>
+      <div id="ltAddChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">${chips}</div>
+      <div id="ltAddCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:8px;">${selCount?`${selCount} compan${selCount===1?'y':'ies'} selected.`:'No companies selected.'}</div>
+      <div style="display:flex;gap:6px;margin-bottom:12px;">
+        <input id="ltManualFsp" placeholder="Add insurer not in list…" style="flex:1;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;"/>
+        <button onclick="ltAddManualFsp()" style="padding:7px 12px;background:#0d1f3c;color:#fff;border:none;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;">+ Add</button>
+      </div>
+    </div>
     ${emailTypeHtml}
     <div style="display:flex;gap:8px;">
       <button onclick="document.getElementById('ltAddOverlay').remove()" style="flex:1;padding:9px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
@@ -2995,6 +3049,32 @@ function ltAddToggleFsp(name,sid){
   const note=document.getElementById('ltAddCount');
   if(note){const n=s.size;note.textContent=n?`${n} compan${n===1?'y':'ies'} selected.`:'No companies selected.';}
 }
+function ltToggleNewBiz(checked){
+  const sec=document.getElementById('ltCompaniesSection');
+  if(sec)sec.style.display=checked?'none':'';
+}
+function ltAddManualFsp(){
+  const inp=document.getElementById('ltManualFsp');
+  const name=(inp?.value||'').trim();
+  if(!name)return;
+  const s=window._ltAddSelFsps||(window._ltAddSelFsps=new Set());
+  if(s.has(name)){inp.value='';return;}
+  s.add(name);
+  inp.value='';
+  // Add a chip for the manual entry
+  const chips=document.getElementById('ltAddChips');
+  if(chips){
+    const sid='ltChip_'+name.replace(/[^a-z0-9]/gi,'_')+'_manual';
+    const btn=document.createElement('button');
+    btn.id=sid;
+    btn.textContent=name;
+    btn.style.cssText='padding:5px 10px;border-radius:20px;border:1.5px solid #0d1f3c;background:#0d1f3c;color:#fff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;';
+    btn.onclick=()=>ltAddToggleFsp(name,sid);
+    chips.appendChild(btn);
+  }
+  const note=document.getElementById('ltAddCount');
+  if(note){const n=s.size;note.textContent=n?`${n} compan${n===1?'y':'ies'} selected.`:'No companies selected.';}
+}
 function ltAddSetType(type){
   window._ltAddType=type;
   const s=document.getElementById('ltTypeSched');
@@ -3010,53 +3090,84 @@ function ltSaveForm(){
   const ph=(document.getElementById('ltPhone')?.value||'').trim();
   const dept=(document.getElementById('ltDept')?.value||'').trim();
   const fac=(document.getElementById('ltFac')?.value||'').trim();
+  const town=(document.getElementById('ltTown')?.value||'').trim();
   const notes=(document.getElementById('ltNotes')?.value||'').trim();
+  const isNewBiz=!!(document.getElementById('ltNewBiz')?.checked);
   const sel=window._ltAddSelFsps?[...window._ltAddSelFsps]:[];
   if(!fn&&!sn){alert('Please enter at least a client name.');return;}
-  if(!sel.length){alert('Please select at least one company.');return;}
+  if(!isNewBiz&&!sel.length){alert('Please select at least one company, or mark as New Business.');return;}
   const caseId=window._ltAddEditId;
+  const now=new Date().toISOString().slice(0,10);
   if(caseId){
-    // Edit existing case
+    // Edit existing — email only newly added companies
     const cases=getLTCases();
     const c=cases.find(x=>x._id===caseId);
     if(c){
-      c.clientName=fn;c.surname=sn;c.idNumber=id;c.phone=ph;c.department=dept;c.facility=fac;c.notes=notes;
+      c.clientName=fn;c.surname=sn;c.idNumber=id;c.phone=ph;c.department=dept;c.facility=fac;c.town=town;c.notes=notes;c.isNewBusiness=isNewBiz;
       const existingNames=new Set(c.companies.map(co=>co.name));
-      sel.forEach(name=>{if(!existingNames.has(name))c.companies.push({name,emailSent:false,dateSent:null,referenceNumber:'',contractsReceived:false,comments:''}); });
-      c.companies=c.companies.filter(co=>sel.includes(co.name)||co.emailSent||co.contractsReceived);
+      const newlyAdded=sel.filter(name=>!existingNames.has(name));
+      newlyAdded.forEach(name=>c.companies.push({name,emailSent:false,dateSent:null,referenceNumber:'',contractStatus:'none',comments:''}));
+      c.companies=c.companies.filter(co=>sel.includes(co.name)||co.emailSent||co.contractStatus==='received');
       saveLTCases(cases);
       if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+      // Email only the newly added ones
+      if(newlyAdded.length){
+        const type=window._ltAddType||'schedule';
+        const emailMap=type==='refund'?FSP_REFUND_EMAILS:FSP_SCHEDULE_EMAILS;
+        const emails=newlyAdded.map(n=>emailMap[n]).filter(Boolean);
+        const noEmail=newlyAdded.filter(n=>!emailMap[n]);
+        if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?')){}
+        if(emails.length){
+          const clientName=(fn+' '+sn).trim();
+          const advisorName=currentUser?.name||'[Your Name]';
+          const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+          const subject=type==='schedule'?id+' — Policy Schedule Request':id+' — Premium Refund Request';
+          const body=type==='schedule'
+            ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
+            :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
+          window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+          // Mark newly added as email sent
+          newlyAdded.forEach(name=>{const co=c.companies.find(x=>x.name===name);if(co){co.emailSent=true;co.dateSent=now;}});
+          saveLTCases(cases);
+          if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+        }
+      }
     }
     document.getElementById('ltAddOverlay')?.remove();
     renderLOATracker();
     renderLoaTrackerWidget();
   } else {
-    // New case — generate email then save
-    if(!id||id.length<6){alert('Please enter the client ID number.');return;}
+    // New case
+    if(!isNewBiz&&(!id||id.length<6)){alert('Please enter the client ID number.');return;}
     const clientName=(fn+' '+sn).trim();
-    const type=window._ltAddType||'schedule';
-    const emailMap=type==='refund'?FSP_REFUND_EMAILS:FSP_SCHEDULE_EMAILS;
-    const emails=sel.map(n=>emailMap[n]).filter(Boolean);
-    const noEmail=sel.filter(n=>!emailMap[n]);
-    if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?'))return;
-    if(!emails.length){alert('No email addresses found for the selected companies.');return;}
-    const advisorName=currentUser?.name||'[Your Name]';
-    const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
-    const subject=type==='schedule'?id+' — Policy Schedule Request':id+' — Premium Refund Request';
-    const body=type==='schedule'
-      ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
-      :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
-    const now=new Date().toISOString().slice(0,10);
-    const entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,notes,createdAt:now,
-      companies:sel.map(name=>({name,emailSent:true,dateSent:now,referenceNumber:'',contractsReceived:false,comments:''}))};
+    const now2=new Date().toISOString().slice(0,10);
+    let entry;
+    if(isNewBiz){
+      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:true,createdAt:now2,companies:[]};
+    } else {
+      const type=window._ltAddType||'schedule';
+      const emailMap=type==='refund'?FSP_REFUND_EMAILS:FSP_SCHEDULE_EMAILS;
+      const emails=sel.map(n=>emailMap[n]).filter(Boolean);
+      const noEmail=sel.filter(n=>!emailMap[n]);
+      if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?'))return;
+      if(!emails.length){alert('No email addresses found for the selected companies.');return;}
+      const advisorName=currentUser?.name||'[Your Name]';
+      const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+      const subject=type==='schedule'?id+' — Policy Schedule Request':id+' — Premium Refund Request';
+      const body=type==='schedule'
+        ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
+        :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
+      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:false,createdAt:now2,
+        companies:sel.map(name=>({name,emailSent:true,dateSent:now2,referenceNumber:'',contractStatus:'none',comments:''}))};
+      triggerLoaDownload();
+      window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+      showLoaReminder();
+    }
     const cases=getLTCases();cases.unshift(entry);saveLTCases(cases);
     if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(entry).catch(()=>{});
     document.getElementById('ltAddOverlay')?.remove();
-    triggerLoaDownload();
-    window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
     showPage('loatracker');
     renderLoaTrackerWidget();
-    showLoaReminder();
   }
 }
 
@@ -3128,24 +3239,30 @@ const FSP_REFUND_EMAILS={
   'Assupol':'clientservice@assupol.co.za',
   'Assupol Prosperity':'groups@assupol.co.za',
   'AVBOB':'clientcare@avbob.co.za',
+  'Centriq / The Unlimited':'customercare@theunlimited.co.za',
+  'Channel Life':'Skyinfo@sanlamsky.co.za',
   'Clientele':'services@clientele.co.za',
+  'Discovery Funeral':'info@phakama.co.za',
   'Discovery Life':'discoverylifeinfo@discovery.co.za',
-  'Discovery (Funeral)':'info@phakama.co.za',
   'Emerald Life':'info@emeraldsa.co.za',
   'FNB Life':'fnblife@fnb.co.za',
   'Guard Risk':'info@guardrisk.co.za',
   'Hollard Life':'customerservice@hollard.co.za',
   'Hollard MLM':'lifeclientservice@hollard.co.za',
   'Hollard Specialist':'Hlamendments@hollard.co.za',
-  'King Price':'clientservices@kingprice.co.za',
+  'King Price Life':'clientservices@kingprice.co.za',
+  'Legalwise':'',
   'Liberty':'info@liberty.co.za',
+  'Lion of Africa':'lionlifenb@lionlife.co.za',
   'Metropolitan':'info@metropolitan.co.za',
   'Momentum':'clientservice@momentum.co.za',
-  'Nedbank':'lifeinsurance@nedbank.co.za',
-  'Old Mutual':'customerservice@oldmutual.co.za',
+  'Nedbank Life':'lifeinsurance@nedbank.co.za',
+  'Old Mutual Group Schemes':'GSenquiries@oldmutual.co.za',
   'Old Mutual Greenlight':'customerservice@oldmutual.co.za',
+  'Old Mutual Life':'customerservice@oldmutual.co.za',
   'Old Mutual Protect':'contactus@oldmutual.com',
   'Outsurance':'uwcancel@out.co.za',
+  'Platinum Life':'info@platinumlife.co.za',
   'Safrican':'safmembership@safrican.co.za',
   'Sanlam Life':'life@sanlam.co.za',
   'Sanlam Sky':'Skyinvestmentclaims@sanlamsky.co.za',
@@ -3263,24 +3380,30 @@ const FSP_SCHEDULE_EMAILS={
   'Assupol':'policyservice@assupol.co.za',
   'Assupol Prosperity':'groups@assupol.co.za',
   'AVBOB':'clientcare@avbob.co.za',
+  'Centriq / The Unlimited':'customercare@theunlimited.co.za',
+  'Channel Life':'Skyinfo@sanlamsky.co.za',
   'Clientele':'services@clientele.co.za',
+  'Discovery Funeral':'info@phakama.co.za',
   'Discovery Life':'discoverylifeinfo@discovery.co.za',
-  'Discovery (Funeral)':'info@phakama.co.za',
   'Emerald Life':'info@emeraldsa.co.za',
   'FNB Life':'fnblife@fnb.co.za',
   'Guard Risk':'info@guardrisk.co.za',
   'Hollard Life':'customerservice@hollard.co.za',
   'Hollard MLM':'lifeclientservice@hollard.co.za',
   'Hollard Specialist':'Hlamendments@hollard.co.za',
-  'King Price':'clientservices@kingprice.co.za',
+  'King Price Life':'clientservices@kingprice.co.za',
+  'Legalwise':'',
   'Liberty':'info@liberty.co.za',
+  'Lion of Africa':'lionlifenb@lionlife.co.za',
   'Metropolitan':'info@metropolitan.co.za',
   'Momentum':'clientservice@momentum.co.za',
-  'Nedbank':'lifeinsurance@nedbank.co.za',
-  'Old Mutual':'customerservice@oldmutual.co.za',
+  'Nedbank Life':'lifeinsurance@nedbank.co.za',
+  'Old Mutual Group Schemes':'GSenquiries@oldmutual.co.za',
   'Old Mutual Greenlight':'customerservice@oldmutual.co.za',
+  'Old Mutual Life':'customerservice@oldmutual.co.za',
   'Old Mutual Protect':'contactus@oldmutual.com',
   'Outsurance':'uwcancel@out.co.za',
+  'Platinum Life':'info@platinumlife.co.za',
   'Safrican':'safmembership@safrican.co.za',
   'Sanlam Life':'life@sanlam.co.za',
   'Sanlam Sky':'PolicyServicing@sanlamsky.co.za',
