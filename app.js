@@ -3039,12 +3039,14 @@ Extract:
 1. Their given name(s) / first name(s)
 2. Their surname / family name
 3. Their South African ID number (13 digits — remove any spaces or dashes)
+4. Their contact/telephone/cell number (digits only, no spaces or dashes)
 
 Reply with ONLY valid JSON, no markdown, no explanation:
-{"firstName":"","surname":"","idNumber":""}
+{"firstName":"","surname":"","idNumber":"","phone":""}
 
 Rules:
-- idNumber must be digits only, no spaces
+- idNumber must be 13 digits only, no spaces
+- phone must be digits only, no spaces or dashes (e.g. 0731234567)
 - If a name has an initial (e.g. "Nomfundo C. Baran"), put "Nomfundo C." as firstName and "Baran" as surname
 - If you cannot find a value, leave it as empty string`;
     const raw=await callClaudeVision(b64,mediaType,prompt,512);
@@ -3057,9 +3059,11 @@ Rules:
     const fn=document.getElementById('ltFName');
     const sn=document.getElementById('ltSName');
     const idF=document.getElementById('ltId');
+    const phF=document.getElementById('ltPhone');
     if(parsed.firstName&&fn)fn.value=parsed.firstName;
     if(parsed.surname&&sn)sn.value=parsed.surname;
     if(parsed.idNumber&&idF)idF.value=parsed.idNumber;
+    if(parsed.phone&&phF)phF.value=parsed.phone;
     const found=parsed.firstName||parsed.surname||parsed.idNumber;
     if(btn)btn.innerHTML=found
       ?`<span style="color:#059669;font-weight:700;">✅ ${file.name}</span>`
