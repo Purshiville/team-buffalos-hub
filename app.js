@@ -2752,121 +2752,7 @@ function showLoaReminder(){
 let _loaWizFsps=new Set();
 let _loaWizType='schedule';
 
-function showLoaEmailWizard(){
-  const ALL_FSPS=[...new Set([...Object.keys(FSP_SCHEDULE_EMAILS||{}),...Object.keys(FSP_REFUND_EMAILS||{})])].sort();
-  _loaWizFsps=new Set();
-  _loaWizType='schedule';
-  window._loaFile=null;
-  let ov=document.getElementById('loaWizOverlay');if(ov)ov.remove();
-  ov=document.createElement('div');
-  ov.id='loaWizOverlay';
-  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
-  const chips=ALL_FSPS.map(n=>{
-    const sid='fspChip_'+n.replace(/[^a-z0-9]/gi,'_');
-    return`<button id="${sid}" onclick="loaWizToggle('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 11px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;
-  }).join('');
-  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,.28);">
-    <h3 style="margin:0 0 3px;font-size:15px;font-weight:800;color:#0d1f3c;text-align:center;">✉️ LOA Email Request</h3>
-    <p style="margin:0 0 14px;font-size:11px;color:#6b7280;text-align:center;">Upload LOA — name &amp; ID fill automatically. Select insurers and generate.</p>
-    <div style="margin-bottom:12px;">
-      <input type="file" id="loaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*" style="display:none;" onchange="loaFileSelected(this)"/>
-      <input type="file" id="loaCamInput" accept="image/*" capture="environment" style="display:none;" onchange="loaFileSelected(this)"/>
-      <div style="display:flex;gap:6px;">
-        <button onclick="document.getElementById('loaFileInput').click()" id="loaFileBtn" style="flex:1;padding:9px 10px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;">📎 Tap to upload LOA</button>
-        <button onclick="document.getElementById('loaCamInput').click()" title="Take photo" style="padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:18px;cursor:pointer;">📷</button>
-      </div>
-      <div id="loaFileNote" style="font-size:10px;color:#9ca3af;margin-top:3px;">Downloads to your device when Gmail opens — attach it from Downloads.</div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
-      <div>
-        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">Client Full Name</label>
-        <input id="loaClientName" placeholder="e.g. Zanele Dlamini" value="${(_loaClient.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:7px 9px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;"/>
-      </div>
-      <div>
-        <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:3px;">ID Number <span style="color:#dc2626;">★</span></label>
-        <input id="loaIdInput" placeholder="13-digit ID" value="${(_loaClient.idNumber||'').replace(/"/g,'&quot;')}" maxlength="13" inputmode="numeric" style="width:100%;padding:7px 9px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;font-family:monospace;" oninput="loaIdCheck()"/>
-      </div>
-    </div>
-    <div style="margin-bottom:10px;">
-      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;">Select Insurers — tap to add</div>
-      <div id="loaWizChips" style="display:flex;flex-wrap:wrap;gap:6px;">${chips}</div>
-    </div>
-    <div id="loaWizCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">No insurers selected yet.</div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <button id="loaWizTypeSched" onclick="loaWizSetType('schedule')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #0d1f3c;background:#f0f4ff;color:#0d1f3c;font-size:12px;font-weight:700;cursor:pointer;">📋 Schedule Request</button>
-      <button id="loaWizTypeRefund" onclick="loaWizSetType('refund')" style="flex:1;padding:9px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;color:#9ca3af;font-size:12px;font-weight:700;cursor:pointer;">💰 Refund Request</button>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button onclick="document.getElementById('loaWizOverlay').remove()" style="flex:1;padding:10px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
-      <button id="loaWizGenBtn" onclick="loaWizGenerate()" style="flex:2;padding:10px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;opacity:.45;pointer-events:none;">Generate Email →</button>
-    </div>
-  </div>`;
-  ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
-  document.body.appendChild(ov);
-  setTimeout(()=>loaWizUpdateCount(),50);
-}
-
-function loaWizToggle(name,sid){
-  if(_loaWizFsps.has(name))_loaWizFsps.delete(name);else _loaWizFsps.add(name);
-  const chip=document.getElementById(sid);
-  if(chip){
-    const sel=_loaWizFsps.has(name);
-    chip.style.background=sel?'#0d1f3c':'#f9fafb';
-    chip.style.color=sel?'#fff':'#374151';
-    chip.style.borderColor=sel?'#0d1f3c':'#e5e7eb';
-  }
-  loaWizUpdateCount();
-}
-
-function loaWizUpdateCount(){
-  const count=_loaWizFsps.size;
-  const note=document.getElementById('loaWizCount');
-  if(note)note.textContent=count?`${count} insurer${count===1?'':'s'} selected.`:'No insurers selected yet.';
-  const btn=document.getElementById('loaWizGenBtn');
-  if(btn){
-    const ok=count>0&&(document.getElementById('loaIdInput')?.value||'').trim().length>=6;
-    btn.style.opacity=ok?'1':'.45';btn.style.pointerEvents=ok?'auto':'none';
-  }
-}
-
-function loaWizSetType(type){
-  _loaWizType=type;
-  const s=document.getElementById('loaWizTypeSched');
-  const r=document.getElementById('loaWizTypeRefund');
-  if(s){s.style.border=type==='schedule'?'2px solid #0d1f3c':'2px solid #e5e7eb';s.style.background=type==='schedule'?'#f0f4ff':'#fff';s.style.color=type==='schedule'?'#0d1f3c':'#9ca3af';}
-  if(r){r.style.border=type==='refund'?'2px solid #c9922a':'2px solid #e5e7eb';r.style.background=type==='refund'?'#fffbeb':'#fff';r.style.color=type==='refund'?'#c9922a':'#9ca3af';}
-}
-
-function loaWizGenerate(){
-  const clientName=(document.getElementById('loaClientName')?.value||'').trim()||'[Full Name]';
-  const idNumber=(document.getElementById('loaIdInput')?.value||'').trim();
-  if(!idNumber||idNumber.length<6){alert('Please enter the client ID number.');return;}
-  if(!_loaWizFsps.size){alert('Please select at least one insurer.');return;}
-  saveLoaClient(clientName,idNumber);
-  const selected=[..._loaWizFsps];
-  const emailMap=_loaWizType==='schedule'?FSP_SCHEDULE_EMAILS:FSP_REFUND_EMAILS;
-  const emails=selected.map(n=>emailMap[n]).filter(Boolean);
-  const noEmail=selected.filter(n=>!emailMap[n]);
-  if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?'))return;
-  if(!emails.length){alert('No email addresses found for the selected companies.');return;}
-  const advisorName=currentUser?.name||'[Your Name]';
-  const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
-  let subject,body;
-  if(_loaWizType==='schedule'){
-    subject=idNumber+' — Policy Schedule Request';
-    body=`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${idNumber}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`;
-  } else {
-    subject=idNumber+' — Premium Refund Request';
-    body=`Good day,\n\nOn behalf of ${clientName} (ID Number: ${idNumber}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
-  }
-  document.getElementById('loaWizOverlay')?.remove();
-  ltAddCase(clientName,'',idNumber,'','','',selected.map(n=>({name:n,emailSent:true,dateSent:new Date().toISOString().slice(0,10),referenceNumber:'',contractsReceived:false,comments:''})),true);
-  renderLoaTrackerWidget();
-  triggerLoaDownload();
-  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  window.open(url,'_blank');
-  showLoaReminder();
-}
+function showLoaEmailWizard(){ showLTAddForm(null); }
 // ── END LOA EMAIL WIZARD ───────────────────────────────────────────────────
 
 // ── LOA SCHEDULE TRACKER ───────────────────────────────────────────────────
@@ -2926,13 +2812,12 @@ function renderLOATracker(){
           <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${lbl}</div>
         </div>`).join('')}
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:14px;">
-      <button onclick="showLTAddForm()" style="flex:1;padding:10px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">+ Add Client</button>
-      <button onclick="showLoaEmailWizard()" style="padding:10px 14px;background:#f4f2ed;color:#0d1f3c;border:1px solid #e5e7eb;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;" title="Generate LOA email">✉️ Email</button>
+    <div style="margin-bottom:14px;">
+      <button onclick="showLTAddForm(null)" style="width:100%;padding:11px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">+ New Schedule Request</button>
     </div>`;
 
   if(!cases.length){
-    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click + Add Client or use the ✉️ Email button to get started.</span></div>`;
+    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click + New Schedule Request to get started.</span></div>`;
     return;
   }
 
@@ -2940,24 +2825,24 @@ function renderLOATracker(){
     const allRecv=c.companies.length&&c.companies.every(co=>co.contractsReceived);
     const headerBg=allRecv?'#f0fdf4':'#f8f7f4';
     const compRows=c.companies.map((co,coIdx)=>{
-      const sid=`lt_sent_${c._id}_${coIdx}`;
-      const rid=`lt_recv_${c._id}_${coIdx}`;
-      const did=`lt_date_${c._id}_${coIdx}`;
-      const refid=`lt_ref_${c._id}_${coIdx}`;
       const sentClr=co.emailSent?'#16a34a':'#9ca3af';
       const recvClr=co.contractsReceived?'#16a34a':'#9ca3af';
-      return`<div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;padding:7px 10px;border-bottom:1px solid #f0f0f0;background:#fff;">
-        <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${co.name}</div>
-        <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
-          <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
-          <button onclick="ltToggle('${c._id}',${coIdx},'contractsReceived',${!co.contractsReceived})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${recvClr};background:${co.contractsReceived?recvClr:'#fff'};color:${co.contractsReceived?'#fff':recvClr};font-size:10px;font-weight:700;cursor:pointer;">${co.contractsReceived?'✓ Received':'Pending'}</button>
+      return`<div style="padding:7px 10px;border-bottom:1px solid #f0f0f0;background:#fff;">
+        <div style="display:grid;grid-template-columns:1fr auto auto;gap:6px;align-items:center;">
+          <div style="font-size:12px;font-weight:700;color:#0d1f3c;">${co.name}</div>
+          <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;">
+            <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
+            <button onclick="ltToggle('${c._id}',${coIdx},'contractsReceived',${!co.contractsReceived})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${recvClr};background:${co.contractsReceived?recvClr:'#fff'};color:${co.contractsReceived?'#fff':recvClr};font-size:10px;font-weight:700;cursor:pointer;">${co.contractsReceived?'✓ Received':'Pending'}</button>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
+            <input type="date" value="${co.dateSent||''}" onchange="ltField('${c._id}',${coIdx},'dateSent',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Date sent"/>
+            <input type="text" value="${(co.referenceNumber||'').replace(/"/g,'&quot;')}" placeholder="Ref #" onchange="ltField('${c._id}',${coIdx},'referenceNumber',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Reference number"/>
+          </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:3px;min-width:120px;">
-          <input type="date" value="${co.dateSent||''}" onchange="ltField('${c._id}',${coIdx},'dateSent',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Date sent"/>
-          <input type="text" value="${(co.referenceNumber||'').replace(/"/g,'&quot;')}" placeholder="Ref #" onchange="ltField('${c._id}',${coIdx},'referenceNumber',this.value)" style="font-size:10px;border:1px solid #e5e7eb;border-radius:6px;padding:3px 6px;width:100%;background:#f9f9f9;" title="Reference number"/>
-        </div>
+        <textarea placeholder="Notes for ${co.name}…" onchange="ltField('${c._id}',${coIdx},'comments',this.value)" style="width:100%;margin-top:5px;padding:5px 7px;font-size:11px;border:1px solid #e5e7eb;border-radius:6px;background:#f9f9f9;box-sizing:border-box;resize:vertical;min-height:32px;color:#374151;">${(co.comments||'').replace(/</g,'&lt;')}</textarea>
       </div>`;
     }).join('');
+    const notesHtml=c.notes?`<div style="font-size:11px;color:#6b7280;font-style:italic;padding:6px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa;">📝 ${c.notes.replace(/</g,'&lt;')}</div>`:'';
     return`<div style="background:${headerBg};border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px;">
         <div style="flex:1;min-width:0;">
@@ -2968,8 +2853,12 @@ function renderLOATracker(){
           </div>
           <div style="font-size:11px;color:#6b7280;margin-top:3px;">${c.idNumber||''}${c.phone?' · '+c.phone:''}${c.department?' · '+c.department:''}${c.facility?' · '+c.facility:''}</div>
         </div>
-        <button onclick="ltDeleteCase('${c._id}')" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;flex-shrink:0;padding:0;">✕</button>
+        <div style="display:flex;gap:6px;flex-shrink:0;">
+          <button onclick="showLTAddForm('${c._id}')" style="background:none;border:1px solid #e5e7eb;color:#6b7280;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Edit">✏️</button>
+          <button onclick="ltDeleteCase('${c._id}')" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0;" title="Remove">✕</button>
+        </div>
       </div>
+      ${notesHtml}
       ${compRows}
     </div>`;
   }).join('');
@@ -2987,34 +2876,59 @@ function ltField(caseId,compIdx,field,value){
   renderLoaTrackerWidget();
 }
 
-function showLTAddForm(){
+function showLTAddForm(caseId){
+  const existing=caseId?getLTCases().find(c=>c._id===caseId):null;
+  const isEdit=!!existing;
   const ALL_FSPS=[...new Set([...Object.keys(FSP_SCHEDULE_EMAILS||{}),...Object.keys(FSP_REFUND_EMAILS||{})])].sort();
-  let selFsps=new Set();
+  window._ltAddSelFsps=new Set(existing?existing.companies.map(co=>co.name):[]);
+  window._ltAddEditId=caseId||null;
+  window._ltAddType='schedule';
   let ov=document.getElementById('ltAddOverlay');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='ltAddOverlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
-  const chips=ALL_FSPS.map(n=>{const sid='ltChip_'+n.replace(/[^a-z0-9]/gi,'_');return`<button id="${sid}" onclick="ltAddToggleFsp('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 10px;border-radius:20px;border:1.5px solid #e5e7eb;background:#f9fafb;color:#374151;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;}).join('');
-  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:440px;max-width:96vw;max-height:90vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
-    <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">Add Client to Tracker</h3>
+  const chips=ALL_FSPS.map(n=>{
+    const sid='ltChip_'+n.replace(/[^a-z0-9]/gi,'_');
+    const sel=window._ltAddSelFsps.has(n);
+    return`<button id="${sid}" onclick="ltAddToggleFsp('${n.replace(/'/g,"\\'")}','${sid}')" style="padding:5px 10px;border-radius:20px;border:1.5px solid ${sel?'#0d1f3c':'#e5e7eb'};background:${sel?'#0d1f3c':'#f9fafb'};color:${sel?'#fff':'#374151'};font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">${n}</button>`;
+  }).join('');
+  const v=(f,fb='')=>(f||fb).replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  const uploadHtml=isEdit?'':`
     <input type="file" id="ltLoaFileInput" accept=".pdf,.jpg,.jpeg,.png,.heic,.heif,image/*" style="display:none;" onchange="ltLoaFileSelected(this)"/>
-    <button onclick="document.getElementById('ltLoaFileInput').click()" id="ltLoaUploadBtn" style="width:100%;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;margin-bottom:10px;box-sizing:border-box;">📎 Upload LOA — AI will fill name &amp; ID</button>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:12px;">
-      ${[['ltFName','First Name',''],['ltSName','Surname',''],['ltId','ID Number','monospace'],['ltPhone','Phone',''],['ltDept','Department',''],['ltFac','Facility','']].map(([id,lbl,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${id}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
+    <input type="file" id="ltLoaCamInput" accept="image/*" capture="environment" style="display:none;" onchange="ltLoaFileSelected(this)"/>
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button onclick="document.getElementById('ltLoaFileInput').click()" id="ltLoaUploadBtn" style="flex:1;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;box-sizing:border-box;">📎 Upload LOA — AI will fill name &amp; ID</button>
+      <button onclick="document.getElementById('ltLoaCamInput').click()" title="Take photo" style="padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:18px;cursor:pointer;">📷</button>
+    </div>`;
+  const emailTypeHtml=isEdit?'':`
+    <div style="margin-bottom:12px;">
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Email Type</div>
+      <div style="display:flex;gap:8px;">
+        <button id="ltTypeSched" onclick="ltAddSetType('schedule')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #0d1f3c;background:#f0f4ff;color:#0d1f3c;font-size:11px;font-weight:700;cursor:pointer;">📋 Schedule Request</button>
+        <button id="ltTypeRefund" onclick="ltAddSetType('refund')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;color:#9ca3af;font-size:11px;font-weight:700;cursor:pointer;">💰 Refund Request</button>
+      </div>
+    </div>`;
+  const selCount=window._ltAddSelFsps.size;
+  ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
+    <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">${isEdit?'✏️ Edit Client':'📋 New Schedule Request'}</h3>
+    ${uploadHtml}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;">
+      ${[['ltFName','First Name',v(existing?.clientName),''],['ltSName','Surname',v(existing?.surname),''],['ltId','ID Number',v(existing?.idNumber),'monospace'],['ltPhone','Phone',v(existing?.phone),''],['ltDept','Department',v(existing?.department),''],['ltFac','Facility',v(existing?.facility),'']].map(([fid,lbl,val,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${fid}" value="${val}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">Notes</label>
+      <textarea id="ltNotes" rows="2" placeholder="General notes about this case…" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;resize:vertical;">${v(existing?.notes)}</textarea>
     </div>
     <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Companies Insured With</div>
-    <div id="ltAddChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;">${chips}</div>
-    <div id="ltAddCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">No companies selected.</div>
+    <div id="ltAddChips" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;">${chips}</div>
+    <div id="ltAddCount" style="font-size:11px;color:#9ca3af;text-align:center;margin-bottom:12px;">${selCount?`${selCount} compan${selCount===1?'y':'ies'} selected.`:'No companies selected.'}</div>
+    ${emailTypeHtml}
     <div style="display:flex;gap:8px;">
       <button onclick="document.getElementById('ltAddOverlay').remove()" style="flex:1;padding:9px;background:#f4f2ed;color:#374151;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">Cancel</button>
-      <button id="ltAddSaveBtn" onclick="ltAddSave()" style="flex:2;padding:9px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Save Client</button>
+      <button onclick="ltSaveForm()" style="flex:2;padding:9px;background:#0d1f3c;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">${isEdit?'Save Changes':'Generate Email & Save →'}</button>
     </div>
   </div>`;
   ov.addEventListener('click',e=>{if(e.target===ov)ov.remove();});
   document.body.appendChild(ov);
-  window._ltAddSelFsps=selFsps;
-  const nameF=document.getElementById('ltFName');if(nameF)nameF.focus();
-  if(_loaClient.name){const parts=_loaClient.name.trim().split(/\s+/);document.getElementById('ltFName').value=parts[0]||'';document.getElementById('ltSName').value=parts.slice(1).join(' ')||'';}
-  if(_loaClient.idNumber)document.getElementById('ltId').value=_loaClient.idNumber;
 }
 async function ltLoaFileSelected(input){
   if(!input.files||!input.files[0])return;
@@ -3081,17 +2995,69 @@ function ltAddToggleFsp(name,sid){
   const note=document.getElementById('ltAddCount');
   if(note){const n=s.size;note.textContent=n?`${n} compan${n===1?'y':'ies'} selected.`:'No companies selected.';}
 }
-function ltAddSave(){
+function ltAddSetType(type){
+  window._ltAddType=type;
+  const s=document.getElementById('ltTypeSched');
+  const r=document.getElementById('ltTypeRefund');
+  if(s){s.style.border=type==='schedule'?'2px solid #0d1f3c':'2px solid #e5e7eb';s.style.background=type==='schedule'?'#f0f4ff':'#fff';s.style.color=type==='schedule'?'#0d1f3c':'#9ca3af';}
+  if(r){r.style.border=type==='refund'?'2px solid #c9922a':'2px solid #e5e7eb';r.style.background=type==='refund'?'#fffbeb':'#fff';r.style.color=type==='refund'?'#c9922a':'#9ca3af';}
+}
+
+function ltSaveForm(){
   const fn=(document.getElementById('ltFName')?.value||'').trim();
   const sn=(document.getElementById('ltSName')?.value||'').trim();
   const id=(document.getElementById('ltId')?.value||'').trim();
+  const ph=(document.getElementById('ltPhone')?.value||'').trim();
+  const dept=(document.getElementById('ltDept')?.value||'').trim();
+  const fac=(document.getElementById('ltFac')?.value||'').trim();
+  const notes=(document.getElementById('ltNotes')?.value||'').trim();
   const sel=window._ltAddSelFsps?[...window._ltAddSelFsps]:[];
   if(!fn&&!sn){alert('Please enter at least a client name.');return;}
   if(!sel.length){alert('Please select at least one company.');return;}
-  ltAddCase(fn,sn,id,document.getElementById('ltPhone')?.value.trim(),document.getElementById('ltDept')?.value.trim(),document.getElementById('ltFac')?.value.trim(),sel,false);
-  document.getElementById('ltAddOverlay')?.remove();
-  renderLOATracker();
-  renderLoaTrackerWidget();
+  const caseId=window._ltAddEditId;
+  if(caseId){
+    // Edit existing case
+    const cases=getLTCases();
+    const c=cases.find(x=>x._id===caseId);
+    if(c){
+      c.clientName=fn;c.surname=sn;c.idNumber=id;c.phone=ph;c.department=dept;c.facility=fac;c.notes=notes;
+      const existingNames=new Set(c.companies.map(co=>co.name));
+      sel.forEach(name=>{if(!existingNames.has(name))c.companies.push({name,emailSent:false,dateSent:null,referenceNumber:'',contractsReceived:false,comments:''}); });
+      c.companies=c.companies.filter(co=>sel.includes(co.name)||co.emailSent||co.contractsReceived);
+      saveLTCases(cases);
+      if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+    }
+    document.getElementById('ltAddOverlay')?.remove();
+    renderLOATracker();
+    renderLoaTrackerWidget();
+  } else {
+    // New case — generate email then save
+    if(!id||id.length<6){alert('Please enter the client ID number.');return;}
+    const clientName=(fn+' '+sn).trim();
+    const type=window._ltAddType||'schedule';
+    const emailMap=type==='refund'?FSP_REFUND_EMAILS:FSP_SCHEDULE_EMAILS;
+    const emails=sel.map(n=>emailMap[n]).filter(Boolean);
+    const noEmail=sel.filter(n=>!emailMap[n]);
+    if(noEmail.length&&!confirm('No email on file for: '+noEmail.join(', ')+'. Continue without them?'))return;
+    if(!emails.length){alert('No email addresses found for the selected companies.');return;}
+    const advisorName=currentUser?.name||'[Your Name]';
+    const today=new Date().toLocaleDateString('en-ZA',{day:'2-digit',month:'long',year:'numeric'});
+    const subject=type==='schedule'?id+' — Policy Schedule Request':id+' — Premium Refund Request';
+    const body=type==='schedule'
+      ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
+      :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
+    const now=new Date().toISOString().slice(0,10);
+    const entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,notes,createdAt:now,
+      companies:sel.map(name=>({name,emailSent:true,dateSent:now,referenceNumber:'',contractsReceived:false,comments:''}))};
+    const cases=getLTCases();cases.unshift(entry);saveLTCases(cases);
+    if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(entry).catch(()=>{});
+    document.getElementById('ltAddOverlay')?.remove();
+    triggerLoaDownload();
+    window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+    showPage('loatracker');
+    renderLoaTrackerWidget();
+    showLoaReminder();
+  }
 }
 
 function renderLoaTrackerWidget(){
