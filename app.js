@@ -2992,7 +2992,7 @@ async function ltLoaFileSelected(input){
   try{
     const fname=file.name.toLowerCase();
     const isPdf=fname.endsWith('.pdf');
-    let mediaType=isPdf?'application/pdf':file.type||'image/jpeg';
+    let mediaType=isPdf?'application/pdf':_fileMediaType(file);
     const b64=await new Promise((res,rej)=>{
       const r=new FileReader();
       r.onload=()=>res(r.result.split(',')[1]);
@@ -6422,7 +6422,7 @@ async function handleIMPUpload(input, mode){
       r.onerror=rej;
       r.readAsDataURL(file);
     });
-    const mediaType = file.type || 'image/jpeg';
+    const mediaType = _fileMediaType(file);
 
     const roaPrompt = 'This is an IMP Final Recommendation screen from Sanlam Sky. Is it REPLACEMENT (has Kept Cover + New Cover sections) or NEW BUSINESS (only new policies)? Return ONLY this JSON (no markdown): {"type":"new","new_plan":"All-in-One Plan","new_lives":[{"role":"Main member","name":"John Smith","cover":"R50 000"},{"role":"Spouse","name":"Mary Smith","cover":"R30 000"}],"new_premium":"R450","kept_cover_lives":[{"role":"Main member","name":"John Smith","cover":"R40 000"}],"total_cover":"R50 000","kept_premium":"R350"}';
     const clean = (await callClaudeVision(b64, mediaType, roaPrompt)).replace(/```json|```/g,'').trim();
@@ -7005,6 +7005,15 @@ const _FSP_ALIAS={
   'standard bank insurance':'Standard Bank','outsurance life':'Outsurance',
 };
 function _normaliseFSP(name){const k=(name||'').toLowerCase().trim();return _FSP_ALIAS[k]||name;}
+function _fileMediaType(f){
+  if(f.type)return f.type;
+  const n=(f.name||'').toLowerCase();
+  if(n.endsWith('.pdf'))return 'application/pdf';
+  if(n.endsWith('.png'))return 'image/png';
+  if(n.endsWith('.gif'))return 'image/gif';
+  if(n.endsWith('.webp'))return 'image/webp';
+  return 'image/jpeg';
+}
 
 function qlinkAddDeduction(company='',amount=0,status='keep'){
   _qlDeductions.push({company,amount,status});
@@ -7237,7 +7246,7 @@ async function handleQlinkPayslip(input){
   statusEl.textContent='⏳ Analysing payslip with AI...';
   try{
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-    const mediaType=file.type||'image/jpeg';
+    const mediaType=_fileMediaType(file);
     const prompt='This is a South African PERSAL payslip. Extract ALL of the following — do not truncate or summarise, return EVERY item you find:\n1. The basic salary (gross/basic, NOT nett).\n2. EVERY FSP insurance stop order deduction — extract ALL of them, up to 30. These are premiums paid to licensed FSPs for insurance products. INCLUDE: Metropolitan, Old Mutual, Old Mutual Group Schemes (may appear as OM Group Schemes or OMGS), Old Mutual Greenlight, Old Mutual Protect, Sanlam, Sanlam Sky (may appear as Channel Life, Sky, or Sky/Channel Life on the payslip), Momentum, Discovery, Liberty, Assupol, AVBOB, Workerslife (may appear as LEGAL, WL LEGAL, WL, or Workers Life on the payslip — use "Workerslife" as the company name), Clientele, 1Life, Emerald Life, Hollard, Absa Life, Absa Lipco, Standard Bank Insurance, FNB Life, Nedgroup, Legalwise, Legal and Tax, Capital Legacy, RMA (Road Accident), Accident insurance, Funeral cover, Life cover, Income protection, Disability cover.\n\nDO NOT INCLUDE: PAYE, income tax, pension fund, provident fund, medical aid, medical scheme, hospital plan, housing subsidy, housing loan, car allowance, transport, equipment deduction, salary sacrifice, union fees, NEHAWU, SADTU, POPCRU, NUM, garnishee orders, maintenance orders, municipality rates, electricity, water, any government department deductions, employer contributions.\n\n3. Policy/member number for each deduction if visible.\n\nReturn ONLY valid JSON — no explanation, no markdown, include ALL deductions found:\n{"basic_salary":15000,"deductions":[{"company":"Metropolitan","amount":350,"policy_number":"12345678"}]}\n\nUse null for policy_number if not visible. Return {"basic_salary":0,"deductions":[]} if unreadable.';
     const rawText=(await callClaudeVision(b64,mediaType,prompt,2048)).replace(/```json|```/g,'').trim();
     const _qlm=rawText.match(/\{[\s\S]*\}/);
@@ -7336,7 +7345,7 @@ async function handlePayslipUpload(input){
       r.readAsDataURL(file);
     });
 
-    const mediaType = file.type || 'image/jpeg';
+    const mediaType = _fileMediaType(file);
     const ps2Prompt = 'Extract ONLY FSP insurance stop order deductions from this South African payslip. These are premiums paid to licensed insurers. INCLUDE ONLY: Metropolitan, Old Mutual, Old Mutual Group Schemes (may appear as OM Group Schemes or OMGS), Old Mutual Greenlight, Old Mutual Protect, Sanlam, Sanlam Sky (may appear as Channel Life, Sky, or Sky/Channel Life), Momentum, Discovery, Liberty, Assupol, AVBOB, Workerslife, Clientele, 1Life, Emerald Life, Hollard, Absa Life, Absa Lipco, Standard Bank Insurance, FNB Life, Nedgroup, Legalwise, Legal and Tax, Capital Legacy, RMA, funeral cover, life cover, income protection, disability cover, accident insurance. DO NOT INCLUDE: PAYE, tax, pension fund, provident fund, medical aid, medical scheme, hospital plan, housing, transport, equipment, union fees, NEHAWU, SADTU, POPCRU, NUM, garnishee, maintenance, municipality, government deductions, employer contributions. Return ONLY a JSON array: [{"company":"Metropolitan","amount":350}] or [] if none found.';
     const clean = (await callClaudeVision(b64, mediaType, ps2Prompt)).replace(/```json|```/g,'').trim();
     _detectedDeductions = JSON.parse(clean);
@@ -7498,7 +7507,7 @@ async function handleSCImpUpload(input){
   try{
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
     const scPrompt = 'This is an IMP Final Recommendation screen. Find: 1) client cell/phone number, 2) all policy premiums, 3) new business or replacement? Respond with ONLY this JSON: {"phone":"0821234567","premiums":"R350, R194","type":"new"} — empty string if not visible.';
-    const parsed=JSON.parse((await callClaudeVision(b64,file.type||'image/jpeg',scPrompt)).replace(/```json|```/g,'').trim()||'{}');
+    const parsed=JSON.parse((await callClaudeVision(b64,_fileMediaType(file),scPrompt)).replace(/```json|```/g,'').trim()||'{}');
     if(parsed.phone){const ph=document.getElementById('sc_phone');if(ph)ph.value=parsed.phone;}
     if(parsed.premiums){const pr=document.getElementById('sc_premiums');if(pr)pr.value=parsed.premiums;}
     if(parsed.type==='replacement'&&_scType!=='replacement')setSCType('replacement');
@@ -8642,7 +8651,7 @@ function _restoreChatHistory(){
 let _chatPhoto=null,_chatPhotoType=null;
 function chatPhotoSelected(inp){
   const file=inp.files?.[0];if(!file)return;
-  _chatPhotoType=file.type||'image/jpeg';
+  _chatPhotoType=_fileMediaType(file);
   const reader=new FileReader();
   reader.onload=e=>{
     _chatPhoto=e.target.result.split(',')[1];
@@ -8997,7 +9006,7 @@ function handlePRLOAUpload(input){
   const reader=new FileReader();
   reader.onload=async e=>{
     const b64=e.target.result.split(',')[1];
-    const mediaType=file.type||'image/jpeg';
+    const mediaType=_fileMediaType(file);
     _prLoaFile={b64,mediaType,name:file.name};
     const status=document.getElementById('prLoaStatus');
     if(status)status.innerHTML=`<span style="color:#16a34a;font-weight:700;">✓ LOA uploaded: ${file.name} — reading client details…</span>`;
@@ -9034,7 +9043,7 @@ function handlePRDocUpload(input){
     const reader=new FileReader();
     reader.onload=e=>{
       const b64=e.target.result.split(',')[1];
-      const mediaType=file.type||'image/jpeg';
+      const mediaType=_fileMediaType(file);
       _prDocFiles.push({files:[{b64,mediaType,name:file.name}],label:file.name,status:'pending',data:null,error:null});
       if(--pending===0){renderPRDocList();updatePRButtons();}
     };
@@ -9053,7 +9062,7 @@ function addPageToPRDoc(idx){
     files.forEach(file=>{
       const reader=new FileReader();
       reader.onload=ev=>{
-        _prDocFiles[idx].files.push({b64:ev.target.result.split(',')[1],mediaType:file.type||'image/jpeg',name:file.name});
+        _prDocFiles[idx].files.push({b64:ev.target.result.split(',')[1],mediaType:_fileMediaType(file),name:file.name});
         if(_prDocFiles[idx].status==='done')_prDocFiles[idx].status='pending'; // mark for re-analysis
         _prDocFiles[idx].label=_prDocFiles[idx].files[0].name+((_prDocFiles[idx].files.length>1)?' + '+((_prDocFiles[idx].files.length-1)+' more'):'');
         if(--pending===0){renderPRDocList();updatePRButtons();}
@@ -9154,7 +9163,7 @@ function reUploadPRDoc(idx){
     for(const file of files){
       await new Promise((res,rej)=>{
         const r=new FileReader();
-        r.onload=e=>{loaded.push({b64:e.target.result.split(',')[1],mediaType:file.type||'image/jpeg',name:file.name});res();};
+        r.onload=e=>{loaded.push({b64:e.target.result.split(',')[1],mediaType:_fileMediaType(file),name:file.name});res();};
         r.onerror=rej;r.readAsDataURL(file);
       });
     }
@@ -10892,7 +10901,7 @@ async function acQlinkHandlePayslip(input){
   statusEl.textContent='⏳ Analysing payslip with AI...';
   try{
     const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
-    const mediaType=file.type||'image/jpeg';
+    const mediaType=_fileMediaType(file);
     const prompt='This is a South African PERSAL payslip. Extract ALL of the following — do not truncate or summarise, return EVERY item you find:\n1. The basic salary (gross/basic, NOT nett).\n2. EVERY FSP insurance stop order deduction — extract ALL of them, up to 30. These are premiums paid to licensed FSPs for insurance products. INCLUDE: Metropolitan, Old Mutual, Old Mutual Group Schemes (may appear as OM Group Schemes or OMGS), Old Mutual Greenlight, Old Mutual Protect, Sanlam, Sanlam Sky (may appear as Channel Life, Sky, or Sky/Channel Life on the payslip), Momentum, Discovery, Liberty, Assupol, AVBOB, Workerslife (may appear as LEGAL, WL LEGAL, WL, or Workers Life on the payslip — use "Workerslife" as the company name), Clientele, 1Life, Emerald Life, Hollard, Absa Life, Absa Lipco, Standard Bank Insurance, FNB Life, Nedgroup, Legalwise, Legal and Tax, Capital Legacy, RMA (Road Accident), Accident insurance, Funeral cover, Life cover, Income protection, Disability cover.\n\nDO NOT INCLUDE: PAYE, income tax, pension fund, provident fund, medical aid, medical scheme, hospital plan, housing subsidy, housing loan, car allowance, transport, equipment deduction, salary sacrifice, union fees, NEHAWU, SADTU, POPCRU, NUM, garnishee orders, maintenance orders, municipality rates, electricity, water, any government department deductions, employer contributions.\n\n3. Policy/member number for each deduction if visible.\n\nReturn ONLY valid JSON — no explanation, no markdown, include ALL deductions found:\n{"basic_salary":15000,"deductions":[{"company":"Metropolitan","amount":350,"policy_number":"12345678"}]}\n\nUse null for policy_number if not visible. Return {"basic_salary":0,"deductions":[]} if unreadable.';
     const rawText=(await callClaudeVision(b64,mediaType,prompt,2048)).replace(/```json|```/g,'').trim();
     const _acqlm=rawText.match(/\{[\s\S]*\}/);
