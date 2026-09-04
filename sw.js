@@ -1,6 +1,6 @@
 // Team Buffalos — Service Worker
 // UPDATE BUILD on every deploy to trigger auto-reload for all users
-const BUILD = '20260903-192';
+const BUILD = '20260904-193';
 const CACHE = 'tb-' + BUILD;
 
 // Install: activate immediately, don't wait for old tabs to close
