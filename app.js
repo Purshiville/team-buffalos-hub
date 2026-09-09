@@ -6929,8 +6929,7 @@ async function callClaudeVision(b64, mediaType, prompt, maxTokens=1024){
     if(b64.length>2000000){
       const blob=await fetch('data:'+finalType+';base64,'+b64).then(r=>r.blob());
       const compressed=await compressImage(blob);
-      if(compressed) finalB64=compressed;
-      finalType='image/jpeg';
+      if(compressed){finalB64=compressed;finalType='image/jpeg';}
     }
   }
   const mediaPart = finalType==='application/pdf'
@@ -7006,13 +7005,28 @@ const _FSP_ALIAS={
 };
 function _normaliseFSP(name){const k=(name||'').toLowerCase().trim();return _FSP_ALIAS[k]||name;}
 function _fileMediaType(f){
-  if(f.type)return f.type;
   const n=(f.name||'').toLowerCase();
   if(n.endsWith('.pdf'))return 'application/pdf';
   if(n.endsWith('.png'))return 'image/png';
   if(n.endsWith('.gif'))return 'image/gif';
   if(n.endsWith('.webp'))return 'image/webp';
+  if(f.type&&f.type.startsWith('image/'))return f.type;
+  if(f.type==='application/pdf')return 'application/pdf';
   return 'image/jpeg';
+}
+function _extractPayslipJSON(raw){
+  // Scan for every balanced {…} in text and return the last one with a basic_salary key
+  let best=null,i=0;
+  while(i<raw.length){
+    const s=raw.indexOf('{',i);if(s<0)break;
+    let d=0,j=s;
+    for(;j<raw.length;j++){
+      if(raw[j]==='{')d++;
+      else if(raw[j]==='}'){d--;if(!d){try{const o=JSON.parse(raw.slice(s,j+1));if(o&&'basic_salary'in o)best=o;}catch(e){}break;}}
+    }
+    i=s+1;
+  }
+  return best;
 }
 
 function qlinkAddDeduction(company='',amount=0,status='keep'){
@@ -7249,8 +7263,7 @@ async function handleQlinkPayslip(input){
     const mediaType=_fileMediaType(file);
     const prompt='This is a South African PERSAL payslip. Extract ALL of the following — do not truncate or summarise, return EVERY item you find:\n1. The basic salary (gross/basic, NOT nett).\n2. EVERY FSP insurance stop order deduction — extract ALL of them, up to 30. These are premiums paid to licensed FSPs for insurance products. INCLUDE: Metropolitan, Old Mutual, Old Mutual Group Schemes (may appear as OM Group Schemes or OMGS), Old Mutual Greenlight, Old Mutual Protect, Sanlam, Sanlam Sky (may appear as Channel Life, Sky, or Sky/Channel Life on the payslip), Momentum, Discovery, Liberty, Assupol, AVBOB, Workerslife (may appear as LEGAL, WL LEGAL, WL, or Workers Life on the payslip — use "Workerslife" as the company name), Clientele, 1Life, Emerald Life, Hollard, Absa Life, Absa Lipco, Standard Bank Insurance, FNB Life, Nedgroup, Legalwise, Legal and Tax, Capital Legacy, RMA (Road Accident), Accident insurance, Funeral cover, Life cover, Income protection, Disability cover.\n\nDO NOT INCLUDE: PAYE, income tax, pension fund, provident fund, medical aid, medical scheme, hospital plan, housing subsidy, housing loan, car allowance, transport, equipment deduction, salary sacrifice, union fees, NEHAWU, SADTU, POPCRU, NUM, garnishee orders, maintenance orders, municipality rates, electricity, water, any government department deductions, employer contributions.\n\n3. Policy/member number for each deduction if visible.\n\nReturn ONLY valid JSON — no explanation, no markdown, include ALL deductions found:\n{"basic_salary":15000,"deductions":[{"company":"Metropolitan","amount":350,"policy_number":"12345678"}]}\n\nUse null for policy_number if not visible. Return {"basic_salary":0,"deductions":[]} if unreadable.';
     const rawText=(await callClaudeVision(b64,mediaType,prompt,2048)).replace(/```json|```/g,'').trim();
-    const _qlm=rawText.match(/\{[\s\S]*\}/);
-    const parsed=_qlm?JSON.parse(_qlm[0]):{basic_salary:0,deductions:[]};
+    const parsed=_extractPayslipJSON(rawText)||{basic_salary:0,deductions:[]};
     if(parsed.basic_salary){const s=document.getElementById('ql_salary');if(s){s.value=parsed.basic_salary;s.dispatchEvent(new Event('input'));}}
     if(parsed.deductions?.length){
       _qlDeductions=parsed.deductions.map(d=>({company:_normaliseFSP(d.company||''),amount:parseFloat(d.amount)||0,status:'keep',policy_number:d.policy_number||''}));
@@ -10904,8 +10917,7 @@ async function acQlinkHandlePayslip(input){
     const mediaType=_fileMediaType(file);
     const prompt='This is a South African PERSAL payslip. Extract ALL of the following — do not truncate or summarise, return EVERY item you find:\n1. The basic salary (gross/basic, NOT nett).\n2. EVERY FSP insurance stop order deduction — extract ALL of them, up to 30. These are premiums paid to licensed FSPs for insurance products. INCLUDE: Metropolitan, Old Mutual, Old Mutual Group Schemes (may appear as OM Group Schemes or OMGS), Old Mutual Greenlight, Old Mutual Protect, Sanlam, Sanlam Sky (may appear as Channel Life, Sky, or Sky/Channel Life on the payslip), Momentum, Discovery, Liberty, Assupol, AVBOB, Workerslife (may appear as LEGAL, WL LEGAL, WL, or Workers Life on the payslip — use "Workerslife" as the company name), Clientele, 1Life, Emerald Life, Hollard, Absa Life, Absa Lipco, Standard Bank Insurance, FNB Life, Nedgroup, Legalwise, Legal and Tax, Capital Legacy, RMA (Road Accident), Accident insurance, Funeral cover, Life cover, Income protection, Disability cover.\n\nDO NOT INCLUDE: PAYE, income tax, pension fund, provident fund, medical aid, medical scheme, hospital plan, housing subsidy, housing loan, car allowance, transport, equipment deduction, salary sacrifice, union fees, NEHAWU, SADTU, POPCRU, NUM, garnishee orders, maintenance orders, municipality rates, electricity, water, any government department deductions, employer contributions.\n\n3. Policy/member number for each deduction if visible.\n\nReturn ONLY valid JSON — no explanation, no markdown, include ALL deductions found:\n{"basic_salary":15000,"deductions":[{"company":"Metropolitan","amount":350,"policy_number":"12345678"}]}\n\nUse null for policy_number if not visible. Return {"basic_salary":0,"deductions":[]} if unreadable.';
     const rawText=(await callClaudeVision(b64,mediaType,prompt,2048)).replace(/```json|```/g,'').trim();
-    const _acqlm=rawText.match(/\{[\s\S]*\}/);
-    const parsed=_acqlm?JSON.parse(_acqlm[0]):{basic_salary:0,deductions:[]};
+    const parsed=_extractPayslipJSON(rawText)||{basic_salary:0,deductions:[]};
     if(parsed.basic_salary){const s=document.getElementById('acql_salary');if(s){s.value=parsed.basic_salary;}}
     if(parsed.deductions?.length){
       _acQlDeductions=parsed.deductions.map(d=>({company:_normaliseFSP(d.company||''),amount:parseFloat(d.amount)||0,status:'keep',policy_number:d.policy_number||''}));
