@@ -6923,13 +6923,16 @@ async function compressImage(file){
 async function callClaudeVision(b64, mediaType, prompt, maxTokens=1024){
   let finalB64=b64;
   let finalType=mediaType||'image/jpeg';
-  if(mediaType!=='application/pdf'){
+  if(finalType!=='application/pdf'){
     const supported=['image/jpeg','image/png','image/gif','image/webp'];
-    if(!supported.includes(finalType)) finalType='image/jpeg';
-    if(b64.length>2000000){
+    const needsConvert=!supported.includes(finalType);
+    // Convert if format unsupported (e.g. HEIC) OR file too large — use ORIGINAL type for blob
+    // so iOS Safari can decode HEIC natively via canvas
+    if(needsConvert||b64.length>2000000){
       const blob=await fetch('data:'+finalType+';base64,'+b64).then(r=>r.blob());
       const compressed=await compressImage(blob);
       if(compressed){finalB64=compressed;finalType='image/jpeg';}
+      else if(needsConvert) finalType='image/jpeg'; // fallback: send original bytes labelled as jpeg
     }
   }
   const mediaPart = finalType==='application/pdf'
@@ -7012,6 +7015,7 @@ function _fileMediaType(f){
   if(n.endsWith('.png'))return 'image/png';
   if(n.endsWith('.gif'))return 'image/gif';
   if(n.endsWith('.webp'))return 'image/webp';
+  if(n.endsWith('.heic')||n.endsWith('.heif'))return 'image/heic';
   if(f.type&&f.type.startsWith('image/'))return f.type;
   if(f.type==='application/pdf')return 'application/pdf';
   return 'image/jpeg';
@@ -7289,8 +7293,11 @@ async function handleQlinkPayslip(input){
     zone.style.opacity='1';
     statusEl.style.background='#fef2f2';statusEl.style.border='1px solid #fca5a5';statusEl.style.color='#991b1b';
     const isQuota=e.message&&(e.message.includes('quota')||e.message.includes('429'));
+    const isFormat=_fileMediaType(input.files?.[0]||{name:''}).includes('heic')||(input.files?.[0]?.type||'').includes('heic');
     statusEl.textContent=isQuota
       ?'AI analysis is temporarily unavailable — please add deductions manually using the dropdown below.'
+      :isFormat
+      ?'HEIC images could not be converted on this browser. Please take a new photo using the 📷 camera button below, or save the photo as JPEG first.'
       :'Could not read the payslip. Please add deductions manually using the dropdown below.';
   }
   input.value='';
