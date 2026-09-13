@@ -13712,7 +13712,7 @@ async function cpBuild(){
       const file=_cpFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        const rPages=await mdRasterizePdf(buf,1.0,0.60);
         for(const rp of rPages){
           const img=await merged.embedJpg(new Uint8Array(rp.ab));
           const sc=Math.min(595/rp.w,842/rp.h,1);
@@ -13720,13 +13720,12 @@ async function cpBuild(){
           pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
         }
       } else {
-        const pg=merged.addPage([595,842]);
+        const compBytes=await mdCompressImg(file,900,0.60);
         let img;
-        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){
-          img=await merged.embedPng(buf);
-        } else {
-          img=await merged.embedJpg(buf);
-        }
+        const isPng=file.name.toLowerCase().endsWith('.png');
+        if(isPng&&!compBytes){img=await merged.embedPng(buf);}
+        else{const src=compBytes?new Uint8Array(compBytes):new Uint8Array(buf);try{img=await merged.embedJpg(src);}catch(e){img=await merged.embedPng(src);}}
+        const pg=merged.addPage([595,842]);
         const scaled=img.scaleToFit(555,802);
         pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
       }
@@ -13874,7 +13873,7 @@ async function claimBuild(){
       const file=_claimFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        const rPages=await mdRasterizePdf(buf,1.0,0.60);
         for(const rp of rPages){
           const img=await merged.embedJpg(new Uint8Array(rp.ab));
           const sc=Math.min(595/rp.w,842/rp.h,1);
@@ -13882,13 +13881,12 @@ async function claimBuild(){
           pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
         }
       } else {
-        const pg=merged.addPage([595,842]);
+        const compBytes=await mdCompressImg(file,900,0.60);
         let img;
-        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){
-          img=await merged.embedPng(buf);
-        } else {
-          img=await merged.embedJpg(buf);
-        }
+        const isPng=file.name.toLowerCase().endsWith('.png');
+        if(isPng&&!compBytes){img=await merged.embedPng(buf);}
+        else{const src=compBytes?new Uint8Array(compBytes):new Uint8Array(buf);try{img=await merged.embedJpg(src);}catch(e){img=await merged.embedPng(src);}}
+        const pg=merged.addPage([595,842]);
         const scaled=img.scaleToFit(555,802);
         pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
       }
@@ -13990,7 +13988,7 @@ async function reinstBuild(){
       const file=_reinstFiles[s.id];if(!file)continue;
       const buf=await file.arrayBuffer();
       if(file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf')){
-        const rPages=await mdRasterizePdf(buf,1.5,0.82);
+        const rPages=await mdRasterizePdf(buf,1.0,0.60);
         for(const rp of rPages){
           const img=await merged.embedJpg(new Uint8Array(rp.ab));
           const sc=Math.min(595/rp.w,842/rp.h,1);
@@ -13998,10 +13996,12 @@ async function reinstBuild(){
           pg.drawImage(img,{x:(595-rp.w*sc)/2,y:(842-rp.h*sc)/2,width:rp.w*sc,height:rp.h*sc});
         }
       } else {
-        const pg=merged.addPage([595,842]);
+        const compBytes=await mdCompressImg(file,900,0.60);
         let img;
-        if(file.type==='image/png'||file.name.toLowerCase().endsWith('.png')){img=await merged.embedPng(buf);}
-        else{img=await merged.embedJpg(buf);}
+        const isPng=file.name.toLowerCase().endsWith('.png');
+        if(isPng&&!compBytes){img=await merged.embedPng(buf);}
+        else{const src=compBytes?new Uint8Array(compBytes):new Uint8Array(buf);try{img=await merged.embedJpg(src);}catch(e){img=await merged.embedPng(src);}}
+        const pg=merged.addPage([595,842]);
         const scaled=img.scaleToFit(555,802);
         pg.drawImage(img,{x:(595-scaled.width)/2,y:(842-scaled.height)/2,width:scaled.width,height:scaled.height});
       }
