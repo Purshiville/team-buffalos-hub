@@ -272,6 +272,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Assupol: 0861 235 664 | clientservice@assupol.co.za · policyservice@assupol.co.za
 - Assupol Prosperity (MHA / NHB): 011 568 1457 · 0861 001 788 | groups@assupol.co.za · info@nhb.co.za
 - Avbob: 0861 282 621 | clientcare@avbob.co.za · retention@avbob.co.za · intermediaries@avbob.co.za
+- Capital Legacy: renaldo@capitallegacy.co.za
 - Centriq / The Unlimited: 0861 990 000 | customercare@theunlimited.co.za
 - Clientele: 011 320 3000 | services@clientele.co.za
 - Discovery Funeral (Phakama / Safrican): 011 778 8000 · 012 348 8310 | safmembership@safrican.co.za · info@phakama.co.za
@@ -290,6 +291,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Nedbank Life: 0800 555 111 | lifeinsurance@nedbank.co.za
 - Old Mutual Life: 0860 665 463 · 0860 506 070 | customerservice@oldmutual.co.za
 - Old Mutual Group Schemes: 0860 607 000 | GSenquiries@oldmutual.co.za
+- Old Mutual Protect: select@oldmutual.com
 - OUTsurance: 087 310 7867 | uwcancel@out.co.za
 - Sanlam Life: 0860 726 526 | life@sanlam.co.za
 - Sanlam Sky — General: 0861 235 433 | Skyinfo@sanlamsky.co.za · Info@sanlamsky.co.za
@@ -790,8 +792,7 @@ function updatePrecanHubAlert(){
           el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
           el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">🚨</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">You are on today's pre-cancellation list!</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">${_myCase.client||'Check the sheet'}${_myCase.product?' — '+_myCase.product:''} · Contact your client before 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
         } else {
-          el.style.cursor='pointer';el.onclick=()=>window.open('https://docs.google.com/spreadsheets/d/1Wt8hpkJXs5cPRCGbSeZJaGOBFcZUjitIoizkssPMJ1E/edit?usp=drivesdk','_blank');
-          el.innerHTML=`<div style="display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">⚠️</span><div><div style="font-size:13px;font-weight:700;color:#dc2626;">Pre-Cancellations — Check if you're on the list</div><div style="font-size:11px;color:#991b1b;margin-top:2px;">Tap to open the Pavlov sheet · Deadline 12:00</div></div><span style="margin-left:auto;font-size:16px;color:#dc2626;">›</span></div>`;
+          el.style.display='none';
         }
       }
     }
@@ -3239,6 +3240,7 @@ const FSP_REFUND_EMAILS={
   'Assupol':'clientservice@assupol.co.za',
   'Assupol Prosperity':'groups@assupol.co.za',
   'AVBOB':'clientcare@avbob.co.za',
+  'Capital Legacy':'renaldo@capitallegacy.co.za',
   'Centriq / The Unlimited':'customercare@theunlimited.co.za',
   'Channel Life':'Skyinfo@sanlamsky.co.za',
   'Clientele':'services@clientele.co.za',
@@ -3260,7 +3262,7 @@ const FSP_REFUND_EMAILS={
   'Old Mutual Group Schemes':'GSenquiries@oldmutual.co.za',
   'Old Mutual Greenlight':'customerservice@oldmutual.co.za',
   'Old Mutual Life':'customerservice@oldmutual.co.za',
-  'Old Mutual Protect':'contactus@oldmutual.com',
+  'Old Mutual Protect':'select@oldmutual.com',
   'Outsurance':'uwcancel@out.co.za',
   'Platinum Life':'info@platinumlife.co.za',
   'Safrican':'safmembership@safrican.co.za',
@@ -3380,6 +3382,7 @@ const FSP_SCHEDULE_EMAILS={
   'Assupol':'policyservice@assupol.co.za',
   'Assupol Prosperity':'groups@assupol.co.za',
   'AVBOB':'clientcare@avbob.co.za',
+  'Capital Legacy':'renaldo@capitallegacy.co.za',
   'Centriq / The Unlimited':'customercare@theunlimited.co.za',
   'Channel Life':'Skyinfo@sanlamsky.co.za',
   'Clientele':'services@clientele.co.za',
@@ -3401,7 +3404,7 @@ const FSP_SCHEDULE_EMAILS={
   'Old Mutual Group Schemes':'GSenquiries@oldmutual.co.za',
   'Old Mutual Greenlight':'customerservice@oldmutual.co.za',
   'Old Mutual Life':'customerservice@oldmutual.co.za',
-  'Old Mutual Protect':'contactus@oldmutual.com',
+  'Old Mutual Protect':'select@oldmutual.com',
   'Outsurance':'uwcancel@out.co.za',
   'Platinum Life':'info@platinumlife.co.za',
   'Safrican':'safmembership@safrican.co.za',
