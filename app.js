@@ -3976,6 +3976,35 @@ function calcCommission(){
   document.getElementById('commEmpty').style.display='none';
 }
 
+function calcStatementComm(){
+  const gross=parseFloat(document.getElementById('scGross').value)||0;
+  const hasTax=document.getElementById('scTax').checked;
+  const res=document.getElementById('scResult');
+  const empty=document.getElementById('scEmpty');
+  if(!gross){res.style.display='none';empty.style.display='block';return;}
+  const fmt=v=>'R '+v.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',');
+  const exVat=gross/1.18;
+  const vat=gross-exVat;
+  const retention=exVat*0.10;
+  const payable=exVat*0.90;
+  const weekly=payable*0.60;
+  const deferred=payable*0.40;
+  const tax=hasTax?weekly*0.18:0;
+  const netWeekly=weekly-tax;
+  document.getElementById('scGrossDisplay').textContent=fmt(gross);
+  document.getElementById('scVat').textContent=fmt(vat);
+  document.getElementById('scExVat').textContent=fmt(exVat);
+  document.getElementById('scRetention').textContent=fmt(retention);
+  document.getElementById('scPayable').textContent=fmt(payable);
+  document.getElementById('scWeekly').textContent=fmt(weekly);
+  document.getElementById('scTaxAmt').textContent=fmt(tax);
+  document.getElementById('scTaxRow').style.display=hasTax?'flex':'none';
+  document.getElementById('scNetWeekly').textContent=fmt(netWeekly);
+  document.getElementById('scDeferred').textContent=fmt(deferred);
+  res.style.display='block';
+  empty.style.display='none';
+}
+
 function renderCompetitors(filter){
   const el=document.getElementById('competitorList');
   if(!el)return;
