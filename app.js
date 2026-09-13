@@ -3943,6 +3943,18 @@ const COMPETITORS = [
    position:'12-month natural death waiting period — the LONGEST in the market. Pre-existing condition exclusion is PERMANENT — it never falls away even after years of paying. Sky\'s ILC: up to R2m, no medicals, no pre-existing exclusion. At R163/month for two lives, R20,000 cover per life is barely enough for a funeral.'},
 ];
 
+function openCommTab(tab){
+  const isStmt=tab==='statement';
+  document.getElementById('commTabStatement').style.display=isStmt?'block':'none';
+  document.getElementById('commTabEstimate').style.display=isStmt?'none':'block';
+  const bs=document.getElementById('commBtnStatement');
+  const be=document.getElementById('commBtnEstimate');
+  bs.style.background=isStmt?'#0d1f3c':'transparent';
+  bs.style.color=isStmt?'#f5d98b':'#6b7280';
+  be.style.background=isStmt?'transparent':'#0d1f3c';
+  be.style.color=isStmt?'#6b7280':'#f5d98b';
+}
+
 function calcCommission(){
   const p=parseFloat(document.getElementById('commPremium').value)||0;
   const a=parseInt(document.getElementById('commAge').value)||0;
