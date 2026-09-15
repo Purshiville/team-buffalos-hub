@@ -1169,8 +1169,9 @@ function enterHub(user){
   window._appBooting=true;
   try{
   // Keep lastActive fresh in Firebase so the manager roster is accurate
+  // Skip for trainee — Firebase may have partial data under TRAINEE key with no name field
   const _users=getUsers();
-  if(_users[user.code]){
+  if(!user.isTrainee&&_users[user.code]){
     _users[user.code].lastActive=now();
     saveUsers(_users);
     user=_users[user.code];
@@ -1226,7 +1227,7 @@ function enterHub(user){
   initStatsListener();
   // Sync from Firebase then render
   if(window.FB_READY){
-    if(window.FB.updateLastSeen){window.FB.updateLastSeen(user.code).catch(()=>{});setInterval(()=>{if(currentUser&&window.FB.updateLastSeen)window.FB.updateLastSeen(currentUser.code).catch(()=>{});},180000);}
+    if(!user.isTrainee&&window.FB.updateLastSeen){window.FB.updateLastSeen(user.code).catch(()=>{});setInterval(()=>{if(currentUser&&!currentUser.isTrainee&&window.FB.updateLastSeen)window.FB.updateLastSeen(currentUser.code).catch(()=>{});},180000);}
     Promise.all([
       syncUsersFromFirebase(),
       syncSchedulesFromFirebase(),
@@ -1237,6 +1238,7 @@ function enterHub(user){
       renderDailyBrief();
       renderTop3();
       if(currentUser.isOps||currentUser.isManager){renderOpsPage();renderManagerDash();populateStatsAdvisorSelect();checkAutoNotice();}
+      if(currentUser?.isTrainee)_applyTraineeLocks(document.querySelector('.page.active')?.id?.replace('page-','')||'hub');
     }).catch(e=>{console.warn('Sync error:',e);renderNoticeBoard();renderDailyBrief();});
     window.startNoticeListener();
     if(window.startTop3Listener)window.startTop3Listener();
