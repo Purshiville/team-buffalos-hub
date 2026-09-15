@@ -1366,4 +1366,5 @@ body::before {
 .brief-item .tip-rotate{font-size:11px;color:#6b7280;font-style:italic;}
 
 /* ── TRAINEE ACCESS LOCK ── */
-.trainee-locked{opacity:0.32;pointer-events:none;user-select:none;filter:grayscale(45%);}
+.trainee-locked{opacity:0.32;filter:grayscale(45%);}
+.trainee-locked,.trainee-locked *{pointer-events:none !important;user-select:none;}
