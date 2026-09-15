@@ -1187,15 +1187,15 @@ function enterHub(user){
     }).catch(()=>{});
   }
   currentUser=user;
-  // Trainee mode: body class + JS click guard as hard backstop
   if(user.isTrainee){
     document.body.classList.add('trainee-mode');
+    // Capture-phase click guard: blocks ANY click inside a data-tlocked element
     if(!window._traineeClickGuard){
       window._traineeClickGuard=function(e){
         if(!currentUser?.isTrainee){document.removeEventListener('click',window._traineeClickGuard,true);window._traineeClickGuard=null;return;}
-        const el=e.target.closest('[onclick]');
-        if(!el)return;
-        const m=(el.getAttribute('onclick')||'').match(/showPage\(['"]([^'"]+)['"]\)/);
+        if(e.target.closest('[data-tlocked]')){e.preventDefault();e.stopImmediatePropagation();return;}
+        const btn=e.target.closest('[onclick]');if(!btn)return;
+        const m=(btn.getAttribute('onclick')||'').match(/showPage\(['"]([^'"]+)['"]\)/);
         if(m&&!['hub','guides','tools','mainguide','worksites'].includes(m[1])){e.preventDefault();e.stopImmediatePropagation();}
       };
       document.addEventListener('click',window._traineeClickGuard,true);
@@ -1273,6 +1273,7 @@ function enterHub(user){
   renderProdCountdownStandalone();
   renderDailyBrief();
   renderTop3();
+  if(user.isTrainee){_applyTraineeLocks('hub');setTimeout(()=>_applyTraineeLocks('hub'),2000);}
   // Show broadcast button for manager/ops
   const bcBtn=document.getElementById('chatBroadcastBtn');if(bcBtn)bcBtn.style.display=(user.isManager||user.isOps)?'inline-block':'none';
   // Request browser notification permission
@@ -3699,16 +3700,41 @@ function showPage(p){
 }
 function _applyTraineeLocks(p){
   if(!currentUser?.isTrainee)return;
-  // CSS (body.trainee-mode) handles all visual locking.
-  // Here we only add trainee-allow to the one card that should be unlocked per page.
-  document.querySelectorAll('.tool-card').forEach(c=>c.classList.remove('trainee-allow'));
-  if(p==='tools'){
-    document.querySelectorAll('.tool-card').forEach(card=>{
-      if((card.getAttribute('onclick')||'').includes("showPage('worksites')")){card.classList.add('trainee-allow');}
+  function lock(el){
+    if(!el)return;
+    el.style.opacity='0.35';el.style.filter='grayscale(45%)';
+    el.style.pointerEvents='none';el.setAttribute('data-tlocked','1');
+  }
+  function unlock(el){
+    if(!el)return;
+    el.style.opacity='';el.style.filter='';
+    el.style.pointerEvents='';el.removeAttribute('data-tlocked');
+  }
+  // Nav tabs — lock The Standard; keep Home/Tools/Resources open
+  document.querySelectorAll('.nav-tab').forEach(t=>{
+    const oc=t.getAttribute('onclick')||'';
+    (oc.includes("showPage('hub')")||oc.includes("showPage('tools')")||oc.includes("showPage('guides')"))?unlock(t):lock(t);
+  });
+  lock(document.getElementById('navMoreBtn'));
+  if(p==='hub'){
+    ['hubPaceChips','hubProdStats','hubTop3','hubPeriodBar','hubLoaTrackerWidget','hubTeamStats','hubDailyPace'].forEach(id=>lock(document.getElementById(id)));
+    document.querySelectorAll('.primary-tools-grid').forEach(lock);
+    document.querySelectorAll('.secondary-tool').forEach(el=>{
+      const oc=el.getAttribute('onclick')||'';
+      (oc.includes("showPage('worksites')")||oc.includes("showPage('tools')"))?unlock(el):lock(el);
     });
   }
+  if(p==='tools'){
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      (card.getAttribute('onclick')||'').includes("showPage('worksites')")?unlock(card):lock(card);
+    });
+    document.querySelectorAll('#toolsFilterBar .tfbtn').forEach(lock);
+  }
   if(p==='guides'){
-    const g=document.getElementById('mainGuideCard');if(g)g.classList.add('trainee-allow');
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      card.id==='mainGuideCard'?unlock(card):lock(card);
+    });
+    document.querySelectorAll('#guidesFilterBar .tfbtn').forEach(lock);
   }
 }
 function toggleChat(){
