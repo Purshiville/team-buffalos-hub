@@ -540,6 +540,9 @@ function tryRestoreSession(){
     if(code==='ARLENE'){
       enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null,photo:saved.photo||getUsers()['ARLENE']?.photo||null});return true;
     }
+    if(code==='TRAINEE'&&pass==='123456'){
+      enterHub({name:'Trainee',email:'',code:'TRAINEE',pass:'123456',isTrainee:true,isManager:false,isOps:false,dob:null});return true;
+    }
     const users=getUsers();
     if(users[code]&&users[code].pass===pass){
       enterHub(users[code]);return true;
@@ -705,10 +708,15 @@ function doLogin(){
   const code=document.getElementById('loginCode').value.trim().toUpperCase(),pass=document.getElementById('loginPass').value;
   if(!code)return showAlert('Please enter your employee code.','error');
   if(!pass)return showAlert('Please enter your password.','error');
-  if(!APPROVED_CODES.has(code)&&code!=='PURSHIVILLE'&&code!=='ARLENE')return showAlert('Access denied. Your employee code is not on the approved list. Please contact your manager.','error');
+  if(!APPROVED_CODES.has(code)&&code!=='PURSHIVILLE'&&code!=='ARLENE'&&code!=='TRAINEE')return showAlert('Access denied. Your employee code is not on the approved list. Please contact your manager.','error');
   const _saveRemember=()=>{const cb=document.getElementById('loginRemember');if(cb?.checked){try{localStorage.setItem('tl_remember',JSON.stringify({code,pass}));}catch(e){}}else{try{localStorage.removeItem('tl_remember');}catch(e){}}};
   if(code==='PURSHIVILLE'||code==='MANAGER'){_saveRemember();return enterHub({name:'Purshiville Nortje',email:'manager@teambuffalos.co.za',code:'PURSHIVILLE',pass,isManager:true,isOps:true,dob:null});}
   if(code==='ARLENE'||code==='OPS'){_saveRemember();return enterHub({name:'Arlene',email:'arlene@teambuffalos.co.za',code:'ARLENE',pass,isManager:false,isOps:true,dob:null});}
+  if(code==='TRAINEE'){
+    if(pass!=='123456')return showAlert('Incorrect password. Please try again.','error');
+    _saveRemember();
+    return enterHub({name:'Trainee',email:'',code:'TRAINEE',pass:'123456',isTrainee:true,isManager:false,isOps:false,dob:null});
+  }
   const users=getUsers();
   if(users[code]){
     if(users[code].pass!==pass)return showAlert('Incorrect password. Please try again.','error');
@@ -1107,6 +1115,14 @@ function applyRoleVisibility(user){
   const spSwitcher=document.getElementById('sp_profileSwitcher');
   if(spSwitcher)spSwitcher.style.display=(user._realIsManager||user._realIsOps||user.isManager||user.isOps)?'block':'none';
   _updateProfileSwitcherUI();
+  if(user.isTrainee){
+    document.querySelectorAll('.nav-tab').forEach(t=>{
+      const oc=t.getAttribute('onclick')||'';
+      if(!oc.includes("showPage('hub')")&&!oc.includes("showPage('tools')")&&!oc.includes("showPage('guides')")){t.classList.add('trainee-locked');}
+    });
+    const moreBtn=document.getElementById('navMoreBtn');
+    if(moreBtn)moreBtn.classList.add('trainee-locked');
+  }
 }
 
 function _updateProfileSwitcherUI(){
@@ -1172,7 +1188,7 @@ function enterHub(user){
   try{localStorage.setItem('tl_session',JSON.stringify({code:user.code,pass:user.pass}));}catch(e){}
   document.getElementById('authScreen').classList.remove('active');
   document.getElementById('hubMain').style.display='flex';
-  if(!checkLegalAcceptance(user.code))showLegalOverlay();
+  if(!user.isTrainee&&!checkLegalAcceptance(user.code))showLegalOverlay();
   const unEl=document.getElementById('userName');if(unEl)unEl.textContent=user.name.split(' ')[0];
   const uaEl=document.getElementById('userAvatar');if(uaEl)uaEl.textContent=user.name.charAt(0).toUpperCase();
   applyRoleVisibility(user);
@@ -3583,6 +3599,8 @@ function wrapFspEmails(){
   });
 }
 function showPage(p){
+  // Trainee: only allow hub, guides, tools, mainguide, worksites
+  if(currentUser?.isTrainee&&!['hub','guides','tools','mainguide','worksites'].includes(p))return;
   // Guard: warn before leaving policyreview with in-progress work
   if(window._currentPage==='policyreview'&&p!=='policyreview'){
     const hasPRWork=_prLoaFile||(_prDocFiles&&_prDocFiles.length>0);
@@ -3658,6 +3676,35 @@ function showPage(p){
   const moreBtn=document.getElementById('navMoreBtn');
   const morePages=['fitproper','budget','commission','documents','academy'];
   if(moreBtn)moreBtn.classList.toggle('active', morePages.includes(p));
+  if(currentUser?.isTrainee)_applyTraineeLocks(p);
+}
+function _applyTraineeLocks(p){
+  if(!currentUser?.isTrainee)return;
+  if(p==='hub'){
+    ['hubPaceChips','hubProdStats','hubTop3','hubPeriodBar','hubLoaTrackerWidget','hubTeamStats','hubDailyPace'].forEach(id=>{
+      const el=document.getElementById(id);if(el)el.classList.add('trainee-locked');
+    });
+    document.querySelectorAll('.primary-tools-grid').forEach(g=>g.classList.add('trainee-locked'));
+    document.querySelectorAll('.secondary-tool').forEach(el=>{
+      const oc=el.getAttribute('onclick')||'';
+      if(!oc.includes("showPage('worksites')")&&!oc.includes("showPage('tools')")){el.classList.add('trainee-locked');}
+    });
+  }
+  if(p==='tools'){
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      const oc=card.getAttribute('onclick')||'';
+      if(oc.includes("showPage('worksites')")){card.classList.remove('trainee-locked');}
+      else{card.classList.add('trainee-locked');}
+    });
+    document.querySelectorAll('#toolsFilterBar .tfbtn').forEach(b=>b.classList.add('trainee-locked'));
+  }
+  if(p==='guides'){
+    document.querySelectorAll('.tool-card').forEach(card=>{
+      if(card.id==='mainGuideCard'){card.classList.remove('trainee-locked');}
+      else{card.classList.add('trainee-locked');}
+    });
+    document.querySelectorAll('#guidesFilterBar .tfbtn').forEach(b=>b.classList.add('trainee-locked'));
+  }
 }
 function toggleChat(){
   const popup=document.getElementById('aiPopup');
