@@ -1116,12 +1116,16 @@ function applyRoleVisibility(user){
   if(spSwitcher)spSwitcher.style.display=(user._realIsManager||user._realIsOps||user.isManager||user.isOps)?'block':'none';
   _updateProfileSwitcherUI();
   if(user.isTrainee){
+    // Mark ALLOWED nav tabs so CSS can lock everything without trainee-allow
     document.querySelectorAll('.nav-tab').forEach(t=>{
       const oc=t.getAttribute('onclick')||'';
-      if(!oc.includes("showPage('hub')")&&!oc.includes("showPage('tools')")&&!oc.includes("showPage('guides')")){t.classList.add('trainee-locked');}
+      if(oc.includes("showPage('hub')")||oc.includes("showPage('tools')")||oc.includes("showPage('guides')")){t.classList.add('trainee-allow');}
     });
-    const moreBtn=document.getElementById('navMoreBtn');
-    if(moreBtn)moreBtn.classList.add('trainee-locked');
+    // Mark allowed secondary-tool tiles on home page
+    document.querySelectorAll('.secondary-tool').forEach(el=>{
+      const oc=el.getAttribute('onclick')||'';
+      if(oc.includes("showPage('worksites')")||oc.includes("showPage('tools')")){el.classList.add('trainee-allow');}
+    });
   }
 }
 
@@ -1183,6 +1187,20 @@ function enterHub(user){
     }).catch(()=>{});
   }
   currentUser=user;
+  // Trainee mode: body class + JS click guard as hard backstop
+  if(user.isTrainee){
+    document.body.classList.add('trainee-mode');
+    if(!window._traineeClickGuard){
+      window._traineeClickGuard=function(e){
+        if(!currentUser?.isTrainee){document.removeEventListener('click',window._traineeClickGuard,true);window._traineeClickGuard=null;return;}
+        const el=e.target.closest('[onclick]');
+        if(!el)return;
+        const m=(el.getAttribute('onclick')||'').match(/showPage\(['"]([^'"]+)['"]\)/);
+        if(m&&!['hub','guides','tools','mainguide','worksites'].includes(m[1])){e.preventDefault();e.stopImmediatePropagation();}
+      };
+      document.addEventListener('click',window._traineeClickGuard,true);
+    }
+  }
   updateTopbarAvatar();
   // Persist session so refresh doesn't log out
   try{localStorage.setItem('tl_session',JSON.stringify({code:user.code,pass:user.pass}));}catch(e){}
@@ -1357,6 +1375,7 @@ function doLogout(reason){
   currentUser=null;chatHistory=[];
   try{localStorage.removeItem('tl_session');}catch(e){}
   if(reason!=='inactivity'&&reason!=='connection_lost'){try{localStorage.removeItem('tl_remember');}catch(e){}}
+  document.body.classList.remove('trainee-mode');
   document.getElementById('hubMain').style.display='none';
   document.getElementById('authScreen').classList.add('active');
   clearAlert();
@@ -3680,30 +3699,16 @@ function showPage(p){
 }
 function _applyTraineeLocks(p){
   if(!currentUser?.isTrainee)return;
-  if(p==='hub'){
-    ['hubPaceChips','hubProdStats','hubTop3','hubPeriodBar','hubLoaTrackerWidget','hubTeamStats','hubDailyPace'].forEach(id=>{
-      const el=document.getElementById(id);if(el)el.classList.add('trainee-locked');
-    });
-    document.querySelectorAll('.primary-tools-grid').forEach(g=>g.classList.add('trainee-locked'));
-    document.querySelectorAll('.secondary-tool').forEach(el=>{
-      const oc=el.getAttribute('onclick')||'';
-      if(!oc.includes("showPage('worksites')")&&!oc.includes("showPage('tools')")){el.classList.add('trainee-locked');}
-    });
-  }
+  // CSS (body.trainee-mode) handles all visual locking.
+  // Here we only add trainee-allow to the one card that should be unlocked per page.
+  document.querySelectorAll('.tool-card').forEach(c=>c.classList.remove('trainee-allow'));
   if(p==='tools'){
     document.querySelectorAll('.tool-card').forEach(card=>{
-      const oc=card.getAttribute('onclick')||'';
-      if(oc.includes("showPage('worksites')")){card.classList.remove('trainee-locked');}
-      else{card.classList.add('trainee-locked');}
+      if((card.getAttribute('onclick')||'').includes("showPage('worksites')")){card.classList.add('trainee-allow');}
     });
-    document.querySelectorAll('#toolsFilterBar .tfbtn').forEach(b=>b.classList.add('trainee-locked'));
   }
   if(p==='guides'){
-    document.querySelectorAll('.tool-card').forEach(card=>{
-      if(card.id==='mainGuideCard'){card.classList.remove('trainee-locked');}
-      else{card.classList.add('trainee-locked');}
-    });
-    document.querySelectorAll('#guidesFilterBar .tfbtn').forEach(b=>b.classList.add('trainee-locked'));
+    const g=document.getElementById('mainGuideCard');if(g)g.classList.add('trainee-allow');
   }
 }
 function toggleChat(){

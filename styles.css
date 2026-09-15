@@ -1365,6 +1365,30 @@ body::before {
 /* ── DAILY TIP ITEM ── */
 .brief-item .tip-rotate{font-size:11px;color:#6b7280;font-style:italic;}
 
-/* ── TRAINEE ACCESS LOCK ── */
-.trainee-locked{opacity:0.32;filter:grayscale(45%);}
-.trainee-locked,.trainee-locked *{pointer-events:none !important;user-select:none;}
+/* ── TRAINEE MODE ── */
+/* Visual dimming for locked elements */
+body.trainee-mode .nav-tab:not(.trainee-allow),
+body.trainee-mode #navMoreBtn{opacity:0.32;filter:grayscale(45%);}
+body.trainee-mode .primary-tools-grid,
+body.trainee-mode #hubProdStats,
+body.trainee-mode #hubPaceChips,
+body.trainee-mode #hubTop3,
+body.trainee-mode #hubPeriodBar,
+body.trainee-mode #hubLoaTrackerWidget,
+body.trainee-mode #hubTeamStats,
+body.trainee-mode #hubDailyPace{opacity:0.32;filter:grayscale(45%);}
+body.trainee-mode .tool-card:not(.trainee-allow),
+body.trainee-mode .secondary-tool:not(.trainee-allow){opacity:0.32;filter:grayscale(45%);}
+/* Block pointer events — element AND every descendant */
+body.trainee-mode .nav-tab:not(.trainee-allow),body.trainee-mode .nav-tab:not(.trainee-allow) *,
+body.trainee-mode #navMoreBtn,body.trainee-mode #navMoreBtn *,
+body.trainee-mode .primary-tools-grid,body.trainee-mode .primary-tools-grid *,
+body.trainee-mode #hubProdStats,body.trainee-mode #hubProdStats *,
+body.trainee-mode #hubPaceChips,body.trainee-mode #hubPaceChips *,
+body.trainee-mode #hubTop3,body.trainee-mode #hubTop3 *,
+body.trainee-mode #hubPeriodBar,body.trainee-mode #hubPeriodBar *,
+body.trainee-mode #hubLoaTrackerWidget,body.trainee-mode #hubLoaTrackerWidget *,
+body.trainee-mode #hubTeamStats,body.trainee-mode #hubTeamStats *,
+body.trainee-mode #hubDailyPace,body.trainee-mode #hubDailyPace *,
+body.trainee-mode .tool-card:not(.trainee-allow),body.trainee-mode .tool-card:not(.trainee-allow) *,
+body.trainee-mode .secondary-tool:not(.trainee-allow),body.trainee-mode .secondary-tool:not(.trainee-allow) *{pointer-events:none !important;user-select:none;}
