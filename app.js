@@ -592,13 +592,13 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759','SKA315568','SKA313162']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed; Stefan Barnard — removed; Ivan Davies — removed
+const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759','SKA315568','SKA313162','SKA315109']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed; Stefan Barnard — removed; Ivan Davies — removed; Roger Pretorius — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
 // Established advisors (were on the team before the hub launched) never get the badge.
 // All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
-const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313936','SKA315109','SKA313383']);
+const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313936','SKA313383']);
 function _newBadge(code){
   if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
@@ -613,7 +613,6 @@ const APPROVED_CODES = new Set([
   'SKA310185', // Benjamin Bothma
   'SKA312741', // Joshua Pretorius
   'SKA313936', // Brian Steve Boucher
-  'SKA315109', // Roger Pretorius
   'SKA313383', // Kevin Kruger
   'SKA316161', // Micaiah Coltman
   'SKA311749', // Linley Kritzinger
@@ -626,7 +625,6 @@ const ADVISOR_LIST = [
   {code:'SKA310185', name:'Benjamin Bothma'},
   {code:'SKA312741', name:'Joshua Pretorius'},
   {code:'SKA313936', name:'Brian Steve Boucher'},
-  {code:'SKA315109', name:'Roger Pretorius'},
   {code:'SKA313383', name:'Kevin Kruger'},
   {code:'SKA316161', name:'Micaiah Coltman'},
   {code:'SKA311749', name:'Linley Kritzinger'},
