@@ -6551,7 +6551,7 @@ async function handleIMPUpload(input, mode){
     });
     const mediaType = _fileMediaType(file);
 
-    const roaPrompt = 'This is an IMP Final Recommendation screen from Sanlam Sky. Is it REPLACEMENT (has Kept Cover + New Cover sections) or NEW BUSINESS (only new policies)? Return ONLY this JSON (no markdown): {"type":"new","new_plan":"All-in-One Plan","new_lives":[{"role":"Main member","name":"John Smith","cover":"R50 000"},{"role":"Spouse","name":"Mary Smith","cover":"R30 000"}],"new_premium":"R450","kept_cover_lives":[{"role":"Main member","name":"John Smith","cover":"R40 000"}],"total_cover":"R50 000","kept_premium":"R350"}';
+    const roaPrompt = 'This is an IMP Final Recommendation or Summary screen from Sanlam Sky. Read every word carefully.\n\n1. TYPE: Look for a "Kept Cover", "Current Cover", or "Existing Cover" section alongside new cover — if it exists, type is "replacement". If there is only new cover with no existing/kept cover section shown, type is "new".\n\n2. NEW_PLAN: Read the EXACT plan name as printed on the screen (e.g. "All-in-One Plan", "Value Funeral Plan", "Enhanced Priority Funeral Plan", "Immediate Life Cover (ILC)", "Essential Med").\n\n3. NEW_LIVES: Extract EVERY life assured listed under the new/recommended cover. For each life get their exact full name as printed and their exact cover amount. For cover_type — on All-in-One Plan: main member and spouse usually have non-underwritten life cover, use "life"; children have funeral cover, use "funeral". On Value Funeral Plan or Enhanced Priority Funeral Plan: all lives use "funeral". On Immediate Life Cover (ILC): all lives use "life".\n\n4. KEPT_COVER_LIVES: If replacement, extract every life from the kept/current/existing cover section with name and cover amount. If new business, use [].\n\nReturn ONLY valid JSON with no markdown or extra text:\n{"type":"new","new_plan":"All-in-One Plan","new_lives":[{"role":"Main member","name":"John Smith","cover":"R500 000","cover_type":"life"},{"role":"Spouse","name":"Mary Smith","cover":"R300 000","cover_type":"life"},{"role":"Child 1","name":"Tom Smith","cover":"R30 000","cover_type":"funeral"}],"new_premium":"R450.00","kept_cover_lives":[],"total_cover":"R500 000","kept_premium":""}';
     const clean = (await callClaudeVision(b64, mediaType, roaPrompt)).replace(/```json|```/g,'').trim();
     const parsed = JSON.parse(clean||'{}');
 
@@ -6564,9 +6564,15 @@ async function handleIMPUpload(input, mode){
     }
 
     const _normLives = (raw)=>{
-      if(Array.isArray(raw) && raw.length) return raw.map(l=>({role:l.role||'Main member',name:l.name||'',cover:l.cover||''}));
-      if(typeof raw === 'string' && raw) return [{role:'Main member',name:raw,cover:''}];
-      return [{role:'Main member',name:'',cover:''}];
+      if(Array.isArray(raw) && raw.length) return raw.map(l=>({
+        role:l.role||'Main member',
+        name:l.name||'',
+        cover:l.cover||'',
+        coverType:l.cover_type==='life'?'Non-underwritten life cover':'Funeral cover',
+        coverTypeOther:''
+      }));
+      if(typeof raw === 'string' && raw) return [{role:'Main member',name:raw,cover:'',coverType:'Funeral cover',coverTypeOther:''}];
+      return [{role:'Main member',name:'',cover:'',coverType:'Funeral cover',coverTypeOther:''}];
     };
 
     if(detectedType === 'new' || _roaType === 'new'){
@@ -6587,8 +6593,20 @@ async function handleIMPUpload(input, mode){
       roaRenderNewPolicies();
 
       // Add kept cover as cancelled policy note if present
-      if(parsed.kept_cover && !_roaRepPolicies.some(p=>p.lives===parsed.kept_cover)){
-        _roaRepPolicies.push({company:'Previous FSP (Kept Cover)',premium:parsed.kept_premium||'',lives:parsed.kept_cover});
+      const _keptLives = parsed.kept_cover_lives||parsed.kept_cover;
+      if(Array.isArray(_keptLives) && _keptLives.length){
+        const _keptStr = _keptLives.map(l=>{
+          let s=l.role||'';
+          if(l.name) s+=(s?': ':'')+l.name;
+          if(l.cover) s+=' — '+l.cover;
+          return s;
+        }).join('; ');
+        if(!_roaRepPolicies.some(p=>p.lives===_keptStr)){
+          _roaRepPolicies.push({company:'Previous FSP (Kept Cover)',premium:parsed.kept_premium||'',lives:_keptStr});
+          roaRenderRepPolicies();
+        }
+      } else if(typeof _keptLives==='string' && _keptLives && !_roaRepPolicies.some(p=>p.lives===_keptLives)){
+        _roaRepPolicies.push({company:'Previous FSP (Kept Cover)',premium:parsed.kept_premium||'',lives:_keptLives});
         roaRenderRepPolicies();
       }
 
@@ -6639,7 +6657,7 @@ function setRepReason(type){
 
 const ROA_PLANS = ['Value Funeral Plan','Enhanced Priority Funeral Plan','All-in-One Plan (standalone)','Immediate Life Cover (ILC)','Essential Med'];
 const ROA_LIFE_ROLES = ['Main member','Spouse','Child 1','Child 2','Child 3','Child 4','Extended family member'];
-const ROA_COVER_TYPES = ['Funeral cover','Life cover','Disability cover','Impairment / severe illness cover','Other (manual)'];
+const ROA_COVER_TYPES = ['Funeral cover','Non-underwritten life cover','Life cover','Disability cover','Impairment / severe illness cover','Other (manual)'];
 const ROA_REASONS = {
   align:'The client chose to align their existing cover amount with the new policy.',
   better:'The client selected the new policy based on its superior product benefits and overall value for money.',
@@ -6826,12 +6844,14 @@ function roaGenerate(){
 
     const planNames = _roaPlans.map(p=>p.plan).join(' and ');
     const _anyILC=_roaPlans.some(p=>(p.plan||'').toLowerCase().includes('ilc')||(p.plan||'').toLowerCase().includes('immediate life'));
-    const benefitsText = `The advisor explained all relevant benefits of the ${planNames||'selected plan'} to ${client}, including the ${_anyILC?'life':'funeral'} cover amounts per life assured, paid-up benefit, repatriation cover, and cashback options where applicable. The client indicated understanding of the benefits and had the opportunity to ask questions.`;
+    const _anyLifeCover=_roaPlans.some(p=>(p.lives||[]).some(l=>l.coverType==='Non-underwritten life cover'));
+    const _coverLabel=_anyILC?'life':(_anyLifeCover?'funeral and non-underwritten life':'funeral');
+    const benefitsText = `The advisor explained all relevant benefits of the ${planNames||'selected plan'} to ${client}, including the ${_coverLabel} cover amounts per life assured, paid-up benefit, repatriation cover, and cashback options where applicable. The client indicated understanding of the benefits and had the opportunity to ask questions.`;
 
     const premiumSummary = _roaPlans.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
-    const agreementText = `${client} confirmed agreement to${premiumSummary ? ' the monthly premium ('+premiumSummary+') and' : ''} the ${_anyILC?'life':'funeral'} cover amounts listed above. The client agreed that the cover meets their needs and that the advice given is understood and accepted.`;
+    const agreementText = `${client} confirmed agreement to${premiumSummary ? ' the monthly premium ('+premiumSummary+') and' : ''} the ${_coverLabel} cover amounts listed above. The client agreed that the cover meets their needs and that the advice given is understood and accepted. The client is happy with the total cover amounts and premiums as per the needs analysis.`;
 
-    const parts = [`A Record of Advice was completed for ${client} for new Sanlam Sky ${_anyILC?'life':'funeral'} cover.\n`];
+    const parts = [`A Record of Advice was completed for ${client} for new Sanlam Sky ${_coverLabel} cover.\n`];
     if(planBlocks) parts.push(planBlocks);
     parts.push(waitText, benefitsText, agreementText);
     if(notes) parts.push(`Additional notes: ${notes}`);
@@ -6943,17 +6963,20 @@ function roaGenerate(){
     }
 
     const repPlanNames=newPolList.map(p=>p.plan).join(' and ');
-    const repBenefitsText=`The advisor explained and disclosed all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including the funeral cover amounts per life assured, the paid-up benefit, repatriation cover, waiting period structure, and all applicable cashback options. The client confirmed full understanding of the new policy benefits and acknowledged how the new benefits compare to and improve upon the cancelled policy. It was disclosed that even on a like-for-like replacement, the benefits of the new policy may not be identical in every respect to the cancelled policy — the client confirmed understanding and acceptance of this disclosure. The advisor advised ${client} that all documents pertaining to this advice will be retained for a minimum of 5 years in accordance with the FAIS Act record-keeping obligation.`;
+    const _repAnyILC=newPolList.some(p=>(p.plan||'').toLowerCase().includes('ilc')||(p.plan||'').toLowerCase().includes('immediate life'));
+    const _repAnyLifeCover=newPolList.some(p=>(p.lives||[]).some(l=>l.coverType==='Non-underwritten life cover'));
+    const _repCoverLabel=_repAnyILC?'life':(_repAnyLifeCover?'funeral and non-underwritten life':'funeral');
+    const repBenefitsText=`The advisor explained and disclosed all relevant benefits of the ${repPlanNames||'new Sanlam Sky policy'} to ${client}, including the ${_repCoverLabel} cover amounts per life assured, the paid-up benefit, repatriation cover, waiting period structure, and all applicable cashback options. The client confirmed full understanding of the new policy benefits and acknowledged how the new benefits compare to and improve upon the cancelled policy. It was disclosed that even on a like-for-like replacement, the benefits of the new policy may not be identical in every respect to the cancelled policy — the client confirmed understanding and acceptance of this disclosure. The advisor advised ${client} that all documents pertaining to this advice will be retained for a minimum of 5 years in accordance with the FAIS Act record-keeping obligation.`;
 
     const repPremiumSummary=newPolList.filter(p=>p.premium).map(p=>`${p.plan} at ${p.premium}`).join('; ');
-    const repAgreementText=`${client} confirmed agreement to${repPremiumSummary?' the monthly premium ('+repPremiumSummary+') and':''} the funeral cover amounts for all lives assured as set out above. The client confirmed that the replacement is in their best interest, that the advice given is fully understood and accepted, and that all questions have been answered to their satisfaction.`;
+    const repAgreementText=`${client} confirmed agreement to${repPremiumSummary?' the monthly premium ('+repPremiumSummary+') and':''} the ${_repCoverLabel} cover amounts for all lives assured as set out above. The client confirmed that the replacement is in their best interest, that the advice given is fully understood and accepted, and that all questions have been answered to their satisfaction. The client is happy with the total cover amounts and premiums as per the needs analysis.`;
 
     let qlinkText='';
     if(qlink==='ok') qlinkText='The Qlink affordability calculation confirms all policies fit within the 15% stop order bracket on the client\'s payslip.';
     else if(qlink==='movement') qlinkText='Policy movements and/or cancellations have created the necessary space on the payslip to accommodate the new policies within the 15% bracket.';
     else if(qlink==='partial_dc') qlinkText='The Qlink calculation did not allow all policies onto the stop order. One or more policies have been placed on debit order. A DebiCheck mandate has been sent to the client. A 3-month bank statement is required for this application.';
 
-    const repParts=[`A Record of Advice was completed for ${client} regarding the replacement of their existing funeral policy.\n`,reasonNarrative];
+    const repParts=[`A Record of Advice was completed for ${client} regarding the replacement of their existing ${_repCoverLabel} cover policy.\n`,reasonNarrative];
     if(cancelText)repParts.push(cancelText);
     if(newPolBlocks)repParts.push(newPolBlocks);
     repParts.push(waitText,repBenefitsText,repAgreementText);
