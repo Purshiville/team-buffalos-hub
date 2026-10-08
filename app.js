@@ -6563,6 +6563,16 @@ async function handleIMPUpload(input, mode){
       setROAType('new');
     }
 
+    const _normPlan = (aiName)=>{
+      if(!aiName) return aiName;
+      const l=aiName.toLowerCase();
+      if(l.includes('all-in-one')||l.includes('all in one')||l.includes('aio')||l.includes('standalone')) return 'All-in-One Plan (standalone)';
+      if(l.includes('enhanced priority')) return 'Enhanced Priority Funeral Plan';
+      if(l.includes('ilc')||l.includes('immediate life')) return 'Immediate Life Cover (ILC)';
+      if(l.includes('essential med')) return 'Essential Med';
+      if(l.includes('value')||l.includes('funeral')) return 'Value Funeral Plan';
+      return aiName;
+    };
     const _normLives = (raw)=>{
       if(Array.isArray(raw) && raw.length) return raw.map(l=>({
         role:l.role||'Main member',
@@ -6579,7 +6589,7 @@ async function handleIMPUpload(input, mode){
       // New business — fill plans
       if(!_roaPlans.length) _roaPlans = [{plan:'Value Funeral Plan',premium:'',lives:[{role:'Main member',name:'',cover:''}]}];
       const planIdx = _roaPlans.length - 1;
-      if(parsed.new_plan) _roaPlans[planIdx].plan = parsed.new_plan;
+      if(parsed.new_plan) _roaPlans[planIdx].plan = _normPlan(parsed.new_plan);
       if(parsed.new_premium) _roaPlans[planIdx].premium = parsed.new_premium;
       if(parsed.new_lives) _roaPlans[planIdx].lives = _normLives(parsed.new_lives);
       roaRenderPlans();
@@ -6587,7 +6597,7 @@ async function handleIMPUpload(input, mode){
       // Replacement — fill new policies + kept cover notes
       if(!_roaNewPolicies.length) _roaNewPolicies = [{plan:'All-in-One Plan (standalone)',premium:'',lives:[{role:'Main member',name:'',cover:''}]}];
       const idx = _roaNewPolicies.length - 1;
-      if(parsed.new_plan) _roaNewPolicies[idx].plan = parsed.new_plan;
+      if(parsed.new_plan) _roaNewPolicies[idx].plan = _normPlan(parsed.new_plan);
       if(parsed.new_premium) _roaNewPolicies[idx].premium = parsed.new_premium;
       if(parsed.new_lives) _roaNewPolicies[idx].lives = _normLives(parsed.new_lives);
       roaRenderNewPolicies();
