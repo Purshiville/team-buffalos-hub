@@ -1392,3 +1392,17 @@ body.trainee-mode #hubTeamStats,body.trainee-mode #hubTeamStats *,
 body.trainee-mode #hubDailyPace,body.trainee-mode #hubDailyPace *,
 body.trainee-mode .tool-card:not(.trainee-allow),body.trainee-mode .tool-card:not(.trainee-allow) *,
 body.trainee-mode .secondary-tool:not(.trainee-allow),body.trainee-mode .secondary-tool:not(.trainee-allow) *{pointer-events:none !important;user-select:none;}
+
+/* ── Refer Client float (mirrors ai-fab on the left) ── */
+.refer-fab{position:fixed;bottom:24px;left:24px;background:#7c3aed;color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,0.4);display:flex;align-items:center;gap:8px;z-index:150;transition:all .2s;}
+.refer-fab:hover{background:#6d28d9;transform:translateY(-2px);box-shadow:0 6px 24px rgba(124,58,237,0.5);}
+.refer-fab-label{font-size:13px;}
+
+/* ── Dark mode (invert + hue-rotate trick — works with inline styles) ── */
+body.dark-mode #hubMain{filter:invert(0.93) hue-rotate(180deg) brightness(0.88) contrast(0.96);}
+body.dark-mode #hubMain img,body.dark-mode #hubMain canvas,body.dark-mode #hubMain video{filter:invert(1) hue-rotate(180deg) brightness(1.14);}
+body.dark-mode #topBar{filter:invert(0.93) hue-rotate(180deg) brightness(0.88) contrast(0.96);}
+body.dark-mode .ai-fab,body.dark-mode .refer-fab{filter:invert(0.93) hue-rotate(180deg) brightness(0.88);}
+body.dark-mode #aiPopup{filter:invert(0.93) hue-rotate(180deg) brightness(0.88) contrast(0.96);}
+body.dark-mode #aiPopup img{filter:invert(1) hue-rotate(180deg) brightness(1.14);}
+body.dark-mode{background:#111;}

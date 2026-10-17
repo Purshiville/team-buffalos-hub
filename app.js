@@ -552,6 +552,23 @@ function tryRestoreSession(){
 }
 
 // Partner portal: bypass login for Masthead partner access via hash
+function toggleDarkMode(){
+  const isDark=document.body.classList.toggle('dark-mode');
+  localStorage.setItem('tb_dark_mode',isDark?'1':'0');
+  const btn=document.getElementById('darkModeBtn');
+  if(btn)btn.textContent=isDark?'☀️':'🌙';
+}
+// Apply saved dark mode preference on load
+(function(){
+  if(localStorage.getItem('tb_dark_mode')==='1'){
+    document.body.classList.add('dark-mode');
+    document.addEventListener('DOMContentLoaded',()=>{
+      const btn=document.getElementById('darkModeBtn');
+      if(btn)btn.textContent='☀️';
+    });
+  }
+})();
+
 document.addEventListener('DOMContentLoaded',()=>{
   if(window.location.hash==='#mastheadpartner'){
     const auth=document.getElementById('authScreen');
@@ -3658,6 +3675,9 @@ function showPage(p){
     if(p==='opsland'&&oc.includes("'opsland'"))t.classList.add('active');
     if(p==='team'&&oc.includes('showTeam'))t.classList.add('active');
   });
+  // Show Refer Client float only on home page
+  const referFab=document.getElementById('referFab');
+  if(referFab)referFab.style.display=(p==='hub')?'flex':'none';
   if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();renderLoaTrackerWidget();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
@@ -15339,8 +15359,6 @@ async function mlLoaSelected(input){
 }
 
 function mlInitPage(){
-  const linkEl=document.getElementById('mlPartnerLinkDisplay');
-  if(linkEl)linkEl.textContent=ML_SITE_URL+'#mastheadpartner';
   if(_mlUnsub){_mlUnsub();_mlUnsub=null;}
   if(!window.FB_READY){mlRenderLeads([]);return;}
   _mlUnsub=window.FB.onMastheadLeads(leads=>{
@@ -15350,8 +15368,10 @@ function mlInitPage(){
 }
 
 function mlFilteredLeads(){
-  if(_mlFilter==='all')return _mlLeads;
-  return _mlLeads.filter(l=>l.status===_mlFilter);
+  const isManager=currentUser?.isManager||currentUser?.isOps;
+  const visible=isManager?_mlLeads:_mlLeads.filter(l=>l.advisorCode===currentUser?.code);
+  if(_mlFilter==='all')return visible;
+  return visible.filter(l=>l.status===_mlFilter);
 }
 
 function mlFilter(f){
