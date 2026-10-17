@@ -577,9 +577,9 @@ document.addEventListener('DOMContentLoaded',()=>{
     if(hub)hub.style.display='flex';
     document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
     const pg=document.getElementById('page-mastheadpartner');
-    if(pg){pg.classList.add('active');}
-    // Hide nav/topbar for partner view
-    ['navBar','topBar','chatBtn'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    if(pg)pg.classList.add('active');
+    // Lock to partner page — hide all hub chrome
+    document.body.classList.add('partner-view');
     mlPartnerInit();
   }
 });

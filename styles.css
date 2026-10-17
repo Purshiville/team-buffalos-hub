@@ -1393,6 +1393,16 @@ body.trainee-mode #hubDailyPace,body.trainee-mode #hubDailyPace *,
 body.trainee-mode .tool-card:not(.trainee-allow),body.trainee-mode .tool-card:not(.trainee-allow) *,
 body.trainee-mode .secondary-tool:not(.trainee-allow),body.trainee-mode .secondary-tool:not(.trainee-allow) *{pointer-events:none !important;user-select:none;}
 
+/* ── Partner view — hide all hub chrome, show only partner page ── */
+body.partner-view .topbar,
+body.partner-view .nav-tabs,
+body.partner-view #navTabs,
+body.partner-view #aiFab,
+body.partner-view #referFab,
+body.partner-view #advisorPreviewBanner,
+body.partner-view #chatBtn,
+body.partner-view .ai-popup{display:none !important;}
+
 /* ── Refer Client float (mirrors ai-fab on the left) ── */
 .refer-fab{position:fixed;bottom:24px;left:24px;background:#7c3aed;color:#fff;border:none;border-radius:50px;padding:12px 20px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,0.4);display:flex;align-items:center;gap:8px;z-index:150;transition:all .2s;}
 .refer-fab:hover{background:#6d28d9;transform:translateY(-2px);box-shadow:0 6px 24px rgba(124,58,237,0.5);}
