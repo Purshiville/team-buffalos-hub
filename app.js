@@ -15492,18 +15492,16 @@ async function mlSubmitLead(){
     }),
   };
 
+  // Open WhatsApp synchronously before any await — browsers block window.open after async calls
+  if(!isEdit) mlSendWhatsApp(lead);
+
   try{
     if(window.FB_READY)await window.FB.saveMastheadLead(id,lead);
     logActivity(isEdit?'MASTHEAD_LEAD_EDITED':'MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
     mlHideForm();
-    if(isEdit){
-      showAlert('Lead updated.','success');
-    } else {
-      showAlert('Lead saved — opening WhatsApp to notify Masthead partner.','success');
-      mlSendWhatsApp(lead);
-    }
+    showAlert(isEdit?'Lead updated.':'Lead saved and WhatsApp opened.','success');
   }catch(e){
-    showAlert('Error: '+e.message,'error');
+    showAlert('Error saving lead: '+e.message,'error');
   }
 }
 
