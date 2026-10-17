@@ -15295,12 +15295,13 @@ function _tourPosCallout(rect,pos){
 
 // ── MASTHEAD REFERRAL LEADS ──────────────────────────────────────────────────
 const ML_PARTNER_PIN = 'BUFFALO2025';
-const ML_MASTHEAD_EMAIL = ''; // fill in when Masthead contact's email is provided
+const ML_MASTHEAD_EMAIL = 'infofincompare@gmail.com';
 const ML_SITE_URL = 'https://purshiville.github.io/team-buffalos-hub/index-live-v2_1.html';
 
 const ML_STATUS_LABELS = {new:'New',contacted:'Contacted',meeting:'Meeting Booked',issued:'Policy Issued',lost:'Lost'};
 const ML_STATUS_COLORS = {new:null,contacted:'#f97316',meeting:'#f97316',issued:'#22c55e',lost:'#ef4444'};
 const ML_STATUS_PCT = {new:0,contacted:33,meeting:67,issued:100,lost:-1};
+let _mlEditId = null; // set when editing an existing lead
 
 let _mlLeads = [];
 let _mlFilter = 'all';
@@ -15375,6 +15376,7 @@ function _mlProgressBar(st){
 }
 
 function mlRenderLeads(leads){
+  window._mlLeadsCache=_mlLeads; // full list for edit lookup
   const el=document.getElementById('mlLeadsList');
   if(!el)return;
   if(!leads.length){
@@ -15392,7 +15394,9 @@ function mlRenderLeads(leads){
     const dt=l.submittedAt?.seconds?new Date(l.submittedAt.seconds*1000).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';
     const ficaList=(l.ficaDocs||[]).join(', ')||'None noted';
     const mNotes=l.mastheadNotes?`<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534;"><b>Masthead update:</b> ${l.mastheadNotes}</div>`:'';
-    const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">🗑 Delete</button>`:'';
+    const canEdit=isManager||(currentUser?.code&&l.advisorCode===currentUser.code);
+    const editBtn=canEdit?`<button onclick="mlEditLead('${l.id}')" style="padding:4px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:11px;color:#1d4ed8;cursor:pointer;font-weight:600;">Edit</button>`:'';
+    const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">Delete</button>`:'';
     const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'';
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
@@ -15408,7 +15412,7 @@ function mlRenderLeads(leads){
       ${docsLine}
       <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">FICA: ${ficaList} · By: ${l.advisorName||l.advisorCode||'—'} · ${dt}</div>
       ${mNotes}
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${delBtn}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${editBtn}${delBtn}</div>
     </div>`;
   }).join('');
 }
@@ -15435,17 +15439,24 @@ function mlHideForm(){
   ['mlClientName','mlClientPhone','mlClientId','mlNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const docsIn=document.getElementById('mlSupportingDocsInput');if(docsIn)docsIn.value='';
   const docsLbl=document.getElementById('mlSupportingDocsLabel');if(docsLbl){docsLbl.textContent='No files chosen';docsLbl.style.color='#9ca3af';}
-  const sel=document.getElementById('mlProductNeed');if(sel)sel.value='';
+  document.querySelectorAll('.mlProductCheck').forEach(cb=>cb.checked=false);
   ['mlFicaId','mlFicaPoa','mlFicaBank','mlFicaPayslip'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+  _mlEditId=null;
+  const t=document.getElementById('mlFormTitle');if(t)t.textContent='New Referral Lead';
+  const b=document.getElementById('mlSubmitBtn');if(b)b.textContent='Submit & Notify Masthead';
+  const err=document.getElementById('mlProductNeedErr');if(err)err.style.display='none';
 }
 
 async function mlSubmitLead(){
   const name=(document.getElementById('mlClientName')||{}).value?.trim();
   const phone=(document.getElementById('mlClientPhone')||{}).value?.trim();
-  const product=(document.getElementById('mlProductNeed')||{}).value;
+  const products=Array.from(document.querySelectorAll('.mlProductCheck:checked')).map(cb=>cb.value);
+  const err=document.getElementById('mlProductNeedErr');
   if(!name)return showAlert('Please enter the client name.','error');
   if(!phone)return showAlert('Please enter a cell number.','error');
-  if(!product)return showAlert('Please select a product need.','error');
+  if(!products.length){if(err)err.style.display='';return showAlert('Please select at least one product need.','error');}
+  if(err)err.style.display='none';
+  const product=products.join(', ');
 
   const ficaDocs=[];
   if(document.getElementById('mlFicaId')?.checked)ficaDocs.push('ID / Passport copy');
@@ -15456,8 +15467,10 @@ async function mlSubmitLead(){
   const notes=(document.getElementById('mlNotes')||{}).value?.trim()||'';
   const clientId=(document.getElementById('mlClientId')||{}).value?.trim()||'';
   const docsInput=document.getElementById('mlSupportingDocsInput');
-  const supportingDocs=docsInput?.files?.length?Array.from(docsInput.files).map(f=>f.name).join(', '):'';
-  const id='ml_'+Date.now()+'_'+(currentUser?.code||'X');
+  const newDocs=docsInput?.files?.length?Array.from(docsInput.files).map(f=>f.name).join(', '):'';
+
+  const isEdit=!!_mlEditId;
+  const id=isEdit?_mlEditId:'ml_'+Date.now()+'_'+(currentUser?.code||'X');
 
   const lead={
     id,
@@ -15467,20 +15480,26 @@ async function mlSubmitLead(){
     productNeed:product,
     notes,
     ficaDocs,
-    supportingDocs,
-    advisorCode:currentUser?.code||'',
-    advisorName:currentUser?.name||'',
-    status:'new',
-    mastheadNotes:'',
-    submittedAt:{seconds:Math.floor(Date.now()/1000)},
+    ...(newDocs?{supportingDocs:newDocs}:{}),
+    ...(isEdit?{}:{
+      advisorCode:currentUser?.code||'',
+      advisorName:currentUser?.name||'',
+      status:'new',
+      mastheadNotes:'',
+      submittedAt:{seconds:Math.floor(Date.now()/1000)},
+    }),
   };
 
   try{
     if(window.FB_READY)await window.FB.saveMastheadLead(id,lead);
-    logActivity('MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
+    logActivity(isEdit?'MASTHEAD_LEAD_EDITED':'MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
     mlHideForm();
-    showAlert('Lead saved — opening Gmail to notify Masthead partner.','success');
-    mlSendEmail(lead);
+    if(isEdit){
+      showAlert('Lead updated.','success');
+    } else {
+      showAlert('Lead saved — opening Gmail to notify Masthead partner.','success');
+      mlSendEmail(lead);
+    }
   }catch(e){
     showAlert('Error saving lead: '+e.message,'error');
   }
@@ -15531,6 +15550,30 @@ async function mlDelete(id){
   try{
     if(window.FB_READY)await window.FB.deleteMastheadLead(id);
   }catch(e){showAlert('Error: '+e.message,'error');}
+}
+
+function mlEditLead(id){
+  const lead=window._mlLeadsCache?.find(l=>l.id===id);
+  if(!lead)return showAlert('Lead not found.','error');
+  _mlEditId=id;
+  const w=document.getElementById('mlFormWrap');
+  if(w){w.style.display='block';w.scrollIntoView({behavior:'smooth',block:'start'});}
+  const t=document.getElementById('mlFormTitle');if(t)t.textContent='Edit Lead';
+  const b=document.getElementById('mlSubmitBtn');if(b)b.textContent='Save Changes';
+  const setVal=(elId,v)=>{const e=document.getElementById(elId);if(e)e.value=v||'';};
+  setVal('mlClientName',lead.clientName);
+  setVal('mlClientPhone',lead.clientPhone);
+  setVal('mlClientId',lead.clientId);
+  setVal('mlNotes',lead.notes);
+  // restore product checkboxes
+  const selected=(lead.productNeed||'').split(', ').map(s=>s.trim());
+  document.querySelectorAll('.mlProductCheck').forEach(cb=>{cb.checked=selected.includes(cb.value);});
+  // restore FICA checkboxes
+  const ficaMap={'mlFicaId':'ID / Passport copy','mlFicaPoa':'Proof of address','mlFicaBank':'Bank statement','mlFicaPayslip':'Payslip'};
+  Object.entries(ficaMap).forEach(([elId,label])=>{const e=document.getElementById(elId);if(e)e.checked=(lead.ficaDocs||[]).includes(label);});
+  // restore docs label if present
+  const docsLbl=document.getElementById('mlSupportingDocsLabel');
+  if(docsLbl&&lead.supportingDocs){docsLbl.textContent=lead.supportingDocs;docsLbl.style.color='#374151';}
 }
 
 // ── Partner page ──
