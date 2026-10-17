@@ -15295,7 +15295,7 @@ function _tourPosCallout(rect,pos){
 
 // ── MASTHEAD REFERRAL LEADS ──────────────────────────────────────────────────
 const ML_PARTNER_PIN = 'BUFFALO2025';
-const ML_MASTHEAD_EMAIL = 'infofincompare@gmail.com';
+const ML_MASTHEAD_WA = '27639047041'; // WhatsApp number in international format
 const ML_SITE_URL = 'https://purshiville.github.io/team-buffalos-hub/index-live-v2_1.html';
 
 const ML_STATUS_LABELS = {new:'New',contacted:'Contacted',meeting:'Meeting Booked',issued:'Policy Issued',lost:'Lost'};
@@ -15397,9 +15397,7 @@ function mlRenderLeads(leads){
     const canEdit=isManager||(currentUser?.code&&l.advisorCode===currentUser.code);
     const editBtn=canEdit?`<button onclick="mlEditLead('${l.id}')" style="padding:4px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:11px;color:#1d4ed8;cursor:pointer;font-weight:600;">Edit</button>`:'';
     const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">Delete</button>`:'';
-    const docsLine=(l.supportingDocUrls||[]).length
-      ?`<div style="margin-bottom:6px;">${l.supportingDocUrls.map(d=>`<a href="${d.url}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;color:#1d4ed8;font-weight:600;text-decoration:none;">&#128206; ${d.name}</a>`).join('')}</div>`
-      :(l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'');
+    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">📎 Docs: ${l.supportingDocs}</div>`:'';
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
@@ -15445,7 +15443,7 @@ function mlHideForm(){
   ['mlFicaId','mlFicaPoa','mlFicaBank','mlFicaPayslip'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
   _mlEditId=null;
   const t=document.getElementById('mlFormTitle');if(t)t.textContent='New Referral Lead';
-  const b=document.getElementById('mlSubmitBtn');if(b)b.textContent='Submit & Notify Masthead';
+  const b=document.getElementById('mlSubmitBtn');if(b)b.textContent='Submit & Notify via WhatsApp';
   const err=document.getElementById('mlProductNeedErr');if(err)err.style.display='none';
 }
 
@@ -15469,101 +15467,70 @@ async function mlSubmitLead(){
   const notes=(document.getElementById('mlNotes')||{}).value?.trim()||'';
   const clientId=(document.getElementById('mlClientId')||{}).value?.trim()||'';
   const docsInput=document.getElementById('mlSupportingDocsInput');
-  const newFiles=docsInput?.files?.length?Array.from(docsInput.files):[];
+  const newDocs=docsInput?.files?.length?Array.from(docsInput.files).map(f=>f.name).join(', '):'';
 
   const isEdit=!!_mlEditId;
   const id=isEdit?_mlEditId:'ml_'+Date.now()+'_'+(currentUser?.code||'X');
+  const existingDocs=isEdit?(window._mlLeadsCache?.find(l=>l.id===id)?.supportingDocs||''):'';
+  const supportingDocs=newDocs||existingDocs;
 
-  const btn=document.getElementById('mlSubmitBtn');
+  const lead={
+    id,
+    clientName:name,
+    clientPhone:phone,
+    clientId,
+    productNeed:product,
+    notes,
+    ficaDocs,
+    supportingDocs,
+    ...(isEdit?{}:{
+      advisorCode:currentUser?.code||'',
+      advisorName:currentUser?.name||'',
+      status:'new',
+      mastheadNotes:'',
+      submittedAt:{seconds:Math.floor(Date.now()/1000)},
+    }),
+  };
+
   try{
-    // Upload supporting docs to Firebase Storage if any new files selected
-    let uploadedDocs=[]; // [{name, url}, ...]
-    if(newFiles.length&&window.FB_READY){
-      if(btn)btn.textContent='Uploading docs…';
-      uploadedDocs=await window.FB.uploadMastheadDocs(id,newFiles);
-    }
-    const supportingDocs=uploadedDocs.length?uploadedDocs.map(d=>d.name).join(', '):
-      (isEdit?(window._mlLeadsCache?.find(l=>l.id===id)?.supportingDocs||''):'');
-
-    const lead={
-      id,
-      clientName:name,
-      clientPhone:phone,
-      clientId,
-      productNeed:product,
-      notes,
-      ficaDocs,
-      supportingDocs,
-      ...(uploadedDocs.length?{supportingDocUrls:uploadedDocs}:{}),
-      ...(isEdit?{}:{
-        advisorCode:currentUser?.code||'',
-        advisorName:currentUser?.name||'',
-        status:'new',
-        mastheadNotes:'',
-        submittedAt:{seconds:Math.floor(Date.now()/1000)},
-      }),
-    };
-
     if(window.FB_READY)await window.FB.saveMastheadLead(id,lead);
     logActivity(isEdit?'MASTHEAD_LEAD_EDITED':'MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
     mlHideForm();
     if(isEdit){
       showAlert('Lead updated.','success');
     } else {
-      showAlert('Lead saved — opening Gmail to notify Masthead partner.','success');
-      mlSendEmail(lead);
+      showAlert('Lead saved — opening WhatsApp to notify Masthead partner.','success');
+      mlSendWhatsApp(lead);
     }
   }catch(e){
-    if(btn)btn.textContent=isEdit?'Save Changes':'Submit & Notify Masthead';
     showAlert('Error: '+e.message,'error');
   }
 }
 
-function mlSendEmail(lead){
-  const toEmail=ML_MASTHEAD_EMAIL||'masthead.partner@example.com';
-  const ficaStr=(lead.ficaDocs||[]).length?(lead.ficaDocs).join(', '):'None noted';
+function mlSendWhatsApp(lead){
+  const ficaStr=(lead.ficaDocs||[]).length?lead.ficaDocs.join(', '):'None noted';
   const partnerLink=ML_SITE_URL+'#mastheadpartner';
-  const subject=`New Referral Lead — ${lead.clientName} — ${lead.productNeed}`;
-  const docsSection=(lead.supportingDocUrls||[]).length
-    ?`SUPPORTING DOCUMENTS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${lead.supportingDocUrls.map((d,i)=>`${i+1}. ${d.name}\n   ${d.url}`).join('\n\n')}
+  const docsLine=lead.supportingDocs?`\n📎 *Supporting docs:* ${lead.supportingDocs} _(please send these in this chat)_`:'';
+  const msg=`🤝 *New Referral Lead — Team Buffalos*
 
-`
-    :(lead.supportingDocs?`SUPPORTING DOCUMENTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${lead.supportingDocs}\n\n`:'');
-  const body=`Good day,
+👤 *Client Details*
+Name: ${lead.clientName}
+Cell: ${lead.clientPhone}
+ID: ${lead.clientId||'Not provided'}
+Product Need: ${lead.productNeed}
 
-A new referral lead has been submitted for your attention by Team Buffalos.
+📋 *FICA Docs Collected*
+${ficaStr}${docsLine}
 
-CLIENT DETAILS
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Name:           ${lead.clientName}
-Cell Number:    ${lead.clientPhone}
-SA ID Number:   ${lead.clientId||'Not provided'}
-Product Need:   ${lead.productNeed}
-
-FICA DOCS COLLECTED
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${ficaStr}
-
-${docsSection}NOTES / BACKGROUND
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📝 *Notes*
 ${lead.notes||'No additional notes.'}
 
-SUBMITTED BY
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Advisor: ${lead.advisorName} (${lead.advisorCode})
+👔 *Submitted by:* ${lead.advisorName} (${lead.advisorCode})
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-View and update all leads here:
+🔗 *View & update all leads:*
 ${partnerLink}
-PIN: ${ML_PARTNER_PIN}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Kind regards,
-Team Buffalos`;
-  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toEmail)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
-  window.open(url,'_blank');
+🔑 PIN: ${ML_PARTNER_PIN}`;
+  window.open('https://wa.me/'+ML_MASTHEAD_WA+'?text='+encodeURIComponent(msg),'_blank');
 }
 
 async function mlDelete(id){
@@ -15657,9 +15624,7 @@ function mlPartnerRender(leads){
       const col=isActive?(sc||'#374151'):'#6b7280';
       return `<button onclick="mlPartnerSetStatus('${l.id}',this,'${s}')" style="padding:5px 10px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${col};font-size:11px;font-weight:700;cursor:pointer;">${ML_STATUS_LABELS[s]}</button>`;
     }).join('');
-    const docsLine=(l.supportingDocUrls||[]).length
-      ?`<div style="margin-bottom:6px;">${l.supportingDocUrls.map(d=>`<a href="${d.url}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;color:#1d4ed8;font-weight:600;text-decoration:none;">&#128206; ${d.name}</a>`).join('')}</div>`
-      :(l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'');
+    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">📎 Docs: ${l.supportingDocs}</div>`:'';
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;" id="mlPCard_${l.id}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
