@@ -551,6 +551,22 @@ function tryRestoreSession(){
   return false;
 }
 
+// Partner portal: bypass login for Masthead partner access via hash
+document.addEventListener('DOMContentLoaded',()=>{
+  if(window.location.hash==='#mastheadpartner'){
+    const auth=document.getElementById('authScreen');
+    const hub=document.getElementById('hubMain');
+    if(auth)auth.classList.remove('active');
+    if(hub)hub.style.display='flex';
+    document.querySelectorAll('.page').forEach(el=>el.classList.remove('active'));
+    const pg=document.getElementById('page-mastheadpartner');
+    if(pg){pg.classList.add('active');}
+    // Hide nav/topbar for partner view
+    ['navBar','topBar','chatBtn'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    mlPartnerInit();
+  }
+});
+
 // Pre-render hub elements after full load — avoids race condition with script parsing
 window.addEventListener('load',()=>{
   setTimeout(()=>{
@@ -3676,6 +3692,8 @@ function showPage(p){
   if(p==='convfunnel')convFunnelInit();
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='loatracker'){renderLOATracker();}
+  if(p==='mastheadleads'){mlInitPage();}
+  if(p==='mastheadpartner'){mlPartnerInit();}
   if(p==='qlink'){qlinkRenderDeductions();qlinkRenderSkyPolicies();qlinkCalc();}
   if(p==='replform'){if(!currentUser?.isManager&&!currentUser?.isOps)return showPage('hub');rfInit();}
   if(p==='replpresentation'){replPresentationInit();}
@@ -15274,3 +15292,270 @@ function _tourPosCallout(rect,pos){
   cl.style.left=left+'px';cl.style.top=top+'px';
 }
 // ── END HUB TOUR ─────────────────────────────────────────────────────────────
+
+// ── MASTHEAD REFERRAL LEADS ──────────────────────────────────────────────────
+const ML_PARTNER_PIN = 'BUFFALO2025';
+const ML_MASTHEAD_EMAIL = ''; // fill in when Masthead contact's email is provided
+const ML_SITE_URL = 'https://purshiville.github.io/team-buffalos-hub/index-live-v2_1.html';
+
+const ML_STATUS_LABELS = {new:'🔵 New',contacted:'🟡 Contacted',meeting:'🟠 Meeting Booked',issued:'🟢 Policy Issued',lost:'🔴 Lost / Not Interested'};
+const ML_STATUS_COLORS = {new:'#3b82f6',contacted:'#eab308',meeting:'#f97316',issued:'#22c55e',lost:'#ef4444'};
+
+let _mlLeads = [];
+let _mlFilter = 'all';
+let _mlUnsub = null;
+
+function mlInitPage(){
+  const linkEl=document.getElementById('mlPartnerLinkDisplay');
+  if(linkEl)linkEl.textContent=ML_SITE_URL+'#mastheadpartner';
+  if(_mlUnsub){_mlUnsub();_mlUnsub=null;}
+  if(!window.FB_READY){mlRenderLeads([]);return;}
+  _mlUnsub=window.FB.onMastheadLeads(leads=>{
+    _mlLeads=leads;
+    mlRenderLeads(mlFilteredLeads());
+  });
+}
+
+function mlFilteredLeads(){
+  if(_mlFilter==='all')return _mlLeads;
+  return _mlLeads.filter(l=>l.status===_mlFilter);
+}
+
+function mlFilter(f){
+  _mlFilter=f;
+  document.querySelectorAll('.ml-filt').forEach(b=>{
+    const isActive=b.id==='mlFilt'+f.charAt(0).toUpperCase()+f.slice(1)||( f==='all'&&b.id==='mlFiltAll');
+    b.style.background=isActive?'#7c3aed':'#fff';
+    b.style.color=isActive?'#fff':'#374151';
+    b.style.borderColor=isActive?'#7c3aed':'#e5e7eb';
+  });
+  mlRenderLeads(mlFilteredLeads());
+}
+
+function mlRenderLeads(leads){
+  const el=document.getElementById('mlLeadsList');
+  if(!el)return;
+  if(!leads.length){
+    el.innerHTML=`<div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;padding:24px;text-align:center;color:#9ca3af;font-size:13px;">No leads yet${_mlFilter!=='all'?' in this category':(currentUser?.isManager?'':" — tap '+ New Lead' to add one")}.</div>`;
+    return;
+  }
+  const isManager=currentUser?.isManager||currentUser?.isOps;
+  el.innerHTML=leads.map(l=>{
+    const st=l.status||'new';
+    const stColor=ML_STATUS_COLORS[st]||'#3b82f6';
+    const stLabel=ML_STATUS_LABELS[st]||st;
+    const dt=l.submittedAt?.seconds?new Date(l.submittedAt.seconds*1000).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const ficaList=(l.ficaDocs||[]).join(', ')||'None noted';
+    const mNotes=l.mastheadNotes?`<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534;"><b>Masthead update:</b> ${l.mastheadNotes}</div>`:'';
+    const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">🗑 Delete</button>`:'';
+    return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${l.clientName||'—'}</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:1px;">${l.productNeed||'—'} · ${l.clientPhone||'—'}</div>
+          ${l.clientId?`<div style="font-size:11px;color:#9ca3af;">ID: ${l.clientId}</div>`:''}
+        </div>
+        <span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>
+      </div>
+      ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
+      <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">FICA: ${ficaList} · By: ${l.advisorName||l.advisorCode||'—'} · ${dt}</div>
+      ${mNotes}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${delBtn}</div>
+    </div>`;
+  }).join('');
+}
+
+function mlShowForm(){
+  const w=document.getElementById('mlFormWrap');
+  if(w){w.style.display='block';w.scrollIntoView({behavior:'smooth',block:'start'});}
+}
+function mlHideForm(){
+  const w=document.getElementById('mlFormWrap');
+  if(w)w.style.display='none';
+  ['mlClientName','mlClientPhone','mlClientId','mlNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const sel=document.getElementById('mlProductNeed');if(sel)sel.value='';
+  ['mlFicaId','mlFicaPoa','mlFicaBank','mlFicaPayslip'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
+}
+
+async function mlSubmitLead(){
+  const name=(document.getElementById('mlClientName')||{}).value?.trim();
+  const phone=(document.getElementById('mlClientPhone')||{}).value?.trim();
+  const product=(document.getElementById('mlProductNeed')||{}).value;
+  if(!name)return showAlert('Please enter the client name.','error');
+  if(!phone)return showAlert('Please enter a cell number.','error');
+  if(!product)return showAlert('Please select a product need.','error');
+
+  const ficaDocs=[];
+  if(document.getElementById('mlFicaId')?.checked)ficaDocs.push('ID / Passport copy');
+  if(document.getElementById('mlFicaPoa')?.checked)ficaDocs.push('Proof of address');
+  if(document.getElementById('mlFicaBank')?.checked)ficaDocs.push('Bank statement');
+  if(document.getElementById('mlFicaPayslip')?.checked)ficaDocs.push('Payslip');
+
+  const notes=(document.getElementById('mlNotes')||{}).value?.trim()||'';
+  const clientId=(document.getElementById('mlClientId')||{}).value?.trim()||'';
+  const id='ml_'+Date.now()+'_'+(currentUser?.code||'X');
+
+  const lead={
+    id,
+    clientName:name,
+    clientPhone:phone,
+    clientId,
+    productNeed:product,
+    notes,
+    ficaDocs,
+    advisorCode:currentUser?.code||'',
+    advisorName:currentUser?.name||'',
+    status:'new',
+    mastheadNotes:'',
+    submittedAt:{seconds:Math.floor(Date.now()/1000)},
+  };
+
+  try{
+    if(window.FB_READY)await window.FB.saveMastheadLead(id,lead);
+    logActivity('MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
+    mlHideForm();
+    showAlert('Lead saved — opening Gmail to notify Masthead partner.','success');
+    mlSendEmail(lead);
+  }catch(e){
+    showAlert('Error saving lead: '+e.message,'error');
+  }
+}
+
+function mlSendEmail(lead){
+  const toEmail=ML_MASTHEAD_EMAIL||'masthead.partner@example.com';
+  const ficaStr=lead.ficaDocs.length?lead.ficaDocs.join(', '):'None noted';
+  const partnerLink=ML_SITE_URL+'#mastheadpartner';
+  const subject=`🤝 New Referral Lead — ${lead.clientName} — ${lead.productNeed}`;
+  const body=`Good day,
+
+A new referral lead has been submitted for your attention by Team Buffalos.
+
+CLIENT DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name:           ${lead.clientName}
+Cell Number:    ${lead.clientPhone}
+SA ID Number:   ${lead.clientId||'Not provided'}
+Product Need:   ${lead.productNeed}
+
+FICA DOCS COLLECTED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${ficaStr}
+
+NOTES / BACKGROUND
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${lead.notes||'No additional notes.'}
+
+SUBMITTED BY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Advisor: ${lead.advisorName} (${lead.advisorCode})
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+View and update all leads here:
+${partnerLink}
+PIN: ${ML_PARTNER_PIN}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Kind regards,
+Team Buffalos`;
+  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toEmail)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  window.open(url,'_blank');
+}
+
+async function mlDelete(id){
+  if(!confirm('Delete this lead? This cannot be undone.'))return;
+  try{
+    if(window.FB_READY)await window.FB.deleteMastheadLead(id);
+  }catch(e){showAlert('Error: '+e.message,'error');}
+}
+
+// ── Partner page ──
+function mlPartnerInit(){
+  const gate=document.getElementById('mlPartnerGate');
+  const leads=document.getElementById('mlPartnerLeads');
+  const pinInput=document.getElementById('mlPartnerPinInput');
+  const pinError=document.getElementById('mlPartnerPinError');
+  const already=sessionStorage.getItem('ml_partner_auth')==='1';
+  if(gate)gate.style.display=already?'none':'block';
+  if(leads)leads.style.display=already?'block':'none';
+  if(pinInput)pinInput.value='';
+  if(pinError)pinError.style.display='none';
+  if(already)mlPartnerLoadLeads();
+}
+
+function mlPartnerLogin(){
+  const pin=(document.getElementById('mlPartnerPinInput')||{}).value?.trim();
+  const err=document.getElementById('mlPartnerPinError');
+  if(pin!==ML_PARTNER_PIN){if(err)err.style.display='block';return;}
+  sessionStorage.setItem('ml_partner_auth','1');
+  const gate=document.getElementById('mlPartnerGate');
+  const leads=document.getElementById('mlPartnerLeads');
+  if(gate)gate.style.display='none';
+  if(leads)leads.style.display='block';
+  mlPartnerLoadLeads();
+}
+
+async function mlPartnerLoadLeads(){
+  const el=document.getElementById('mlPartnerList');
+  if(!el)return;
+  if(!window.FB_READY){el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;">Firebase not ready.</div>';return;}
+  el.innerHTML='<div style="text-align:center;color:#9ca3af;padding:20px;font-size:13px;">Loading leads…</div>';
+  try{
+    const leads=await window.FB.getMastheadLeads();
+    mlPartnerRender(leads);
+  }catch(e){el.innerHTML='<div style="color:#dc2626;padding:16px;font-size:12px;">Error loading leads: '+e.message+'</div>';}
+}
+
+function mlPartnerRefresh(){mlPartnerLoadLeads();}
+
+function mlPartnerRender(leads){
+  const el=document.getElementById('mlPartnerList');
+  if(!el)return;
+  if(!leads.length){el.innerHTML='<div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;padding:24px;text-align:center;color:#9ca3af;font-size:13px;">No leads yet.</div>';return;}
+  el.innerHTML=leads.map(l=>{
+    const st=l.status||'new';
+    const stColor=ML_STATUS_COLORS[st]||'#3b82f6';
+    const stLabel=ML_STATUS_LABELS[st]||st;
+    const dt=l.submittedAt?.seconds?new Date(l.submittedAt.seconds*1000).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const ficaList=(l.ficaDocs||[]).join(', ')||'None noted';
+    const statusBtns=Object.keys(ML_STATUS_LABELS).map(s=>
+      `<button onclick="mlPartnerSetStatus('${l.id}',this,'${s}')" style="padding:5px 10px;border-radius:8px;border:1.5px solid ${s===st?ML_STATUS_COLORS[s]:'#e5e7eb'};background:${s===st?ML_STATUS_COLORS[s]+'18':'#fff'};color:${s===st?ML_STATUS_COLORS[s]:'#6b7280'};font-size:11px;font-weight:700;cursor:pointer;">${ML_STATUS_LABELS[s]}</button>`
+    ).join('');
+    return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;" id="mlPCard_${l.id}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;">
+        <div>
+          <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${l.clientName||'—'}</div>
+          <div style="font-size:12px;color:#6b7280;">${l.productNeed||'—'} · <a href="tel:${(l.clientPhone||'').replace(/\s/g,'')}" style="color:#7c3aed;font-weight:700;">${l.clientPhone||'—'}</a></div>
+          ${l.clientId?`<div style="font-size:11px;color:#9ca3af;">ID: ${l.clientId}</div>`:''}
+        </div>
+        <span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>
+      </div>
+      ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
+      <div style="font-size:11px;color:#9ca3af;margin-bottom:10px;">FICA: ${ficaList} · Advisor: ${l.advisorName||'—'} · ${dt}</div>
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Update Status</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${statusBtns}</div>
+      <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Your Notes (visible to advisor)</div>
+      <textarea id="mlPNotes_${l.id}" rows="2" placeholder="Add update notes here…" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;resize:vertical;box-sizing:border-box;font-family:inherit;">${l.mastheadNotes||''}</textarea>
+      <button onclick="mlPartnerSaveNotes('${l.id}')" style="margin-top:6px;padding:7px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Notes</button>
+    </div>`;
+  }).join('');
+}
+
+async function mlPartnerSetStatus(id,btn,status){
+  if(!window.FB_READY)return;
+  try{
+    await window.FB.saveMastheadLead(id,{status});
+    // refresh card
+    mlPartnerLoadLeads();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function mlPartnerSaveNotes(id){
+  const ta=document.getElementById('mlPNotes_'+id);
+  if(!ta||!window.FB_READY)return;
+  try{
+    await window.FB.saveMastheadLead(id,{mastheadNotes:ta.value.trim()});
+    ta.style.borderColor='#22c55e';
+    setTimeout(()=>{ta.style.borderColor='#e5e7eb';},1500);
+  }catch(e){alert('Error: '+e.message);}
+}
+// ── END MASTHEAD REFERRAL LEADS ──────────────────────────────────────────────
