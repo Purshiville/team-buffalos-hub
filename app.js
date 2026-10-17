@@ -15305,6 +15305,37 @@ let _mlLeads = [];
 let _mlFilter = 'all';
 let _mlUnsub = null;
 
+async function mlLoaSelected(input){
+  const file=input.files?.[0];
+  if(!file)return;
+  const btn=document.getElementById('mlLoaBtn');
+  const status=document.getElementById('mlLoaStatus');
+  if(btn)btn.textContent='⏳ Reading…';
+  if(status){status.style.display='block';status.textContent='AI is reading the LOA — please wait…';status.style.color='#6b7280';}
+  try{
+    const isPdf=file.type==='application/pdf'||file.name.toLowerCase().endsWith('.pdf');
+    const b64=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file);});
+    const mediaType=isPdf?'application/pdf':_fileMediaType(file);
+    const prompt=`This is a Letter of Authority (LOA) or insurance document.\n\nFind the CLIENT/POLICYHOLDER/LIFE ASSURED (the person granting authority — NOT the financial adviser).\n\nExtract:\n1. Their full name (first name + surname combined)\n2. Their South African ID number (13 digits — remove spaces or dashes)\n3. Their contact/cell number (digits only, no spaces or dashes)\n\nReply with ONLY valid JSON, no markdown:\n{"fullName":"","idNumber":"","phone":""}\n\nRules:\n- idNumber must be 13 digits, no spaces\n- phone must be digits only (e.g. 0731234567)\n- If you cannot find a value, leave as empty string`;
+    const raw=await callClaudeVision(b64,mediaType,prompt,512);
+    let parsed={};
+    try{const m=[...raw.matchAll(/\{[^{}]*\}/g)];parsed=JSON.parse(m.length?m[m.length-1][0]:'{}');}catch(e){}
+    const nameEl=document.getElementById('mlClientName');
+    const idEl=document.getElementById('mlClientId');
+    const phoneEl=document.getElementById('mlClientPhone');
+    if(parsed.fullName&&nameEl)nameEl.value=parsed.fullName;
+    if(parsed.idNumber&&idEl)idEl.value=parsed.idNumber;
+    if(parsed.phone&&phoneEl)phoneEl.value=parsed.phone;
+    const found=parsed.fullName||parsed.idNumber||parsed.phone;
+    if(btn)btn.textContent=found?'✅ LOA Read':'📎 Upload LOA';
+    if(status){status.textContent=found?'✅ Fields filled from LOA — check and edit if needed':'⚠️ Could not read details — fill in manually';status.style.color=found?'#059669':'#d97706';}
+  }catch(e){
+    if(btn)btn.textContent='📎 Upload LOA';
+    if(status){status.textContent='❌ Error reading file — fill in manually';status.style.color='#dc2626';}
+  }
+  input.value='';
+}
+
 function mlInitPage(){
   const linkEl=document.getElementById('mlPartnerLinkDisplay');
   if(linkEl)linkEl.textContent=ML_SITE_URL+'#mastheadpartner';
