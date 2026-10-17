@@ -15397,7 +15397,9 @@ function mlRenderLeads(leads){
     const canEdit=isManager||(currentUser?.code&&l.advisorCode===currentUser.code);
     const editBtn=canEdit?`<button onclick="mlEditLead('${l.id}')" style="padding:4px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:11px;color:#1d4ed8;cursor:pointer;font-weight:600;">Edit</button>`:'';
     const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">Delete</button>`:'';
-    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'';
+    const docsLine=(l.supportingDocUrls||[]).length
+      ?`<div style="margin-bottom:6px;">${l.supportingDocUrls.map(d=>`<a href="${d.url}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;color:#1d4ed8;font-weight:600;text-decoration:none;">&#128206; ${d.name}</a>`).join('')}</div>`
+      :(l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'');
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
@@ -15467,30 +15469,41 @@ async function mlSubmitLead(){
   const notes=(document.getElementById('mlNotes')||{}).value?.trim()||'';
   const clientId=(document.getElementById('mlClientId')||{}).value?.trim()||'';
   const docsInput=document.getElementById('mlSupportingDocsInput');
-  const newDocs=docsInput?.files?.length?Array.from(docsInput.files).map(f=>f.name).join(', '):'';
+  const newFiles=docsInput?.files?.length?Array.from(docsInput.files):[];
 
   const isEdit=!!_mlEditId;
   const id=isEdit?_mlEditId:'ml_'+Date.now()+'_'+(currentUser?.code||'X');
 
-  const lead={
-    id,
-    clientName:name,
-    clientPhone:phone,
-    clientId,
-    productNeed:product,
-    notes,
-    ficaDocs,
-    ...(newDocs?{supportingDocs:newDocs}:{}),
-    ...(isEdit?{}:{
-      advisorCode:currentUser?.code||'',
-      advisorName:currentUser?.name||'',
-      status:'new',
-      mastheadNotes:'',
-      submittedAt:{seconds:Math.floor(Date.now()/1000)},
-    }),
-  };
-
+  const btn=document.getElementById('mlSubmitBtn');
   try{
+    // Upload supporting docs to Firebase Storage if any new files selected
+    let uploadedDocs=[]; // [{name, url}, ...]
+    if(newFiles.length&&window.FB_READY){
+      if(btn)btn.textContent='Uploading docs…';
+      uploadedDocs=await window.FB.uploadMastheadDocs(id,newFiles);
+    }
+    const supportingDocs=uploadedDocs.length?uploadedDocs.map(d=>d.name).join(', '):
+      (isEdit?(window._mlLeadsCache?.find(l=>l.id===id)?.supportingDocs||''):'');
+
+    const lead={
+      id,
+      clientName:name,
+      clientPhone:phone,
+      clientId,
+      productNeed:product,
+      notes,
+      ficaDocs,
+      supportingDocs,
+      ...(uploadedDocs.length?{supportingDocUrls:uploadedDocs}:{}),
+      ...(isEdit?{}:{
+        advisorCode:currentUser?.code||'',
+        advisorName:currentUser?.name||'',
+        status:'new',
+        mastheadNotes:'',
+        submittedAt:{seconds:Math.floor(Date.now()/1000)},
+      }),
+    };
+
     if(window.FB_READY)await window.FB.saveMastheadLead(id,lead);
     logActivity(isEdit?'MASTHEAD_LEAD_EDITED':'MASTHEAD_LEAD_SUBMITTED',name+' — '+product);
     mlHideForm();
@@ -15501,15 +15514,23 @@ async function mlSubmitLead(){
       mlSendEmail(lead);
     }
   }catch(e){
-    showAlert('Error saving lead: '+e.message,'error');
+    if(btn)btn.textContent=isEdit?'Save Changes':'Submit & Notify Masthead';
+    showAlert('Error: '+e.message,'error');
   }
 }
 
 function mlSendEmail(lead){
   const toEmail=ML_MASTHEAD_EMAIL||'masthead.partner@example.com';
-  const ficaStr=lead.ficaDocs.length?lead.ficaDocs.join(', '):'None noted';
+  const ficaStr=(lead.ficaDocs||[]).length?(lead.ficaDocs).join(', '):'None noted';
   const partnerLink=ML_SITE_URL+'#mastheadpartner';
-  const subject=`🤝 New Referral Lead — ${lead.clientName} — ${lead.productNeed}`;
+  const subject=`New Referral Lead — ${lead.clientName} — ${lead.productNeed}`;
+  const docsSection=(lead.supportingDocUrls||[]).length
+    ?`SUPPORTING DOCUMENTS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${lead.supportingDocUrls.map((d,i)=>`${i+1}. ${d.name}\n   ${d.url}`).join('\n\n')}
+
+`
+    :(lead.supportingDocs?`SUPPORTING DOCUMENTS\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${lead.supportingDocs}\n\n`:'');
   const body=`Good day,
 
 A new referral lead has been submitted for your attention by Team Buffalos.
@@ -15525,7 +15546,7 @@ FICA DOCS COLLECTED
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${ficaStr}
 
-NOTES / BACKGROUND
+${docsSection}NOTES / BACKGROUND
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ${lead.notes||'No additional notes.'}
 
@@ -15636,7 +15657,9 @@ function mlPartnerRender(leads){
       const col=isActive?(sc||'#374151'):'#6b7280';
       return `<button onclick="mlPartnerSetStatus('${l.id}',this,'${s}')" style="padding:5px 10px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${col};font-size:11px;font-weight:700;cursor:pointer;">${ML_STATUS_LABELS[s]}</button>`;
     }).join('');
-    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'';
+    const docsLine=(l.supportingDocUrls||[]).length
+      ?`<div style="margin-bottom:6px;">${l.supportingDocUrls.map(d=>`<a href="${d.url}" target="_blank" rel="noopener" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;font-size:11px;color:#1d4ed8;font-weight:600;text-decoration:none;">&#128206; ${d.name}</a>`).join('')}</div>`
+      :(l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'');
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;" id="mlPCard_${l.id}">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
