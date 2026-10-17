@@ -15298,8 +15298,9 @@ const ML_PARTNER_PIN = 'BUFFALO2025';
 const ML_MASTHEAD_EMAIL = ''; // fill in when Masthead contact's email is provided
 const ML_SITE_URL = 'https://purshiville.github.io/team-buffalos-hub/index-live-v2_1.html';
 
-const ML_STATUS_LABELS = {new:'🔵 New',contacted:'🟡 Contacted',meeting:'🟠 Meeting Booked',issued:'🟢 Policy Issued',lost:'🔴 Lost / Not Interested'};
-const ML_STATUS_COLORS = {new:'#3b82f6',contacted:'#eab308',meeting:'#f97316',issued:'#22c55e',lost:'#ef4444'};
+const ML_STATUS_LABELS = {new:'New',contacted:'Contacted',meeting:'Meeting Booked',issued:'Policy Issued',lost:'Lost'};
+const ML_STATUS_COLORS = {new:null,contacted:'#f97316',meeting:'#f97316',issued:'#22c55e',lost:'#ef4444'};
+const ML_STATUS_PCT = {new:0,contacted:33,meeting:67,issued:100,lost:-1};
 
 let _mlLeads = [];
 let _mlFilter = 'all';
@@ -15355,12 +15356,22 @@ function mlFilteredLeads(){
 function mlFilter(f){
   _mlFilter=f;
   document.querySelectorAll('.ml-filt').forEach(b=>{
-    const isActive=b.id==='mlFilt'+f.charAt(0).toUpperCase()+f.slice(1)||( f==='all'&&b.id==='mlFiltAll');
-    b.style.background=isActive?'#7c3aed':'#fff';
-    b.style.color=isActive?'#fff':'#374151';
-    b.style.borderColor=isActive?'#7c3aed':'#e5e7eb';
+    const bid=b.id;
+    const isActive=(f==='all'&&bid==='mlFiltAll')||(bid==='mlFilt'+f.charAt(0).toUpperCase()+f.slice(1));
+    const dotColor={mlFiltNew:'#9ca3af',mlFiltContacted:'#f97316',mlFiltMeeting:'#f97316',mlFiltIssued:'#22c55e',mlFiltLost:'#ef4444'}[bid];
+    b.style.background=isActive?(dotColor||'#7c3aed'):'#fff';
+    b.style.color=isActive?'#fff':(dotColor||'#374151');
+    b.style.borderColor=isActive?(dotColor||'#7c3aed'):(dotColor||'#e5e7eb');
   });
   mlRenderLeads(mlFilteredLeads());
+}
+
+function _mlProgressBar(st){
+  const pct=ML_STATUS_PCT[st]??0;
+  if(st==='lost')return `<div style="display:inline-block;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:3px 10px;font-size:11px;color:#ef4444;font-weight:700;margin-bottom:6px;">✗ Lost</div>`;
+  if(st==='new')return `<div style="margin:6px 0 8px;"><div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;background:#f3f4f6;border-radius:99px;height:5px;"><div style="background:#d1d5db;height:100%;width:4%;border-radius:99px;"></div></div><span style="font-size:10px;font-weight:700;color:#9ca3af;min-width:28px;text-align:right;">New</span></div></div>`;
+  const barColor=st==='issued'?'#22c55e':'#f97316';
+  return `<div style="margin:6px 0 8px;"><div style="display:flex;align-items:center;gap:8px;"><div style="flex:1;background:#f3f4f6;border-radius:99px;height:5px;overflow:hidden;"><div style="background:${barColor};height:100%;width:${pct}%;border-radius:99px;"></div></div><span style="font-size:10px;font-weight:700;color:${barColor};min-width:28px;text-align:right;">${pct}%</span></div><div style="display:flex;justify-content:space-between;font-size:9px;color:#d1d5db;margin-top:2px;"><span>New</span><span>Contact</span><span>Meeting</span><span>Issued</span></div></div>`;
 }
 
 function mlRenderLeads(leads){
@@ -15373,22 +15384,28 @@ function mlRenderLeads(leads){
   const isManager=currentUser?.isManager||currentUser?.isOps;
   el.innerHTML=leads.map(l=>{
     const st=l.status||'new';
-    const stColor=ML_STATUS_COLORS[st]||'#3b82f6';
+    const stColor=ML_STATUS_COLORS[st];
     const stLabel=ML_STATUS_LABELS[st]||st;
+    const stBadge=stColor
+      ?`<span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>`
+      :`<span style="font-size:11px;font-weight:700;color:#9ca3af;white-space:nowrap;">${stLabel}</span>`;
     const dt=l.submittedAt?.seconds?new Date(l.submittedAt.seconds*1000).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';
     const ficaList=(l.ficaDocs||[]).join(', ')||'None noted';
     const mNotes=l.mastheadNotes?`<div style="margin-top:8px;padding:8px 10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:11px;color:#166534;"><b>Masthead update:</b> ${l.mastheadNotes}</div>`:'';
     const delBtn=isManager?`<button onclick="mlDelete('${l.id}')" style="padding:4px 10px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:11px;color:#dc2626;cursor:pointer;font-weight:600;">🗑 Delete</button>`:'';
+    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'';
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
           <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${l.clientName||'—'}</div>
           <div style="font-size:12px;color:#6b7280;margin-top:1px;">${l.productNeed||'—'} · ${l.clientPhone||'—'}</div>
           ${l.clientId?`<div style="font-size:11px;color:#9ca3af;">ID: ${l.clientId}</div>`:''}
         </div>
-        <span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>
+        ${stBadge}
       </div>
+      ${_mlProgressBar(st)}
       ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
+      ${docsLine}
       <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">FICA: ${ficaList} · By: ${l.advisorName||l.advisorCode||'—'} · ${dt}</div>
       ${mNotes}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${delBtn}</div>
@@ -15400,10 +15417,24 @@ function mlShowForm(){
   const w=document.getElementById('mlFormWrap');
   if(w){w.style.display='block';w.scrollIntoView({behavior:'smooth',block:'start'});}
 }
+function mlSupportingDocsSelected(input){
+  const lbl=document.getElementById('mlSupportingDocsLabel');
+  if(!lbl)return;
+  if(input.files&&input.files.length){
+    lbl.textContent=Array.from(input.files).map(f=>f.name).join(', ');
+    lbl.style.color='#374151';
+  } else {
+    lbl.textContent='No files chosen';
+    lbl.style.color='#9ca3af';
+  }
+}
+
 function mlHideForm(){
   const w=document.getElementById('mlFormWrap');
   if(w)w.style.display='none';
   ['mlClientName','mlClientPhone','mlClientId','mlNotes'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const docsIn=document.getElementById('mlSupportingDocsInput');if(docsIn)docsIn.value='';
+  const docsLbl=document.getElementById('mlSupportingDocsLabel');if(docsLbl){docsLbl.textContent='No files chosen';docsLbl.style.color='#9ca3af';}
   const sel=document.getElementById('mlProductNeed');if(sel)sel.value='';
   ['mlFicaId','mlFicaPoa','mlFicaBank','mlFicaPayslip'].forEach(id=>{const el=document.getElementById(id);if(el)el.checked=false;});
 }
@@ -15424,6 +15455,8 @@ async function mlSubmitLead(){
 
   const notes=(document.getElementById('mlNotes')||{}).value?.trim()||'';
   const clientId=(document.getElementById('mlClientId')||{}).value?.trim()||'';
+  const docsInput=document.getElementById('mlSupportingDocsInput');
+  const supportingDocs=docsInput?.files?.length?Array.from(docsInput.files).map(f=>f.name).join(', '):'';
   const id='ml_'+Date.now()+'_'+(currentUser?.code||'X');
 
   const lead={
@@ -15434,6 +15467,7 @@ async function mlSubmitLead(){
     productNeed:product,
     notes,
     ficaDocs,
+    supportingDocs,
     advisorCode:currentUser?.code||'',
     advisorName:currentUser?.name||'',
     status:'new',
@@ -15544,29 +15578,40 @@ function mlPartnerRender(leads){
   if(!leads.length){el.innerHTML='<div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;padding:24px;text-align:center;color:#9ca3af;font-size:13px;">No leads yet.</div>';return;}
   el.innerHTML=leads.map(l=>{
     const st=l.status||'new';
-    const stColor=ML_STATUS_COLORS[st]||'#3b82f6';
+    const stColor=ML_STATUS_COLORS[st];
     const stLabel=ML_STATUS_LABELS[st]||st;
+    const stBadge=stColor
+      ?`<span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>`
+      :`<span style="font-size:11px;font-weight:700;color:#9ca3af;white-space:nowrap;">${stLabel}</span>`;
     const dt=l.submittedAt?.seconds?new Date(l.submittedAt.seconds*1000).toLocaleDateString('en-ZA',{day:'2-digit',month:'short',year:'numeric'}):'—';
     const ficaList=(l.ficaDocs||[]).join(', ')||'None noted';
-    const statusBtns=Object.keys(ML_STATUS_LABELS).map(s=>
-      `<button onclick="mlPartnerSetStatus('${l.id}',this,'${s}')" style="padding:5px 10px;border-radius:8px;border:1.5px solid ${s===st?ML_STATUS_COLORS[s]:'#e5e7eb'};background:${s===st?ML_STATUS_COLORS[s]+'18':'#fff'};color:${s===st?ML_STATUS_COLORS[s]:'#6b7280'};font-size:11px;font-weight:700;cursor:pointer;">${ML_STATUS_LABELS[s]}</button>`
-    ).join('');
+    const statusBtns=Object.keys(ML_STATUS_LABELS).map(s=>{
+      const sc=ML_STATUS_COLORS[s];
+      const isActive=s===st;
+      const border=isActive?(sc||'#9ca3af'):'#e5e7eb';
+      const bg=isActive?(sc?sc+'18':'#f3f4f6'):'#fff';
+      const col=isActive?(sc||'#374151'):'#6b7280';
+      return `<button onclick="mlPartnerSetStatus('${l.id}',this,'${s}')" style="padding:5px 10px;border-radius:8px;border:1.5px solid ${border};background:${bg};color:${col};font-size:11px;font-weight:700;cursor:pointer;">${ML_STATUS_LABELS[s]}</button>`;
+    }).join('');
+    const docsLine=l.supportingDocs?`<div style="font-size:11px;color:#6b7280;margin-bottom:4px;">Docs: ${l.supportingDocs}</div>`:'';
     return `<div style="background:#fff;border:1px solid #e8e4db;border-radius:16px;padding:14px 16px;" id="mlPCard_${l.id}">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">
         <div>
           <div style="font-size:14px;font-weight:700;color:#0d1f3c;">${l.clientName||'—'}</div>
           <div style="font-size:12px;color:#6b7280;">${l.productNeed||'—'} · <a href="tel:${(l.clientPhone||'').replace(/\s/g,'')}" style="color:#7c3aed;font-weight:700;">${l.clientPhone||'—'}</a></div>
           ${l.clientId?`<div style="font-size:11px;color:#9ca3af;">ID: ${l.clientId}</div>`:''}
         </div>
-        <span style="background:${stColor}18;color:${stColor};border:1px solid ${stColor}33;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:700;white-space:nowrap;">${stLabel}</span>
+        ${stBadge}
       </div>
+      ${_mlProgressBar(st)}
       ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
+      ${docsLine}
       <div style="font-size:11px;color:#9ca3af;margin-bottom:10px;">FICA: ${ficaList} · Advisor: ${l.advisorName||'—'} · ${dt}</div>
       <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Update Status</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${statusBtns}</div>
       <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Your Notes (visible to advisor)</div>
       <textarea id="mlPNotes_${l.id}" rows="2" placeholder="Add update notes here…" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;resize:vertical;box-sizing:border-box;font-family:inherit;">${l.mastheadNotes||''}</textarea>
-      <button onclick="mlPartnerSaveNotes('${l.id}')" style="margin-top:6px;padding:7px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">💾 Save Notes</button>
+      <button onclick="mlPartnerSaveNotes('${l.id}')" style="margin-top:6px;padding:7px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">Save Notes</button>
     </div>`;
   }).join('');
 }
