@@ -15410,6 +15410,7 @@ function mlRenderLeads(leads){
       ${_mlProgressBar(st)}
       ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
       ${docsLine}
+      ${l.meetingDate?`<div style="font-size:11px;font-weight:700;color:#f97316;margin-bottom:6px;">📅 Meeting: ${new Date(l.meetingDate+'T00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</div>`:''}
       <div style="font-size:11px;color:#9ca3af;margin-bottom:8px;">FICA: ${ficaList} · By: ${l.advisorName||l.advisorCode||'—'} · ${dt}</div>
       ${mNotes}
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;">${editBtn}${delBtn}</div>
@@ -15635,9 +15636,17 @@ function mlPartnerRender(leads){
       ${_mlProgressBar(st)}
       ${l.notes?`<div style="font-size:12px;color:#374151;margin-bottom:6px;">${l.notes}</div>`:''}
       ${docsLine}
+      ${l.meetingDate?`<div style="font-size:11px;font-weight:700;color:#f97316;margin-bottom:6px;">📅 Meeting: ${new Date(l.meetingDate+'T00:00').toLocaleDateString('en-ZA',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})}</div>`:''}
       <div style="font-size:11px;color:#9ca3af;margin-bottom:10px;">FICA: ${ficaList} · Advisor: ${l.advisorName||'—'} · ${dt}</div>
       <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:6px;">Update Status</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">${statusBtns}</div>
+      <div id="mlPMeetRow_${l.id}" style="display:${st==='meeting'?'block':'none'};margin-bottom:10px;background:#fff7ed;border:1.5px solid #fed7aa;border-radius:10px;padding:10px 12px;">
+        <div style="font-size:10px;font-weight:700;color:#ea580c;text-transform:uppercase;margin-bottom:6px;">Meeting Date *</div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <input type="date" id="mlPMeetDate_${l.id}" value="${l.meetingDate||''}" style="flex:1;padding:7px 10px;font-size:13px;border:1.5px solid #fed7aa;border-radius:8px;box-sizing:border-box;">
+          <button onclick="mlPartnerConfirmMeeting('${l.id}')" style="padding:7px 14px;background:#f97316;color:#fff;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;">Confirm</button>
+        </div>
+      </div>
       <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;margin-bottom:4px;">Your Notes (visible to advisor)</div>
       <textarea id="mlPNotes_${l.id}" rows="2" placeholder="Add update notes here…" style="width:100%;padding:8px 10px;font-size:12px;border:1.5px solid #e5e7eb;border-radius:8px;resize:vertical;box-sizing:border-box;font-family:inherit;">${l.mastheadNotes||''}</textarea>
       <button onclick="mlPartnerSaveNotes('${l.id}')" style="margin-top:6px;padding:7px 16px;background:#1e3a5f;color:#fff;border:none;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;">Save Notes</button>
@@ -15646,10 +15655,30 @@ function mlPartnerRender(leads){
 }
 
 async function mlPartnerSetStatus(id,btn,status){
+  if(status==='meeting'){
+    // show date picker — don't save until date is confirmed
+    const row=document.getElementById('mlPMeetRow_'+id);
+    if(row)row.style.display='block';
+    const dateIn=document.getElementById('mlPMeetDate_'+id);
+    if(dateIn)dateIn.focus();
+    return;
+  }
+  // hide date row if switching away from meeting
+  const row=document.getElementById('mlPMeetRow_'+id);
+  if(row)row.style.display='none';
   if(!window.FB_READY)return;
   try{
     await window.FB.saveMastheadLead(id,{status});
-    // refresh card
+    mlPartnerLoadLeads();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function mlPartnerConfirmMeeting(id){
+  const dateIn=document.getElementById('mlPMeetDate_'+id);
+  if(!dateIn||!dateIn.value)return showAlert('Please select a meeting date first.','error');
+  if(!window.FB_READY)return;
+  try{
+    await window.FB.saveMastheadLead(id,{status:'meeting',meetingDate:dateIn.value});
     mlPartnerLoadLeads();
   }catch(e){alert('Error: '+e.message);}
 }
