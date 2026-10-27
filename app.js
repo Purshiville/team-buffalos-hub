@@ -652,7 +652,7 @@ const APPROVED_CODES = new Set([
   'SKA316286', // Sello Kgopa
   'SKA305313', // Miranda Adams
   'SKA312797', // Giqma Salie
-  'SKA31033',  // Rosaine Allie
+  'SKA310333',  // Rosaine Allie
   'PURSHIVILLE',
   'ARLENE',
 ]);
@@ -668,7 +668,7 @@ const ADVISOR_LIST = [
   {code:'SKA316286', name:'Sello Kgopa'},
   {code:'SKA305313', name:'Miranda Adams'},
   {code:'SKA312797', name:'Giqma Salie'},
-  {code:'SKA31033',  name:'Rosaine Allie'},
+  {code:'SKA310333',  name:'Rosaine Allie'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
 const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
 
