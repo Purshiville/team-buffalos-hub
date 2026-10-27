@@ -144,11 +144,11 @@ All 4 criteria must be met simultaneously. NTU = 4-month NTU rate.
 - Refund opportunity: if old policy cancelled on/before payday, client may receive refund of that month's premium. Takes 3–5 working days — use as a selling point.
 
 ## CLAIMS
-- Contact Anelisa Tanda (066 128 5500) for all claim follow-ups. She WhatsApps if additional docs needed.
+- Contact Reane Beyleveldt (084 965 0997) for all claim follow-ups. She WhatsApps if additional docs needed.
 - Required: certified IDs (claimant + deceased) + death certificate + Form BI-1663 + 3-month bank statement + completed claim form. Police report if unnatural death.
 - Claims within 6 months of replacement: also need proof of previous cover + proof of cancellation.
 - Validation periods: 5, 7, 11, 14, 21 days depending on claim type.
-- Do NOT disclose claim details to client without checking with Anelisa first.
+- Do NOT disclose claim details to client without checking with Reane first.
 
 ## DEBICHECK REACTIVATION
 - Client's DebiCheck fails: contact Lynn Williams (084 429 6131) immediately.
@@ -214,7 +214,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 
 ## COMMERCIAL WORKSITES
 - Stop order facility at a PRIVATE institution (40+ employees minimum). Farms also qualify.
-- Opened ONLY by Sales Manager or Jacques du Preez (Regional Executive, 082 551 8170).
+- Opened ONLY by Sales Manager or Jacques du Preez (Branch Manager, 082 551 8170).
 - Can be set up in 2–3 business days if employer is on board.
 - Company kickback: up to 2.5% on all premiums collected monthly.
 - Advisor identifies opportunity → escalates to manager immediately. Never approach independently.
@@ -302,17 +302,15 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Workerslife: 0861 520 520 | info@workerslife.co.za
 
 ## TEAM DIRECTORY
-- Jacques du Preez — Regional Executive: 082 551 8170
-- Michael Bernardt — Branch Manager: 083 440 9098
+- Jacques du Preez — Branch Manager: 082 551 8170
 - Purshiville (Percy) Nortje — Sales Manager: 067 674 7722
 - Brian Steve Boucher — Team Leader: 063 786 3708
 - Lwahluma Mtsulwana — Team Leader: 076 210 5484
 - Carleen Damant — Key Individual: 082 496 8536
 - Arlene Davis — Manager's Assistant & Ops: 084 088 1666
 - Mareli Coetzer — HR: 083 299 3058
-- Anelisa Tanda — Servicing & Claims: 066 128 5500 (claims follow-up; do not share claim details with client without consulting Anelisa first)
 - Lynn Williams — Accounts & Billing: 084 429 6131 (DebiCheck reactivation, municipality status checks, payment queries)
-- Reane Beyleveldt — Servicing & Queries: 084 965 0997
+- Reane Beyleveldt — Back Office: 084 965 0997 (claims follow-up, servicing & queries; do not share claim details with client without consulting Reane first)
 - Nonzukiso (Zuki) Ketye — Cancellations: 079 752 1191 (proof of cancellation for HR engagement)
 - Lerato Mogadima — Cancellations: 066 359 7401
 
@@ -343,7 +341,7 @@ REINSTATEMENT RULES (Updated June 2026 — unified rule for all products):
 - Leads: Tools → Client & Field → Leads — view and manage your leads pipeline (opens Connect Me leads section).
 - Unlock PDF: Tools → Case & Documentation → Unlock PDF — remove passwords from one or multiple PDFs at once. Upload PDFs, enter each PDF's individual password, unlock and download. Handles multiple files simultaneously.
 - Cancellation Pack Builder: Tools → Case & Documentation → Cancellation Pack Builder — the complete replacement and cancellation workflow tool. Expand the 8-step "Replacement & Cancellation Process Guide" at the top to walk through the full process with your client (roles: advisor, client, back office, HR/payroll, new insurer). Below the guide: each insurer's required cancellation form (AL9, own form, or own letter) and a Pack Builder to merge all documents per insurer into one PDF. Also accessible from Quick Access on the Home screen.
-- Claim Pack Builder: Tools → Case & Documentation → Claim Pack Builder — step-by-step guide and document merger for processing death or disability claims. Contact Anelisa Tanda (066 128 5500) for all claim follow-up.
+- Claim Pack Builder: Tools → Case & Documentation → Claim Pack Builder — step-by-step guide and document merger for processing death or disability claims. Contact Reane Beyleveldt (084 965 0997) for all claim follow-up.
 - Referral Tracker: Tools → Client & Field → Referral Tracker — track client referrals (1 Name = 2 Names). Log the date and time you contacted each referral plus notes. Status tracking: In pipeline / Contacted / Submitted to IMP / Converted / Lost. Stats header shows total, submitted, converted, and overall conversion rate. Each source client shows their own conversion rate.
 - Conversion Funnel: Tools → Client & Field → Conversion Funnel — track your appointments, presentations, submissions, and approvals per production period. Submissions auto-fill from your stats. Shows conversion rate between each stage and your overall close rate. Manager can view any advisor's funnel.
 - Schedule Tracker (LOA Tracker): Tools → Client & Field → Schedule Tracker — manage all LOA schedule and refund requests in one place. Upload LOA (PDF or photo) → AI auto-extracts client name, ID, and phone. Fill in department, facility, and notes. Select companies from the chip grid (all FSPs). Choose Schedule Request or Refund Request → Generate Email & Save opens Gmail pre-addressed with the LOA attached and saves the case. Per company: track email sent status, contract/refund received status, date sent, reference number, and notes. 3-state contract status: red (none) / orange (in progress) / green (received). Manager can view all advisors' cases via Firebase. Home widget shows case count summary.
@@ -519,7 +517,7 @@ const DAILY_TIPS=[
   `<b>Tip:</b> Log every referral in the hub immediately. A name with no notes is forgotten within 48 hours.`,
   `<b>Tip:</b> A referred client stays longer — they were pre-sold by the person who referred them. Prioritise converting referrals first.`,
 ];
-const KEY_CONTACTS=[{name:'Jacques du Preez',role:'Regional Executive',num:'082 551 8170'},{name:'Michael',role:'Branch Manager',num:'083 440 9098'},{name:'Anelisa',role:'Servicing & Claims',num:'066 128 5500'},{name:'Lynn',role:'Accounts & Billing',num:'084 429 6131'},{name:'Carleen',role:'Key Individual',num:'082 496 8536'},{name:'Reane',role:'Servicing & Queries',num:'084 965 0997'},{name:'Zuki',role:'Cancellations',num:'079 752 1191'},{name:'Randmore',role:'',nums:['082 659 4445','041 582 2066','071 897 1855']}];
+const KEY_CONTACTS=[{name:'Jacques du Preez',role:'Branch Manager',num:'082 551 8170'},{name:'Lynn',role:'Accounts & Billing',num:'084 429 6131'},{name:'Carleen',role:'Key Individual',num:'082 496 8536'},{name:'Reane',role:'Back Office',num:'084 965 0997'},{name:'Zuki',role:'Cancellations',num:'079 752 1191'},{name:'Randmore',role:'',nums:['082 659 4445','041 582 2066','071 897 1855']}];
 
 let chatHistory=[],currentUser=null,currentModal=null;
 // Gemini API key for image analysis (free tier)
@@ -15230,7 +15228,7 @@ const TOUR_STEPS=[
   {page:'fica',target:'#ficaList',title:'FICA Checklist — Before You Pack',text:"Run through this before submitting any case. New Business needs 5 documents; Replacement needs 8. Tick each off as you pack the file. The bar turns green when all items are confirmed — that's your signal you're clear to submit.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'canpack',target:'#page-canpack',title:'Merge Docs — Build the IMP Pack',text:'Combine your signed declaration form, ROA, and policy schedule into a single PDF for IMP submission. This is the §8 file checklist in practice. Auto-compresses to stay within the 4MB IMP limit.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'cancellations',target:'#page-cancellations',title:'Cancellation Pack Builder — Process & Forms',text:"Tap the Process Guide at the top to walk through all 8 steps with your client — from requesting schedules to delivering proof of cancellation to both HR and the new insurer (which waives the 6-month natural death waiting period). Below: each insurer's required form (AL9, own form, or own letter) and the Pack Builder to merge everything per insurer into one PDF.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
-  {page:'claimpack',target:'#page-claimpack',title:'Claim Pack Builder — Be There When It Matters',text:"Guide the family through a death or disability claim. Shows exactly which documents are required, walks through the process step by step, and merges all claim documents into a single pack ready to submit. Contact Anelisa Tanda (066 128 5500) for all claim follow-up.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
+  {page:'claimpack',target:'#page-claimpack',title:'Claim Pack Builder — Be There When It Matters',text:"Guide the family through a death or disability claim. Shows exactly which documents are required, walks through the process step by step, and merges all claim documents into a single pack ready to submit. Contact Reane Beyleveldt (084 965 0997) for all claim follow-up.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'reinstatement',target:'#page-reinstatement',title:'Reinstatement Pack Builder — Save the Policy',text:"A lapsed policy can be reinstated within 120 days of the lapse date — this applies to Value Funeral Plan, AIO, and Enhanced Priority. Maximum 3 reinstatements per 12 months. The quick reference cheat sheet shows eligible statuses (LAPSE, NTU, NTU-CAN, PDU, CANCELLED), payment rules, and required documents. The Pack Builder merges the reinstatement form, debit mandate, and proof of payment into a single submission pack.",pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit'},
   {page:'replform',target:'#page-replform',title:'Replacement Form — Full Digital Case Capture',text:'Capture the complete replacement case digitally: client info, competitor insurer, cover amounts, insurable interest, affordability declaration, and digital signatures from both advisor and client. Exports a compliant PDF.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit',managerOnly:true},
   {page:'appchecks',target:'#page-appchecks',title:'App Checks — Track the Case to Paid',text:'Track submitted cases from Pending Approval through Spotcheck to Approved. Log all policies per case and monitor each through the pipeline. This is how you know a case is progressing and when commission will run.',pos:'bottom',phase:'Phase 6 of 7 — Pack & Submit',managerOnly:true},
