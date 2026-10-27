@@ -625,7 +625,7 @@ window.addEventListener('offline',()=>{
   if(currentUser)doLogout('connection_lost');
 });
 // ── REVOKED CODES — never display in rankings or anywhere on platform ──
-const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759','SKA315568','SKA313162','SKA315109']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed; Stefan Barnard — removed; Ivan Davies — removed; Roger Pretorius — removed
+const REVOKED_CODES = new Set(['SKA313952','SKA311460','SKA310194','SKA315496','SKA312009','SKA310889','SKA315759','SKA315568','SKA313162','SKA315109','SKA316286']); // Rivaldo Rossouw — left team; Carlo Crusi — removed; Stefan Bekker — removed; Litha Qashani — removed; Adrian Roelfse — removed; Lwahluma Mtsulwana — removed; Lutho Mphahlele — removed; Stefan Barnard — removed; Ivan Davies — removed; Roger Pretorius — removed; Sello Kgopa — removed
 const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 
 // ── NEW ADVISORS — dynamic "New" badge ──
@@ -649,7 +649,6 @@ const APPROVED_CODES = new Set([
   'SKA313383', // Kevin Kruger
   'SKA316161', // Micaiah Coltman
   'SKA311749', // Linley Kritzinger
-  'SKA316286', // Sello Kgopa
   'SKA305313', // Miranda Adams
   'SKA312797', // Giqma Salie
   'SKA310333',  // Rosaine Allie
@@ -665,7 +664,6 @@ const ADVISOR_LIST = [
   {code:'SKA313383', name:'Kevin Kruger'},
   {code:'SKA316161', name:'Micaiah Coltman'},
   {code:'SKA311749', name:'Linley Kritzinger'},
-  {code:'SKA316286', name:'Sello Kgopa'},
   {code:'SKA305313', name:'Miranda Adams'},
   {code:'SKA312797', name:'Giqma Salie'},
   {code:'SKA310333',  name:'Rosaine Allie'},
