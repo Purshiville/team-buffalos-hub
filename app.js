@@ -2637,6 +2637,7 @@ async function chatSendBroadcast(){
 // ── LOA CLIENT SESSION ────────────────────────────────────────────────────
 let _loaClient=(()=>{try{return JSON.parse(sessionStorage.getItem('tl_loa_client')||'null')||{name:'',idNumber:''};}catch(e){return{name:'',idNumber:''};} })();
 window._loaFile=null;
+let _ltAdvisorFilter='';
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -2898,6 +2899,18 @@ async function renderLOATracker(){
         cases=Object.values(byId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
       }
     }catch(e){console.warn('FB getAllLoaTrackerCases failed',e);}
+  }
+
+  // Advisor filter (manager only)
+  if(isMgr){
+    const advisors=[...new Set(cases.map(c=>c.advisorCode).filter(Boolean))].sort((a,b)=>{
+      const na=_advisorNameMap[a]||a, nb=_advisorNameMap[b]||b; return na.localeCompare(nb);
+    });
+    const opts='<option value="">All advisors</option>'+advisors.map(code=>`<option value="${code}" ${code===_ltAdvisorFilter?'selected':''}>${_advisorNameMap[code]||code}</option>`).join('');
+    let fb=document.getElementById('ltAdvisorFilterBar');
+    if(!fb){fb=document.createElement('div');fb.id='ltAdvisorFilterBar';fb.style.cssText='margin-bottom:10px;';el.before(fb);}
+    fb.innerHTML=`<select onchange="_ltAdvisorFilter=this.value;renderLOATracker()" style="padding:8px 12px;font-size:13px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#0d1f3c;width:100%;">${opts}</select>`;
+    if(_ltAdvisorFilter)cases=cases.filter(c=>c.advisorCode===_ltAdvisorFilter);
   }
 
   const _ltStatus=co=>co.contractStatus||(co.contractsReceived?'received':'none');
@@ -3200,7 +3213,7 @@ function ltSaveForm(){
           const body=type==='schedule'
             ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
             :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
-          window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+          window.open('mailto:'+encodeURIComponent(emails.join(','))+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
           // Mark newly added as email sent
           newlyAdded.forEach(name=>{const co=c.companies.find(x=>x.name===name);if(co){co.emailSent=true;co.dateSent=now;}});
           saveLTCases(cases);
@@ -3235,7 +3248,7 @@ function ltSaveForm(){
       entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:false,createdAt:now2,
         companies:sel.map(name=>({name,emailSent:true,dateSent:now2,referenceNumber:'',contractStatus:'none',comments:''}))};
       triggerLoaDownload();
-      window.open('https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(emails.join(','))+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
+      window.open('mailto:'+encodeURIComponent(emails.join(','))+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
       showLoaReminder();
     }
     const cases=getLTCases();cases.unshift(entry);saveLTCases(cases);
@@ -3275,7 +3288,7 @@ function openGmailCompose(email, ccList, type){
     subject='[Client ID Number] — Policy Schedule Request';
     body='Good day,\n\nPlease find the attached Letter of Authority. Kindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies owned by the client.\n\nKind regards';
   }
-  let url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(email)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  let url='mailto:'+encodeURIComponent(email)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   if(ccList&&ccList.length) url+='&cc='+encodeURIComponent(ccList.join(','));
   window.open(url,'_blank');
 }
@@ -3441,7 +3454,7 @@ function generateRefundEmail(){
   const subject=idNumber+' — Premium Refund Request';
   const body=`Good day,\n\nOn behalf of ${clientName} (ID Number: ${idNumber}), I am hereby requesting a premium refund.\n\nPolicy No: [Policy Number]\nAmount: R[Amount]\n\nKindly process the refund and confirm once the amount has been transferred to the client's account.\n\nKind regards,\n${advisorName}\n${dateStr}`;
   const toAddr=emails.join(',');
-  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  const url='mailto:'+encodeURIComponent(toAddr)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeRefundBuilder();
   triggerLoaDownload();
   window.open(url,'_blank');
@@ -3583,7 +3596,7 @@ function generateScheduleEmail(){
   const subject=idNumber+' — Policy Schedule Request';
   const body=`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${idNumber}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${dateStr}`;
   const toAddr=emails.join(',');
-  const url='https://mail.google.com/mail/?view=cm&to='+encodeURIComponent(toAddr)+'&su='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
+  const url='mailto:'+encodeURIComponent(toAddr)+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body);
   closeSchedBuilder();
   triggerLoaDownload();
   window.open(url,'_blank');
@@ -7005,7 +7018,7 @@ function roaGenerate(){
     if(increase==='yes'){
       waitText='All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month natural death waiting period applies on any additional cover taken up above the existing cover amount. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter.';
     }else if(increase==='residual'){
-      waitText='All waiting periods were discussed with the client. At the time of replacement, the client\'s previous policy had not yet completed its statutory waiting period. The remaining portion of that waiting period carries over to the new policy and must still be served before a natural death claim can be processed. This residual waiting period was fully disclosed to the client and confirmed in writing. The client was further informed that proof of cancellation of the previous policy will be required by the underwriter for any natural death claim lodged within the first 6 months.';
+      waitText='All waiting periods were discussed with the client. At the time of replacement, the client\'s previous policy had not yet completed its 6-month statutory waiting period. The outstanding portion of that waiting period carries over and must still be served on the new policy before a natural death claim can be processed — for example, if the client had served 5 months on the previous policy, only 1 month remains and will still apply under the new policy. This residual waiting period was fully disclosed to the client and accepted in writing. The client was further informed that written proof of cancellation of the previous policy will be required by the underwriter for any natural death claim lodged within the initial 6-month period.';
     }else{
       waitText='All waiting periods were discussed with the client. The waiting period has been waived in full as the client has had continuous funeral cover for 31 or more days prior to commencement of the new policy. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter to process the claim under the waiver provision.';
     }
