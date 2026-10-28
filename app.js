@@ -629,7 +629,7 @@ const EXCLUDED_NAMES = new Set(['Thomas Taylor']); // removed from team
 // ── NEW ADVISORS — dynamic "New" badge ──
 // Established advisors (were on the team before the hub launched) never get the badge.
 // All others: 90 days from registeredAt. Auto-expires — no manual cleanup needed.
-const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313936','SKA313383','SKA311749','SKA316161']);
+const _ESTABLISHED_CODES=new Set(['SKA310185','SKA312741','SKA313936','SKA313383','SKA311749','SKA316161','SKA305313']);
 function _newBadge(code){
   if(_ESTABLISHED_CODES.has(code))return'';
   const u=getUsers()[code];
