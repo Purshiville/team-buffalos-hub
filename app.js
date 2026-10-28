@@ -1870,8 +1870,11 @@ function renderStatsManagerPreview(data){
 }
 function getYTDStats(){
   const ytd={};
-  // Seed all known advisors so everyone appears even with 0
-  ADVISOR_LIST.forEach(a=>{if(!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name))ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0};});
+  // Seed active advisors
+  ADVISOR_LIST.forEach(a=>{if(!REVOKED_CODES.has(a.code)&&!EXCLUDED_NAMES.has(a.name))ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0,inactive:false};});
+  // Seed inactive advisors and Purshiville so their historical data is included
+  INACTIVE_ADVISORS.forEach(a=>{ytd[a.code]={code:a.code,name:a.name,cases:0,premium:0,inactive:true};});
+  ytd['PURSHIVILLE']={code:'PURSHIVILLE',name:'Purshiville Nortje',cases:0,premium:0,inactive:false};
   const now=new Date();
   const year=now.getFullYear();
   for(let m=1;m<=now.getMonth()+1;m++){
@@ -1880,7 +1883,7 @@ function getYTDStats(){
       const d=JSON.parse(localStorage.getItem(key)||'null');
       if(!d?.advisors)continue;
       Object.entries(d.advisors).forEach(([code,a])=>{
-        if(!ytd[code])return; // skip revoked/excluded/unknown codes — only accumulate for current team
+        if(!ytd[code])return;
         ytd[code].cases+=(a.actualCases||0);
         ytd[code].premium+=(a.actualPremium||0);
       });
@@ -1942,8 +1945,9 @@ function _renderYTDStatsInner(el){
   const ytdTotalPrem=byPrem.reduce((s,a)=>s+a.premium,0);
   const ytdTotalAPI=ytdTotalPrem*12;
   const ytdTotalCases=byCases.reduce((s,a)=>s+a.cases,0);
-  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;const api=a.premium*12;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td><td style="padding:7px 8px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td></tr>`;}).join('');
-  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
+  const _inactiveTag='<span style="font-size:9px;font-weight:700;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle;">Inactive</span>';
+  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;const api=a.premium*12;return`<tr style="${a.inactive?'opacity:0.7;':isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${a.inactive?_inactiveTag:_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td><td style="padding:7px 8px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td></tr>`;}).join('');
+  const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${a.inactive?'opacity:0.7;':isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${a.inactive?_inactiveTag:_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📅 ${yr} Year-to-Date</div>`+myCard+
     `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${ytdTotalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${ytdTotalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">${ytdTotalCases} cases</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
