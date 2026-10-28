@@ -675,6 +675,41 @@ const INACTIVE_ADVISORS=[
   {code:'SKA315568', name:'Stefan Barnard'},
   {code:'SKA315759', name:'Lutho Mphahlele'},
 ].sort((a,b)=>a.name.localeCompare(b.name));
+const BONUS_TIERS=[
+  {tier:1,label:'Tier 1',cases:120,api:315000,pers:78,bonus:15000},
+  {tier:2,label:'Tier 2',cases:90,api:235000,pers:74,bonus:10000},
+  {tier:3,label:'Tier 3',cases:60,api:160000,pers:72,bonus:6000},
+  {tier:4,label:'Tier 4',cases:45,api:120000,pers:70,bonus:3500},
+  {tier:5,label:'Tier 5',cases:30,api:80000,pers:68,bonus:2000},
+];
+function _currentQuarter(){
+  const m=new Date().getMonth()+1;
+  if(m<=3)return{q:1,label:'Q1',months:[1,2,3]};
+  if(m<=6)return{q:2,label:'Q2',months:[4,5,6]};
+  if(m<=9)return{q:3,label:'Q3',months:[7,8,9]};
+  return{q:4,label:'Q4',months:[10,11,12]};
+}
+function _getQtrStats(code){
+  const yr=new Date().getFullYear();
+  const {months}=_currentQuarter();
+  let cases=0,premium=0,ntu4=null,pers=null;
+  for(const m of months){
+    const key='tl_prod_stats_'+yr+'-'+(m<10?'0':'')+m;
+    try{
+      const d=JSON.parse(localStorage.getItem(key)||'null');
+      const a=d?.advisors?.[code];
+      if(a){cases+=(a.actualCases||0);premium+=(a.actualPremium||0);if(a.ntu4Month!=null)ntu4=a.ntu4Month;if(a.persistency!=null)pers=a.persistency;}
+    }catch(e){}
+  }
+  return{cases,premium,api:premium*12,ntu4,pers};
+}
+function _qualifyingTier(stats){
+  const ntuOk=stats.ntu4==null||stats.ntu4<=14;
+  for(const t of BONUS_TIERS){
+    if(stats.cases>=t.cases&&stats.api>=t.api&&ntuOk&&(stats.pers==null||stats.pers>=t.pers))return t;
+  }
+  return null;
+}
 
 function getUsers(){try{return JSON.parse(localStorage.getItem('tl_v6')||'{}');}catch(e){return{};}}
 function saveUsers(u){try{localStorage.setItem('tl_v6',JSON.stringify(u));}catch(e){}}
@@ -1896,6 +1931,7 @@ function renderYTDStats(){
   const els=['stdYTD'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
   els.forEach(el=>_renderYTDStatsInner(el)); // render from localStorage immediately
+  _initBonusSection();
   if(window.FB_READY&&window.FB.getYearStats){
     const yr=String(new Date().getFullYear());
     window.FB.getYearStats(yr).then(fbMonths=>{
@@ -1909,6 +1945,7 @@ function renderYTDStats(){
         }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
       els.forEach(el=>_renderYTDStatsInner(el));
+      _initBonusSection();
     }).catch(()=>{});
   }
 }
@@ -1952,6 +1989,90 @@ function _renderYTDStatsInner(el){
     `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${ytdTotalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${ytdTotalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
     `<div class="team-stats-card"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">📋 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Cases</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">${ytdTotalCases} cases</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Cases</th></tr></thead><tbody>${caseRows}</tbody></table></div></div>`;
   renderYTDTop3();
+}
+function _initBonusSection(){
+  if(!currentUser)return;
+  const bcs=document.getElementById('bonusCheckerSection');
+  const bms=document.getElementById('bonusManagerSummary');
+  if(!bcs&&!bms)return;
+  if(currentUser.isManager||currentUser.isOps){
+    if(bcs)bcs.style.display='none';
+    renderBonusSummary();
+  } else {
+    const {label}=_currentQuarter();
+    if(bcs){bcs.style.display='block';const btn=bcs.querySelector('button');if(btn)btn.innerHTML='🔍 Check My '+label+' Bonus Eligibility';}
+    if(bms)bms.style.display='none';
+  }
+}
+function checkBonusEligibility(){
+  if(!currentUser)return;
+  const code=currentUser.code||'PURSHIVILLE';
+  const stats=_getQtrStats(code);
+  const {label:qLabel}=_currentQuarter();
+  const yr=new Date().getFullYear();
+  const qual=_qualifyingTier(stats);
+  const nextIdx=qual?BONUS_TIERS.findIndex(t=>t.tier===qual.tier)-1:-1;
+  const next=nextIdx>=0?BONUS_TIERS[nextIdx]:null;
+  let html=`<div style="margin-top:12px;padding:14px 16px;background:${qual?'#f0fdf4':'#fff7ed'};border:1.5px solid ${qual?'#86efac':'#fcd34d'};border-radius:12px;">`;
+  html+=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">${qLabel} ${yr} — My Eligibility</div>`;
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">`;
+  html+=`<div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e5e7eb;"><div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px;">Cases</div><div style="font-size:24px;font-weight:800;color:#0d1f3c;">${stats.cases}</div></div>`;
+  html+=`<div style="background:#fff;border-radius:8px;padding:10px;text-align:center;border:1px solid #e5e7eb;"><div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:3px;">API</div><div style="font-size:18px;font-weight:800;color:#c9922a;">R${stats.api.toLocaleString()}</div></div>`;
+  html+=`</div>`;
+  if(qual){
+    html+=`<div style="background:#dcfce7;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:10px;"><span style="font-size:22px;">🏆</span><div><div style="font-size:13px;font-weight:700;color:#166534;">${qual.label} — R${qual.bonus.toLocaleString()} Bonus</div><div style="font-size:11px;color:#16a34a;margin-top:1px;">Based on cases &amp; API — subject to quality metrics</div></div></div>`;
+    if(next){const cn=Math.max(0,next.cases-stats.cases);const an=Math.max(0,next.api-stats.api);html+=`<div style="background:#fff;border-radius:8px;padding:9px 11px;margin-bottom:10px;border:1px solid #e5e7eb;"><div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:3px;">Next: ${next.label} (R${next.bonus.toLocaleString()})</div><div style="font-size:11px;color:#6b7280;">Need <span style="color:#dc2626;font-weight:700;">${cn} more case${cn!==1?'s':''}</span> and <span style="color:#dc2626;font-weight:700;">R${Math.round(an/12).toLocaleString()}/mo premium (R${an.toLocaleString()} API)</span></div></div>`;}
+  } else {
+    const t5=BONUS_TIERS[BONUS_TIERS.length-1];
+    const cn=Math.max(0,t5.cases-stats.cases);const an=Math.max(0,t5.api-stats.api);
+    html+=`<div style="background:#fff;border-radius:8px;padding:9px 11px;margin-bottom:10px;border:1px solid #e5e7eb;"><div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:4px;">Not yet qualifying</div>`;
+    if(cn>0||an>0)html+=`<div style="font-size:11px;color:#6b7280;">To reach <strong>${t5.label}</strong> (R${t5.bonus.toLocaleString()}): <span style="color:#dc2626;font-weight:700;">${cn} more case${cn!==1?'s':''}</span> and <span style="color:#dc2626;font-weight:700;">R${Math.round(an/12).toLocaleString()}/mo premium (R${an.toLocaleString()} API)</span>.</div>`;
+    else html+=`<div style="font-size:11px;color:#16a34a;font-weight:700;">Cases &amp; API thresholds met for Tier 5 — check quality metrics.</div>`;
+    html+=`</div>`;
+  }
+  html+=`<div style="font-size:10px;color:#9ca3af;padding:8px 10px;background:#f9f9f9;border-radius:7px;line-height:1.6;">⚠️ <strong>Subject to quality metrics:</strong> Final qualification is conditional on 4m NTU ≤14% and persistency meeting the tier threshold.`;
+  if(stats.ntu4!=null)html+=` Your current 4m NTU: <strong style="color:${stats.ntu4<=14?'#16a34a':'#dc2626'};">${stats.ntu4}%</strong>.`;
+  if(stats.pers!=null)html+=` Persistency: <strong style="color:${stats.pers>=(qual?qual.pers:68)?'#16a34a':'#dc2626'};">${stats.pers}%</strong>.`;
+  html+=`</div></div>`;
+  const res=document.getElementById('bonusCheckerResult');
+  if(res){res.innerHTML=html;res.style.display='block';}
+}
+function renderBonusSummary(){
+  const el=document.getElementById('bonusManagerSummary');
+  if(!el)return;
+  if(!currentUser||(! currentUser.isManager&&!currentUser.isOps)){el.style.display='none';return;}
+  const {label:qLabel}=_currentQuarter();
+  const yr=new Date().getFullYear();
+  const allCodes=[...ADVISOR_LIST.map(a=>a.code),'PURSHIVILLE'];
+  const rows=allCodes.map(code=>{
+    const name=code==='PURSHIVILLE'?'Purshiville Nortje':(_advisorNameMap[code]||code);
+    const stats=_getQtrStats(code);
+    const qual=_qualifyingTier(stats);
+    return{code,name,stats,qual};
+  }).filter(r=>r.stats.cases>0||r.stats.api>0||r.qual);
+  rows.sort((a,b)=>(!a.qual&&b.qual?1:a.qual&&!b.qual?-1:0)||(a.qual&&b.qual?a.qual.tier-b.qual.tier:b.stats.api-a.stats.api));
+  const qualifying=rows.filter(r=>r.qual);
+  el.style.display='block';
+  let html=`<div style="background:#fff;border:1px solid #e8e4db;border-radius:14px;overflow:hidden;margin-top:10px;">`;
+  html+=`<div style="background:#0d1f3c;padding:12px 16px;display:flex;align-items:center;gap:10px;"><span style="font-size:20px;">📊</span><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;">Manager View</div><div style="color:#fff;font-size:13px;font-weight:700;">${qLabel} ${yr} — Bonus Eligibility</div></div></div>`;
+  html+=`<div style="padding:14px;">`;
+  if(!rows.length){
+    html+=`<div style="font-size:12px;color:#9ca3af;text-align:center;padding:10px;">No stats captured for ${qLabel} yet.</div>`;
+  } else {
+    if(qualifying.length){
+      html+=`<div style="font-size:10px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">✅ Currently qualifying (${qualifying.length})</div>`;
+      html+=qualifying.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#f0fdf4;border-radius:8px;margin-bottom:5px;border:1px solid #bbf7d0;flex-wrap:wrap;"><div style="flex:1;min-width:80px;font-size:12px;font-weight:700;color:#0d1f3c;">${r.name}</div><div style="font-size:11px;font-weight:700;color:#166534;">${r.qual.label}</div><div style="font-size:11px;color:#c9922a;font-weight:700;">R${r.qual.bonus.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;">${r.stats.cases}c · R${r.stats.api.toLocaleString()} API</div></div>`).join('');
+    }
+    const notYet=rows.filter(r=>!r.qual);
+    if(notYet.length){
+      html+=`<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:.5px;margin:${qualifying.length?'10px':'0'} 0 8px;">Not yet qualifying (${notYet.length})</div>`;
+      const t5=BONUS_TIERS[BONUS_TIERS.length-1];
+      html+=notYet.map(r=>{const cn=Math.max(0,t5.cases-r.stats.cases);const an=Math.max(0,t5.api-r.stats.api);const need=(cn>0||an>0)?`<div style="font-size:10px;color:#dc2626;margin-top:2px;">Need ${cn>0?cn+' cases':''}${cn>0&&an>0?' + ':''}${an>0?'R'+Math.round(an/12).toLocaleString()+'/mo':''}</div>`:'<div style="font-size:10px;color:#16a34a;margin-top:2px;">Thresholds met — check quality metrics</div>';return`<div style="padding:7px 10px;background:#f9f9f9;border-radius:8px;margin-bottom:4px;border:1px solid #f0f0f0;"><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;"><div style="flex:1;min-width:80px;font-size:12px;color:#374151;">${r.name}</div><div style="font-size:10px;color:#9ca3af;">${r.stats.cases}c · R${r.stats.api.toLocaleString()} API</div></div>${need}</div>`;}).join('');
+    }
+  }
+  html+=`<div style="font-size:10px;color:#9ca3af;margin-top:10px;padding-top:8px;border-top:1px solid #f4f2ed;">⚠️ Based on cases &amp; API only. Final approval subject to NTU ≤14% and persistency per tier.</div>`;
+  html+=`</div></div>`;
+  el.innerHTML=html;
 }
 function renderYTDTop3(){
   const els=['stdYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
