@@ -1483,7 +1483,7 @@ function populateStatsAdvisorSelect(){
   // Always use the full whitelist — fall back to registered name if available
   const activeOpts=ADVISOR_LIST.map(a=>{const name=(users[a.code]?.name)||a.name;return`<option value="${a.code}">${name}</option>`;}).join('');
   const inactiveOpts=INACTIVE_ADVISORS.map(a=>`<option value="${a.code}">${a.name} ⚫ Inactive</option>`).join('');
-  sel.innerHTML='<option value="">— Select advisor —</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
+  sel.innerHTML='<option value="">— Select advisor —</option><option value="PURSHIVILLE">Purshiville Nortje</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
 }
 function refreshStatsPeriod(){
   const period=getStatsPeriod();
@@ -5960,7 +5960,7 @@ function populateTop3Selects(){
   const advisors=Object.values(getUsers()).filter(u=>!u.isManager&&!u.isOps);
   const activeOpts=[...ADVISOR_LIST,...advisors.filter(u=>!ADVISOR_LIST.find(a=>a.code===u.code))].map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   const inactiveOpts=INACTIVE_ADVISORS.map(a=>`<option value="${a.code}">${a.name} ⚫ Inactive</option>`).join('');
-  const opts='<option value="">—</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
+  const opts='<option value="">—</option><option value="PURSHIVILLE">Purshiville Nortje</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
   ['top3_first','top3_second','top3_third'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts.replace('<option value="">—</option>',`<option value="">${el.options[0]?.text||'—'}</option>`);});
   prefillTop3Form();
 }
