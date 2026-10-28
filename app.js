@@ -668,6 +668,14 @@ const ADVISOR_LIST = [
 ].sort((a,b)=>a.name.localeCompare(b.name));
 const _advisorNameMap=Object.fromEntries(ADVISOR_LIST.map(a=>[a.code,a.name]));
 
+const INACTIVE_ADVISORS=[
+  {code:'SKA315496', name:'Litha Qashani'},
+  {code:'SKA310889', name:'Lwahluma Mtsulwana'},
+  {code:'SKA315109', name:'Roger Pretorius'},
+  {code:'SKA315568', name:'Stefan Barnard'},
+  {code:'SKA315759', name:'Lutho Mphahlele'},
+].sort((a,b)=>a.name.localeCompare(b.name));
+
 function getUsers(){try{return JSON.parse(localStorage.getItem('tl_v6')||'{}');}catch(e){return{};}}
 function saveUsers(u){try{localStorage.setItem('tl_v6',JSON.stringify(u));}catch(e){}}
 async function syncUsersFromFirebase(){
@@ -1473,12 +1481,9 @@ function populateStatsAdvisorSelect(){
   if(!sel)return;
   const users=getUsers();
   // Always use the full whitelist — fall back to registered name if available
-  sel.innerHTML='<option value="">— Select advisor —</option>'+
-    ADVISOR_LIST.map(a=>{
-      const reg=users[a.code];
-      const name=reg?.name||a.name;
-      return`<option value="${a.code}">${name}</option>`;
-    }).join('');
+  const activeOpts=ADVISOR_LIST.map(a=>{const name=(users[a.code]?.name)||a.name;return`<option value="${a.code}">${name}</option>`;}).join('');
+  const inactiveOpts=INACTIVE_ADVISORS.map(a=>`<option value="${a.code}">${a.name} ⚫ Inactive</option>`).join('');
+  sel.innerHTML='<option value="">— Select advisor —</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
 }
 function refreshStatsPeriod(){
   const period=getStatsPeriod();
@@ -5953,7 +5958,9 @@ function saveTop3Awards(){
 
 function populateTop3Selects(){
   const advisors=Object.values(getUsers()).filter(u=>!u.isManager&&!u.isOps);
-  const opts='<option value="">—</option>'+[...ADVISOR_LIST,...advisors.filter(u=>!ADVISOR_LIST.find(a=>a.code===u.code))].map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
+  const activeOpts=[...ADVISOR_LIST,...advisors.filter(u=>!ADVISOR_LIST.find(a=>a.code===u.code))].map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
+  const inactiveOpts=INACTIVE_ADVISORS.map(a=>`<option value="${a.code}">${a.name} ⚫ Inactive</option>`).join('');
+  const opts='<option value="">—</option>'+activeOpts+'<optgroup label="──────────────"></optgroup>'+inactiveOpts;
   ['top3_first','top3_second','top3_third'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML=opts.replace('<option value="">—</option>',`<option value="">${el.options[0]?.text||'—'}</option>`);});
   prefillTop3Form();
 }
