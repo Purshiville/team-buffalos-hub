@@ -2775,6 +2775,7 @@ async function chatSendBroadcast(){
 let _loaClient=(()=>{try{return JSON.parse(sessionStorage.getItem('tl_loa_client')||'null')||{name:'',idNumber:''};}catch(e){return{name:'',idNumber:''};} })();
 window._loaFile=null;
 let _ltAdvisorFilter='';
+let _ltExpandedCases=new Set();
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -3111,8 +3112,14 @@ async function renderLOATracker(){
     }).join('');
     const notesHtml=c.notes?`<div style="font-size:11px;color:#6b7280;font-style:italic;padding:6px 12px;border-bottom:1px solid #f0f0f0;background:#fafafa;">📝 ${c.notes.replace(/</g,'&lt;')}</div>`:'';
     const subLine=[c.idNumber,c.phone,c.department,c.facility,c.town].filter(Boolean).join(' · ');
+    const isExpanded=_ltExpandedCases.has(c._id);
+    const totalCo=c.companies.length;
+    const recvCo=c.companies.filter(co=>st(co)==='received').length;
+    const pendingCo=c.companies.filter(co=>st(co)==='none'||st(co)==='not_received').length;
+    const progressCo=c.companies.filter(co=>st(co)==='inprogress').length;
+    const coSummary=totalCo?`<span style="font-size:10px;color:#6b7280;margin-left:2px;">${recvCo}/${totalCo} received${progressCo?' · '+progressCo+' in progress':''}</span>`:'';
     return`<div style="background:${headerBg};border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px;">
+      <div onclick="ltToggleExpand('${c._id}')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px;cursor:pointer;user-select:none;">
         <div style="flex:1;min-width:0;">
           <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
             <span style="background:#0d1f3c;color:#f5d98b;font-size:10px;font-weight:800;padding:2px 8px;border-radius:8px;">#${ci+1}</span>
@@ -3120,22 +3127,31 @@ async function renderLOATracker(){
             ${c.isNewBusiness?'<span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">🆕 New Business</span>':''}
             ${allRecv?'<span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:2px 8px;border-radius:8px;">✓ Complete</span>':''}
             ${advisorLabel}
+            ${coSummary}
           </div>
           ${subLine?`<div style="font-size:11px;color:#6b7280;margin-top:3px;">${subLine}</div>`:''}
         </div>
-        <div style="display:flex;gap:6px;flex-shrink:0;">
-          <button onclick="showLTAddForm('${c._id}')" style="background:none;border:1px solid #e5e7eb;color:#6b7280;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Edit">✏️</button>
-          <button onclick="ltDeleteCase('${c._id}')" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0;" title="Remove">✕</button>
+        <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+          <button onclick="event.stopPropagation();showLTAddForm('${c._id}')" style="background:none;border:1px solid #e5e7eb;color:#6b7280;font-size:13px;cursor:pointer;padding:4px 8px;border-radius:6px;" title="Edit">✏️</button>
+          <button onclick="event.stopPropagation();ltDeleteCase('${c._id}')" style="background:none;border:none;color:#9ca3af;font-size:16px;cursor:pointer;padding:0;" title="Remove">✕</button>
+          <span style="color:#9ca3af;font-size:14px;transition:transform .2s;${isExpanded?'transform:rotate(180deg);':''}">▼</span>
         </div>
       </div>
-      ${notesHtml}
-      ${compRows}
+      <div style="display:${isExpanded?'block':'none'};">
+        ${notesHtml}
+        ${compRows}
+      </div>
     </div>`;
   }).join('');
 
   el.innerHTML=summaryHtml+rows;
 }
 
+function ltToggleExpand(caseId){
+  if(_ltExpandedCases.has(caseId))_ltExpandedCases.delete(caseId);
+  else _ltExpandedCases.add(caseId);
+  renderLOATracker();
+}
 function ltToggle(caseId,compIdx,field,value){
   ltUpdateCompany(caseId,compIdx,field,value);
   renderLOATracker();
@@ -4272,6 +4288,8 @@ function calcStatementComm(){
   const deferred=payable*0.40;
   const tax=hasTax?weekly*0.18:0;
   const netWeekly=weekly-tax;
+  const deferredTax=hasTax?deferred*0.18:0;
+  const deferredNet=deferred-deferredTax;
   document.getElementById('scGrossDisplay').textContent=fmt(gross);
   document.getElementById('scVat').textContent=fmt(vat);
   document.getElementById('scExVat').textContent=fmt(exVat);
@@ -4281,7 +4299,13 @@ function calcStatementComm(){
   document.getElementById('scTaxAmt').textContent=fmt(tax);
   document.getElementById('scTaxRow').style.display=hasTax?'flex':'none';
   document.getElementById('scNetWeekly').textContent=fmt(netWeekly);
-  document.getElementById('scDeferred').textContent=fmt(deferred);
+  document.getElementById('scDeferred').textContent=hasTax?fmt(deferredNet):fmt(deferred);
+  const dRow=document.getElementById('scDeferredTaxRow');
+  if(dRow)dRow.style.display=hasTax?'flex':'none';
+  const dGross=document.getElementById('scDeferredGross');
+  if(dGross)dGross.textContent=fmt(deferred);
+  const dTaxAmt=document.getElementById('scDeferredTaxAmt');
+  if(dTaxAmt)dTaxAmt.textContent=fmt(deferredTax);
   res.style.display='block';
   empty.style.display='none';
 }
