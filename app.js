@@ -2776,6 +2776,7 @@ let _loaClient=(()=>{try{return JSON.parse(sessionStorage.getItem('tl_loa_client
 window._loaFile=null;
 let _ltAdvisorFilter='';
 let _ltExpandedCases=new Set();
+let _ltAllCases=[];
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -3009,13 +3010,22 @@ function ltDeleteCase(caseId){
   renderLoaTrackerWidget();
 }
 function ltSetContractStatus(caseId,compIdx,status){
-  const cases=getLTCases();
-  const c=cases.find(x=>x._id===caseId);
-  if(!c||!c.companies[compIdx])return;
-  c.companies[compIdx].contractStatus=status;
-  c.companies[compIdx].contractsReceived=(status==='received');
-  saveLTCases(cases);
-  if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+  const localCases=getLTCases();
+  let c=localCases.find(x=>x._id===caseId);
+  if(c&&c.companies[compIdx]){
+    // Case is in local storage — update locally and sync to Firebase
+    c.companies[compIdx].contractStatus=status;
+    c.companies[compIdx].contractsReceived=(status==='received');
+    saveLTCases(localCases);
+    if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+  }else{
+    // Case only in Firebase (manager viewing another advisor's case) — update in-memory and save to Firebase
+    c=_ltAllCases.find(x=>x._id===caseId);
+    if(!c||!c.companies[compIdx])return;
+    c.companies[compIdx].contractStatus=status;
+    c.companies[compIdx].contractsReceived=(status==='received');
+    if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
+  }
   renderLOATracker();
   renderLoaTrackerWidget();
 }
@@ -3030,14 +3040,15 @@ async function renderLOATracker(){
     try{
       const fbAll=await window.FB.getAllLoaTrackerCases();
       if(fbAll&&fbAll.length){
-        // Merge: Firebase is source of truth, local is fallback
+        // Firebase as base (other advisors' cases), local wins (most recent state for current user)
         const byId={};
-        cases.forEach(c=>byId[c._id]=c);
         fbAll.forEach(c=>byId[c._id]=c);
+        cases.forEach(c=>byId[c._id]=c);
         cases=Object.values(byId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
       }
     }catch(e){console.warn('FB getAllLoaTrackerCases failed',e);}
   }
+  _ltAllCases=cases;
 
   // Advisor filter (manager only)
   if(isMgr){
