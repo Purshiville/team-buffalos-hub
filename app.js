@@ -923,7 +923,7 @@ function updateNtuHubAlert(){
 
 function updateCpdsSection(){
   const el=document.getElementById('cpdsHubSection');if(!el||!currentUser)return;
-  if(!['SKA310889','PURSHIVILLE'].includes(currentUser.code)){el.style.display='none';return;}
+  if(!['ARLENE','PURSHIVILLE'].includes(currentUser.code)){el.style.display='none';return;}
   // Production month runs 23rd→22nd. On/after the 23rd we've entered the next production month.
   const _now=new Date();let _yr=_now.getFullYear();let _mo=_now.getMonth()+1;
   if(_now.getDate()>=23){_mo+=1;if(_mo>12){_mo=1;_yr+=1;}}
@@ -1004,7 +1004,7 @@ function _startTeamPageRefresh(){
 }
 function _stopTeamPageRefresh(){if(_teamRefreshInt){clearInterval(_teamRefreshInt);_teamRefreshInt=null;}}
 function sendCpdNotifIfNeeded(){
-  if(!currentUser||!['SKA310889','PURSHIVILLE'].includes(currentUser.code))return;
+  if(!currentUser||!['ARLENE','PURSHIVILLE'].includes(currentUser.code))return;
   const _n=new Date();let _yr=_n.getFullYear();let _mo=_n.getMonth()+1;
   if(_n.getDate()>=23){_mo+=1;if(_mo>12){_mo=1;_yr+=1;}}
   const _pm=_yr+'-'+String(_mo).padStart(2,'0');
@@ -2013,6 +2013,11 @@ function checkBonusEligibility(){
   const qual=_qualifyingTier(stats);
   const nextIdx=qual?BONUS_TIERS.findIndex(t=>t.tier===qual.tier)-1:-1;
   const next=nextIdx>=0?BONUS_TIERS[nextIdx]:null;
+  if(stats.cases===0&&stats.api===0){
+    const res=document.getElementById('bonusCheckerResult');
+    if(res){res.innerHTML=`<div style="margin-top:12px;padding:14px 16px;background:#f9f9f9;border:1px solid #e5e7eb;border-radius:12px;text-align:center;color:#9ca3af;font-size:12px;"><div style="font-size:20px;margin-bottom:6px;">📊</div><div style="font-weight:700;color:#374151;margin-bottom:4px;">No stats captured yet for ${qLabel}</div><div>Your production figures for this quarter haven't been entered yet. Ask your manager to log stats in Production Stats.</div></div>`;res.style.display='block';}
+    return;
+  }
   let html=`<div style="margin-top:12px;padding:14px 16px;background:${qual?'#f0fdf4':'#fff7ed'};border:1.5px solid ${qual?'#86efac':'#fcd34d'};border-radius:12px;">`;
   html+=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">${qLabel} ${yr} — My Eligibility</div>`;
   html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">`;
@@ -3070,7 +3075,8 @@ async function renderLOATracker(){
   }
 
   const _statusCfg={
-    none:{label:'🔴 Not Received',bg:'#fee2e2',clr:'#dc2626',border:'#dc2626'},
+    none:{label:'Pending',bg:'#f9f9f9',clr:'#9ca3af',border:'#e5e7eb'},
+    not_received:{label:'🔴 Not Received',bg:'#fee2e2',clr:'#dc2626',border:'#dc2626'},
     inprogress:{label:'🟠 In Progress',bg:'#fff7ed',clr:'#d97706',border:'#d97706'},
     received:{label:'🟢 Received',bg:'#dcfce7',clr:'#16a34a',border:'#16a34a'},
   };
@@ -3090,7 +3096,7 @@ async function renderLOATracker(){
             <div style="font-size:12px;font-weight:700;color:#0d1f3c;margin-bottom:4px;">${co.name}</div>
             <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:4px;">
               <button onclick="ltToggle('${c._id}',${coIdx},'emailSent',${!co.emailSent})" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${sentClr};background:${co.emailSent?sentClr:'#fff'};color:${co.emailSent?'#fff':sentClr};font-size:10px;font-weight:700;cursor:pointer;">${co.emailSent?'✓ Sent':'Send?'}</button>
-              <button onclick="ltSetContractStatus('${c._id}',${coIdx},'none')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='none'?'#dc2626':'#e5e7eb'};background:${coStatus==='none'?'#dc2626':'#fff'};color:${coStatus==='none'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🔴 No</button>
+              <button onclick="ltSetContractStatus('${c._id}',${coIdx},'not_received')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='not_received'?'#dc2626':'#e5e7eb'};background:${coStatus==='not_received'?'#dc2626':'#fff'};color:${coStatus==='not_received'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🔴 No</button>
               <button onclick="ltSetContractStatus('${c._id}',${coIdx},'inprogress')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='inprogress'?'#d97706':'#e5e7eb'};background:${coStatus==='inprogress'?'#d97706':'#fff'};color:${coStatus==='inprogress'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🟠 Progress</button>
               <button onclick="ltSetContractStatus('${c._id}',${coIdx},'received')" style="padding:3px 9px;border-radius:12px;border:1.5px solid ${coStatus==='received'?'#16a34a':'#e5e7eb'};background:${coStatus==='received'?'#16a34a':'#fff'};color:${coStatus==='received'?'#fff':'#9ca3af'};font-size:10px;font-weight:700;cursor:pointer;">🟢 Received</button>
             </div>
@@ -3827,7 +3833,7 @@ function showPage(p){
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
-  if(p==='guides'){guidesFilter('all');const fc=document.getElementById('fanewsCard');if(fc)fc.style.display=(currentUser&&['SKA310889','PURSHIVILLE'].includes(currentUser.code))?'flex':'none';}
+  if(p==='guides'){guidesFilter('all');const fc=document.getElementById('fanewsCard');if(fc)fc.style.display=(currentUser&&['ARLENE','PURSHIVILLE'].includes(currentUser.code))?'flex':'none';}
   if(p==='activity')renderActivityLog();
   if(p==='canpack'){mdInit();}
   if(p==='termcal')renderTermCal();
@@ -5345,7 +5351,7 @@ function closeDocUpload(){document.getElementById('docUploadOverlay').style.disp
 
 // ── BUDGET TOOL ──
 const BGT_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-let bgtCurrentMonth=4,bgtCurrentYear=2026;
+let bgtCurrentMonth=new Date().getMonth()+1,bgtCurrentYear=new Date().getFullYear();
 let bgtMonthStore={};
 
 function bgtUid(){return Math.random().toString(36).substr(2,9);}
