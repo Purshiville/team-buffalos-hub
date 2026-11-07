@@ -3441,7 +3441,6 @@ function renderLoaTrackerWidget(){
   const el=document.getElementById('hubLoaTrackerWidget');
   if(!el)return;
   const cases=getLTCases().filter(c=>(c.requestType||'schedule')!=='refund');
-  if(!cases.length){el.style.display='none';return;}
   const contractsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
   const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
   const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
@@ -3452,6 +3451,7 @@ function renderLoaTrackerWidget(){
       ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':'s'} to send</span>`:''}
       ${contractsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${contractsPending} contract${contractsPending===1?'':'s'} pending</span>`:''}
       ${fullyDone?`<span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${fullyDone} complete</span>`:''}
+      ${!cases.length?`<span style="font-size:11px;color:#9ca3af;">No active cases</span>`:''}
     </div>
     <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
   </div>`;
@@ -3460,7 +3460,6 @@ function renderRefundTrackerWidget(){
   const el=document.getElementById('hubRefundTrackerWidget');
   if(!el)return;
   const cases=getLTCases().filter(c=>c.requestType==='refund');
-  if(!cases.length){el.style.display='none';return;}
   const refundsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
   const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
   const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
@@ -3471,6 +3470,7 @@ function renderRefundTrackerWidget(){
       ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':'s'} to send</span>`:''}
       ${refundsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${refundsPending} refund${refundsPending===1?'':'s'} pending</span>`:''}
       ${fullyDone?`<span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${fullyDone} complete</span>`:''}
+      ${!cases.length?`<span style="font-size:11px;color:#9ca3af;">No active cases</span>`:''}
     </div>
     <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
   </div>`;
