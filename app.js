@@ -3985,7 +3985,7 @@ function showPage(p){
   // Show Refer Client float only on home page
   const referFab=document.getElementById('referFab');
   if(referFab)referFab.style.display=(p==='hub')?'flex':'none';
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();renderLoaTrackerWidget();renderRefundTrackerWidget();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
