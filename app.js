@@ -6187,20 +6187,22 @@ function _renderTop3Inner(el){
   const _bg={gold:'background:#fef3c7;',silver:'background:#f3f4f6;',bronze:'background:#ffedd5;'};
   const _badgeCol={gold:'#f59e0b',silver:'#9ca3af',bronze:'#cd7f32'};
   const _card=(a,cls,medal,posLabel)=>{
-    if(!a)return`<div class="podium-col"><div class="top3-card ${cls}" style="opacity:0.45;border-style:dashed;"><div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}margin:0 auto 6px;">${medal}</div><div class="top3-name" style="color:#9ca3af;">${posLabel==='3'?'3rd Place':'—'}</div></div></div>`;
+    if(!a)return`<div class="podium-col"><div class="top3-card ${cls}" style="opacity:0.45;border-style:dashed;"><div style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;${_bg[cls]}${_ring[cls]}margin:0 auto 8px;">${medal}</div><div class="top3-name" style="color:#9ca3af;">${posLabel==='3'?'3rd':'—'}</div></div></div>`;
     const photo=_regUsers[a.code]?.photo||null;
     const name=_regUsers[a.code]?.name||a.name||a.code;
-    const metrics=`<span>${a.actualCases}/${a.targetCases||'?'}</span><span>R${(a.actualPremium||0).toLocaleString()}</span><span style="color:#9ca3af;">R${(a.targetPremium||0).toLocaleString()}</span>`;
-    const ntuBits=[a.ntu4Month!=null?`4M NTU ${a.ntu4Month}%`:null,a.ntu15Month!=null?`15M NTU ${a.ntu15Month}%`:null,a.persistency!=null?`Pers ${a.persistency}%`:null].filter(Boolean);
-    const ntuLine=ntuBits.length?`<div class="top3-metrics" style="margin-top:3px;">${ntuBits.map(t=>`<span>${t}</span>`).join('')}</div>`:'';
+    const prem='R'+(a.actualPremium||0).toLocaleString();
+    const caseLbl=`${a.actualCases} case${a.actualCases!==1?'s':''}${a.targetCases?` / ${a.targetCases} target`:''}`;
+    const ntuParts=[a.ntu4Month!=null?`4M ${a.ntu4Month}%`:null,a.ntu15Month!=null?`15M ${a.ntu15Month}%`:null,a.persistency!=null?`Pers ${a.persistency}%`:null].filter(Boolean);
+    const ntuRow=ntuParts.length?`<div style="font-size:9px;color:#9ca3af;margin-top:5px;line-height:1.5;">${ntuParts.join(' · ')}</div>`:'';
     return`<div class="podium-col"><div class="top3-card ${cls}">
-      <div style="position:relative;width:52px;margin:0 auto 6px;">
-        ${photo?`<img src="${photo}" style="width:52px;height:52px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`:`<div style="width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:26px;${_bg[cls]}${_ring[cls]}">${medal}</div>`}
+      <div style="position:relative;width:56px;margin:0 auto 8px;">
+        ${photo?`<img src="${photo}" style="width:56px;height:56px;border-radius:50%;object-fit:cover;display:block;${_ring[cls]}">`:`<div style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;${_bg[cls]}${_ring[cls]}">${medal}</div>`}
         <div style="position:absolute;bottom:-1px;right:-1px;width:18px;height:18px;border-radius:50%;background:${_badgeCol[cls]};color:#fff;font-size:9px;font-weight:900;display:flex;align-items:center;justify-content:center;border:1.5px solid #fff;">${posLabel}</div>
       </div>
       <div class="top3-name">${name}${_newBadge(a.code)}</div>
-      <div class="top3-metrics">${metrics}</div>
-      ${ntuLine}
+      <div style="font-size:15px;font-weight:800;color:#0d1f3c;margin-top:4px;">${prem}</div>
+      <div style="font-size:10px;color:#6b7280;margin-top:2px;">${caseLbl}</div>
+      ${ntuRow}
     </div></div>`;
   };
   el.innerHTML=`
