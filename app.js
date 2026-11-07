@@ -1180,6 +1180,7 @@ function applyRoleVisibility(user){
   const scCard=document.getElementById('toolSpotcheck');if(scCard)scCard.style.display=user.isManager?'block':'none';
   const ntuCard=document.getElementById('toolNTU');if(ntuCard)ntuCard.style.display=isMgr?'block':'none';
   const drCard=document.getElementById('toolDailyRegion');if(drCard)drCard.style.display=user.isManager?'block':'none';
+  const pdfEdCard=document.getElementById('toolPdfEditor');if(pdfEdCard)pdfEdCard.style.display=['ARLENE','PURSHIVILLE'].includes(user.code)?'block':'none';
   const hqn=document.getElementById('hubQuickNotice');if(hqn)hqn.style.display=isMgr?'block':'none';
   const advisorOpts=ADVISOR_LIST.map(a=>`<option value="${a.code}">${a.name}</option>`).join('');
   ['hubNoticeRecipient','noticeRecipient'].forEach(id=>{const s=document.getElementById(id);if(s){s.innerHTML=`<option value="ALL">👥 All advisors</option>${advisorOpts}`;}});
@@ -4019,7 +4020,7 @@ function showPage(p){
   if(p==='policyreview'){renderPRSavedList();}
   if(p==='loatracker'){renderLOATracker('schedule');}
   if(p==='refundtracker'){renderRefundTracker();}
-  if(p==='pdfeditor'){renderPdfEditor();}
+  if(p==='pdfeditor'){if(!currentUser||!['ARLENE','PURSHIVILLE'].includes(currentUser.code))return showPage('hub');renderPdfEditor();}
   if(p==='mastheadleads'){mlInitPage();}
   if(p==='mastheadpartner'){mlPartnerInit();}
   if(p==='qlink'){qlinkRenderDeductions();qlinkRenderSkyPolicies();qlinkCalc();}
