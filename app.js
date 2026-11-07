@@ -2777,6 +2777,7 @@ window._loaFile=null;
 let _ltAdvisorFilter='';
 let _ltExpandedCases=new Set();
 let _ltAllCases=[];
+let _ltCurrentType='schedule';
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -3007,7 +3008,7 @@ function ltDeleteCase(caseId){
   saveLTCases(cases);
   if(window.FB_READY&&window.FB.deleteLoaTrackerCase)window.FB.deleteLoaTrackerCase(caseId).catch(()=>{});
   renderLOATracker();
-  renderLoaTrackerWidget();
+  renderAllLTWidgets();
 }
 function ltSetContractStatus(caseId,compIdx,status){
   const localCases=getLTCases();
@@ -3027,11 +3028,16 @@ function ltSetContractStatus(caseId,compIdx,status){
     if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(c).catch(()=>{});
   }
   renderLOATracker();
-  renderLoaTrackerWidget();
+  renderAllLTWidgets();
 }
 
-async function renderLOATracker(){
-  const el=document.getElementById('loaTrackerContent');
+function renderAllLTWidgets(){renderLoaTrackerWidget();renderRefundTrackerWidget();}
+function renderRefundTracker(){return renderLOATracker('refund');}
+async function renderLOATracker(type){
+  if(type)_ltCurrentType=type; else type=_ltCurrentType||'schedule';
+  const isRefund=type==='refund';
+  const elId=isRefund?'refundTrackerContent':'loaTrackerContent';
+  const el=document.getElementById(elId);
   if(!el)return;
   const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
   let cases=getLTCases();
@@ -3049,20 +3055,26 @@ async function renderLOATracker(){
     }catch(e){console.warn('FB getAllLoaTrackerCases failed',e);}
   }
   _ltAllCases=cases;
+  // Filter to this tracker's type (old cases without requestType default to 'schedule')
+  cases=cases.filter(c=>isRefund?(c.requestType==='refund'):(c.requestType||'schedule')!=='refund');
 
   // Advisor filter (manager only)
   if(isMgr){
     const advisors=[...new Set(cases.map(c=>c.advisorCode).filter(Boolean))].sort((a,b)=>{
       const na=_advisorNameMap[a]||a, nb=_advisorNameMap[b]||b; return na.localeCompare(nb);
     });
+    const filterBarId=isRefund?'rtAdvisorFilterBar':'ltAdvisorFilterBar';
     const opts='<option value="">All advisors</option>'+advisors.map(code=>`<option value="${code}" ${code===_ltAdvisorFilter?'selected':''}>${_advisorNameMap[code]||code}</option>`).join('');
-    let fb=document.getElementById('ltAdvisorFilterBar');
-    if(!fb){fb=document.createElement('div');fb.id='ltAdvisorFilterBar';fb.style.cssText='margin-bottom:10px;';el.before(fb);}
-    fb.innerHTML=`<select onchange="_ltAdvisorFilter=this.value;renderLOATracker()" style="padding:8px 12px;font-size:13px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#0d1f3c;width:100%;">${opts}</select>`;
+    let fb=document.getElementById(filterBarId);
+    if(!fb){fb=document.createElement('div');fb.id=filterBarId;fb.style.cssText='margin-bottom:10px;';el.before(fb);}
+    fb.innerHTML=`<select onchange="_ltAdvisorFilter=this.value;renderLOATracker('${type}')" style="padding:8px 12px;font-size:13px;font-weight:600;border:1px solid #e5e7eb;border-radius:10px;background:#fff;color:#0d1f3c;width:100%;">${opts}</select>`;
     if(_ltAdvisorFilter)cases=cases.filter(c=>c.advisorCode===_ltAdvisorFilter);
   }
 
   const _ltStatus=co=>co.contractStatus||(co.contractsReceived?'received':'none');
+  const addLabel=isRefund?'+ New Refund Request':'+ New Schedule Request';
+  const awaitingLabel=isRefund?'Awaiting Refund':'Awaiting Contracts';
+  const doneLabel=isRefund?'Fully Refunded':'Fully Received';
   // Summary row
   const total=cases.length;
   const emailsPending=cases.filter(c=>!c.isNewBusiness).reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
@@ -3071,18 +3083,18 @@ async function renderLOATracker(){
   const newBizCount=cases.filter(c=>c.isNewBusiness).length;
   const summaryHtml=`
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;">
-      ${[['Clients',total,'#0d1f3c'],['New Business',newBizCount,newBizCount?'#92400e':'#6b7280'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],['Awaiting Contracts',contractsPending,contractsPending?'#d97706':'#6b7280'],['Fully Received',fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
+      ${[['Clients',total,'#0d1f3c'],['New Business',newBizCount,newBizCount?'#92400e':'#6b7280'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],[awaitingLabel,contractsPending,contractsPending?'#d97706':'#6b7280'],[doneLabel,fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
         <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 8px;text-align:center;">
           <div style="font-size:20px;font-weight:800;color:${clr};">${val}</div>
           <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${lbl}</div>
         </div>`).join('')}
     </div>
     <div style="margin-bottom:14px;">
-      <button onclick="showLTAddForm(null)" style="width:100%;padding:11px;background:#0d1f3c;color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">+ New Schedule Request</button>
+      <button onclick="showLTAddForm(null,'${type}')" style="width:100%;padding:11px;background:${isRefund?'#92400e':'#0d1f3c'};color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">${addLabel}</button>
     </div>`;
 
   if(!cases.length){
-    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click + New Schedule Request to get started.</span></div>`;
+    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click ${addLabel} to get started.</span></div>`;
     return;
   }
 
@@ -3166,20 +3178,20 @@ function ltToggleExpand(caseId){
 function ltToggle(caseId,compIdx,field,value){
   ltUpdateCompany(caseId,compIdx,field,value);
   renderLOATracker();
-  renderLoaTrackerWidget();
+  renderAllLTWidgets();
 }
 function ltField(caseId,compIdx,field,value){
   ltUpdateCompany(caseId,compIdx,field,value);
-  renderLoaTrackerWidget();
+  renderAllLTWidgets();
 }
 
-function showLTAddForm(caseId){
-  const existing=caseId?getLTCases().find(c=>c._id===caseId):null;
+function showLTAddForm(caseId,defaultType){
+  const existing=caseId?(getLTCases().find(c=>c._id===caseId)||_ltAllCases.find(c=>c._id===caseId)):null;
   const isEdit=!!existing;
   const ALL_FSPS=[...new Set([...Object.keys(FSP_SCHEDULE_EMAILS||{}),...Object.keys(FSP_REFUND_EMAILS||{})])].sort();
   window._ltAddSelFsps=new Set(existing?existing.companies.map(co=>co.name):[]);
   window._ltAddEditId=caseId||null;
-  window._ltAddType='schedule';
+  window._ltAddType=existing?.requestType||defaultType||_ltCurrentType||'schedule';
   let ov=document.getElementById('ltAddOverlay');if(ov)ov.remove();
   ov=document.createElement('div');ov.id='ltAddOverlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9300;display:flex;align-items:center;justify-content:center;padding:10px;';
@@ -3388,7 +3400,7 @@ function ltSaveForm(){
     }
     document.getElementById('ltAddOverlay')?.remove();
     renderLOATracker();
-    renderLoaTrackerWidget();
+    renderAllLTWidgets();
   } else {
     // New case
     if(!isNewBiz&&(!id||id.length<6)){alert('Please enter the client ID number.');return;}
@@ -3410,7 +3422,7 @@ function ltSaveForm(){
       const body=type==='schedule'
         ?`Good day,\n\nPlease find the attached Letter of Authority for ${clientName} (ID Number: ${id}).\n\nKindly provide the full policy contracts including full names, surnames, and dates of birth of all insured lives, for all active policies held by this client.\n\nKind regards,\n${advisorName}\n${today}`
         :`Good day,\n\nOn behalf of ${clientName} (ID Number: ${id}), I am requesting a premium refund for all applicable policies.\n\nPlease confirm once processed and advise the estimated timeline.\n\nKind regards,\n${advisorName}\n${today}`;
-      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:false,createdAt:now2,
+      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:false,requestType:type,createdAt:now2,
         companies:sel.map(name=>({name,emailSent:true,dateSent:now2,referenceNumber:'',contractStatus:'none',comments:''}))};
       triggerLoaDownload();
       window.open('mailto:'+encodeURIComponent(emails.join(','))+'?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(body),'_blank');
@@ -3419,15 +3431,15 @@ function ltSaveForm(){
     const cases=getLTCases();cases.unshift(entry);saveLTCases(cases);
     if(window.FB_READY&&window.FB.saveLoaTrackerCase)window.FB.saveLoaTrackerCase(entry).catch(()=>{});
     document.getElementById('ltAddOverlay')?.remove();
-    showPage('loatracker');
-    renderLoaTrackerWidget();
+    showPage(type==='refund'?'refundtracker':'loatracker');
+    renderAllLTWidgets();
   }
 }
 
 function renderLoaTrackerWidget(){
   const el=document.getElementById('hubLoaTrackerWidget');
   if(!el)return;
-  const cases=getLTCases();
+  const cases=getLTCases().filter(c=>(c.requestType||'schedule')!=='refund');
   if(!cases.length){el.style.display='none';return;}
   const contractsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
   const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
@@ -3443,6 +3455,122 @@ function renderLoaTrackerWidget(){
     <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
   </div>`;
 }
+function renderRefundTrackerWidget(){
+  const el=document.getElementById('hubRefundTrackerWidget');
+  if(!el)return;
+  const cases=getLTCases().filter(c=>c.requestType==='refund');
+  if(!cases.length){el.style.display='none';return;}
+  const refundsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&!co.contractsReceived).length,0);
+  const emailsPending=cases.reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
+  const fullyDone=cases.filter(c=>c.companies.length&&c.companies.every(co=>co.contractsReceived)).length;
+  el.style.display='block';
+  el.innerHTML=`<div onclick="showPage('refundtracker')" style="background:#fff;border:1px solid #e5e7eb;border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span style="font-size:13px;font-weight:800;color:#92400e;">💰 Refund Tracker</span>
+      ${emailsPending?`<span style="background:#fee2e2;color:#dc2626;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${emailsPending} email${emailsPending===1?'':'s'} to send</span>`:''}
+      ${refundsPending?`<span style="background:#fef3c7;color:#d97706;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${refundsPending} refund${refundsPending===1?'':'s'} pending</span>`:''}
+      ${fullyDone?`<span style="background:#dcfce7;color:#16a34a;font-size:11px;font-weight:700;padding:3px 10px;border-radius:8px;">${fullyDone} complete</span>`:''}
+    </div>
+    <span style="color:#9ca3af;font-size:13px;flex-shrink:0;">›</span>
+  </div>`;
+}
+
+// ── PDF Page Editor ──────────────────────────────────────────────────────────
+let _pdfEdFile=null,_pdfEdDeleted=new Set(),_pdfEdPageCount=0;
+function renderPdfEditor(){
+  const el=document.getElementById('pdfEditorContent');
+  if(!el)return;
+  _pdfEdFile=null;_pdfEdDeleted=new Set();_pdfEdPageCount=0;
+  el.innerHTML=`
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#075985;line-height:1.6;">
+      <strong>How to use:</strong> Upload a PDF — each page appears as a thumbnail. Tap a page to mark it for deletion (turns grey with ✕). Then tap <strong>Save PDF</strong> to download the edited file.
+    </div>
+    <div onclick="document.getElementById('pdfEdInput').click()" ondragover="event.preventDefault();this.style.borderColor='#c9922a'" ondragleave="this.style.borderColor='#e5e7eb'" ondrop="pdfEdHandleDrop(event)" style="border:2px dashed #e5e7eb;border-radius:16px;padding:32px 20px;text-align:center;cursor:pointer;background:#fafafa;margin-bottom:16px;transition:border-color .2s;">
+      <div style="font-size:36px;margin-bottom:8px;">✂️</div>
+      <div style="font-size:14px;font-weight:700;color:#0d1f3c;margin-bottom:4px;">Tap to choose a PDF</div>
+      <div style="font-size:12px;color:#9ca3af;">Select the PDF you want to edit</div>
+      <input type="file" id="pdfEdInput" accept=".pdf,application/pdf" style="display:none;" onchange="pdfEdLoad(this.files[0])"/>
+    </div>
+    <div id="pdfEdThumbs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
+    <button id="pdfEdSaveBtn" onclick="pdfEdSave()" style="display:none;width:100%;padding:13px;background:#065f46;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Save PDF</button>
+    <button id="pdfEdResetBtn" onclick="renderPdfEditor()" style="display:none;width:100%;padding:9px;background:none;border:1.5px dashed #e5e7eb;border-radius:10px;font-size:12px;color:#9ca3af;cursor:pointer;">✕ Clear &amp; start over</button>`;
+}
+function pdfEdHandleDrop(e){e.preventDefault();const f=e.dataTransfer?.files?.[0];if(f&&f.type==='application/pdf')pdfEdLoad(f);}
+async function pdfEdLoad(file){
+  if(!file||file.type!=='application/pdf'){alert('Please select a PDF file.');return;}
+  _pdfEdFile=file;_pdfEdDeleted=new Set();
+  const statusEl=document.getElementById('pdfEdThumbs');
+  if(statusEl)statusEl.innerHTML='<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px;grid-column:1/-1;">Loading pages…</div>';
+  document.getElementById('pdfEdSaveBtn').style.display='none';
+  document.getElementById('pdfEdResetBtn').style.display='block';
+  try{
+    await _loadPdfJs();
+    const buf=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+    _pdfEdPageCount=pdf.numPages;
+    const thumbsEl=document.getElementById('pdfEdThumbs');
+    if(!thumbsEl)return;
+    thumbsEl.innerHTML='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const vp=page.getViewport({scale:0.4});
+      const canvas=document.createElement('canvas');
+      canvas.width=vp.width;canvas.height=vp.height;
+      await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
+      const img=canvas.toDataURL('image/jpeg',0.75);
+      const pn=i;
+      const div=document.createElement('div');
+      div.id='pdfThumb_'+pn;
+      div.onclick=()=>pdfEdToggle(pn);
+      div.style.cssText='border:2px solid #e5e7eb;border-radius:10px;overflow:hidden;cursor:pointer;position:relative;background:#fff;transition:opacity .2s;';
+      div.innerHTML=`<img src="${img}" style="width:100%;display:block;"/><div style="text-align:center;font-size:10px;font-weight:700;color:#374151;padding:4px 0;background:#f9fafb;">Page ${pn}</div><div id="pdfDelMark_${pn}" style="display:none;position:absolute;inset:0;background:rgba(220,38,38,.55);display:none;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;">✕</div>`;
+      thumbsEl.appendChild(div);
+    }
+    _pdfEdUpdateSaveBtn();
+  }catch(e){
+    const t=document.getElementById('pdfEdThumbs');
+    if(t)t.innerHTML='<div style="color:#dc2626;padding:16px;grid-column:1/-1;">Could not load PDF: '+e.message+'</div>';
+  }
+}
+function pdfEdToggle(pageNum){
+  if(_pdfEdDeleted.has(pageNum)){_pdfEdDeleted.delete(pageNum);}else{_pdfEdDeleted.add(pageNum);}
+  const thumb=document.getElementById('pdfThumb_'+pageNum);
+  const mark=document.getElementById('pdfDelMark_'+pageNum);
+  if(thumb){thumb.style.opacity=_pdfEdDeleted.has(pageNum)?'0.45':'1';thumb.style.borderColor=_pdfEdDeleted.has(pageNum)?'#dc2626':'#e5e7eb';}
+  if(mark){mark.style.display=_pdfEdDeleted.has(pageNum)?'flex':'none';}
+  _pdfEdUpdateSaveBtn();
+}
+function _pdfEdUpdateSaveBtn(){
+  const btn=document.getElementById('pdfEdSaveBtn');
+  if(!btn)return;
+  const remaining=_pdfEdPageCount-_pdfEdDeleted.size;
+  if(_pdfEdDeleted.size===0||remaining<=0){btn.style.display='none';}
+  else{btn.style.display='block';btn.textContent=`Save PDF — ${remaining} page${remaining===1?'':'s'} remaining`;}
+}
+async function pdfEdSave(){
+  if(!_pdfEdFile||_pdfEdDeleted.size===0)return;
+  const btn=document.getElementById('pdfEdSaveBtn');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  try{
+    await loadPdfLib();
+    const {PDFDocument}=window.PDFLib;
+    const buf=await _pdfEdFile.arrayBuffer();
+    const pdfDoc=await PDFDocument.load(buf);
+    const sortedDel=[..._pdfEdDeleted].sort((a,b)=>b-a);
+    sortedDel.forEach(pn=>pdfDoc.removePage(pn-1));
+    const bytes=await pdfDoc.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=(_pdfEdFile.name||'document').replace(/\.pdf$/i,'')+'_edited.pdf';
+    a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
+    if(btn){btn.textContent=`Saved!`;btn.disabled=false;}
+  }catch(e){
+    if(btn){btn.textContent='Error — try again';btn.disabled=false;}
+    alert('Could not save PDF: '+e.message);
+  }
+}
+// ── end PDF Page Editor ───────────────────────────────────────────────────────
 
 function openGmailCompose(email, ccList, type){
   let subject, body;
@@ -3856,7 +3984,7 @@ function showPage(p){
   // Show Refer Client float only on home page
   const referFab=document.getElementById('referFab');
   if(referFab)referFab.style.display=(p==='hub')?'flex':'none';
-  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();renderLoaTrackerWidget();}
+  if(p==='hub'){updateWelcomeBar();updatePrecanHubAlert();updateQlinkHubAlert();updateNtuHubAlert();updateCpdsSection();renderBibleVerse();renderHubCountdown();renderHubPaymentReminder();renderProdCountdownStandalone();renderTop3();renderDailyBrief();renderHubPeriodBar();renderLoaTrackerWidget();renderRefundTrackerWidget();}
   if(p==='commcases'){renderCommCases();renderCommQueries();startCommQueryListener();}
   else{stopCommQueryListener();}
   if(p==='referrals')renderReferrals();
@@ -3889,7 +4017,9 @@ function showPage(p){
   if(p==='worksites')csoInit();
   if(p==='convfunnel')convFunnelInit();
   if(p==='policyreview'){renderPRSavedList();}
-  if(p==='loatracker'){renderLOATracker();}
+  if(p==='loatracker'){renderLOATracker('schedule');}
+  if(p==='refundtracker'){renderRefundTracker();}
+  if(p==='pdfeditor'){renderPdfEditor();}
   if(p==='mastheadleads'){mlInitPage();}
   if(p==='mastheadpartner'){mlPartnerInit();}
   if(p==='qlink'){qlinkRenderDeductions();qlinkRenderSkyPolicies();qlinkCalc();}
