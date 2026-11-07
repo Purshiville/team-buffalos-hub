@@ -3042,8 +3042,9 @@ async function renderLOATracker(type){
   if(!el)return;
   const isMgr=currentUser&&(currentUser.isManager||currentUser.isOps);
   let cases=getLTCases();
-  // Manager: load all advisors from Firebase
+  // Manager: load all advisors from Firebase; show loading state while fetching
   if(isMgr&&window.FB_READY&&window.FB.getAllLoaTrackerCases){
+    if(!el.innerHTML.trim())el.innerHTML='<div style="text-align:center;padding:40px;color:#9ca3af;font-size:13px;">Loading cases…</div>';
     try{
       const fbAll=await window.FB.getAllLoaTrackerCases();
       if(fbAll&&fbAll.length){
@@ -3054,10 +3055,30 @@ async function renderLOATracker(type){
         cases=Object.values(byId).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
       }
     }catch(e){console.warn('FB getAllLoaTrackerCases failed',e);}
+  } else if(!isMgr&&window.FB_READY&&window.FB.getAdvisorLoaTrackerCases){
+    // Advisor: recover from Firebase if local storage is empty (e.g. cache cleared)
+    if(!cases.length){
+      try{
+        const fbCases=await window.FB.getAdvisorLoaTrackerCases(currentUser.code);
+        if(fbCases&&fbCases.length){
+          cases=fbCases.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+          saveLTCases(cases);
+        }
+      }catch(e){console.warn('FB getAdvisorLoaTrackerCases failed',e);}
+    }
+  }
+  // Migration: tag pre-Build-248 cases (no requestType) as 'schedule' and persist
+  const untyped=cases.filter(c=>!c.requestType);
+  if(untyped.length){
+    untyped.forEach(c=>c.requestType='schedule');
+    const localCases=getLTCases();let localChanged=false;
+    localCases.forEach(c=>{if(!c.requestType){c.requestType='schedule';localChanged=true;}});
+    if(localChanged)saveLTCases(localCases);
+    if(window.FB_READY&&window.FB.saveLoaTrackerCase)
+      untyped.forEach(c=>window.FB.saveLoaTrackerCase(c).catch(()=>{}));
   }
   _ltAllCases=cases;
-  // Filter to this tracker's type (old cases without requestType default to 'schedule')
-  cases=cases.filter(c=>isRefund?(c.requestType==='refund'):(c.requestType||'schedule')!=='refund');
+  cases=cases.filter(c=>isRefund?c.requestType==='refund':c.requestType!=='refund');
 
   // Advisor filter (manager only)
   if(isMgr){
@@ -3209,17 +3230,18 @@ function showLTAddForm(caseId,defaultType){
       <button onclick="document.getElementById('ltLoaFileInput').click()" id="ltLoaUploadBtn" style="flex:1;padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:12px;font-weight:600;color:#374151;cursor:pointer;text-align:left;box-sizing:border-box;">📎 Upload LOA — AI will fill name &amp; ID</button>
       <button onclick="document.getElementById('ltLoaCamInput').click()" title="Take photo" style="padding:9px 12px;background:#f4f2ed;border:1.5px dashed #d1d5db;border-radius:8px;font-size:18px;cursor:pointer;">📷</button>
     </div>`;
+  const _initTypeSched=window._ltAddType!=='refund';
   const emailTypeHtml=isEdit?'':`
     <div style="margin-bottom:12px;">
       <div style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Email Type</div>
       <div style="display:flex;gap:8px;">
-        <button id="ltTypeSched" onclick="ltAddSetType('schedule')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #0d1f3c;background:#f0f4ff;color:#0d1f3c;font-size:11px;font-weight:700;cursor:pointer;">📋 Schedule Request</button>
-        <button id="ltTypeRefund" onclick="ltAddSetType('refund')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #e5e7eb;background:#fff;color:#9ca3af;font-size:11px;font-weight:700;cursor:pointer;">💰 Refund Request</button>
+        <button id="ltTypeSched" onclick="ltAddSetType('schedule')" style="flex:1;padding:8px;border-radius:8px;border:2px solid ${_initTypeSched?'#0d1f3c':'#e5e7eb'};background:${_initTypeSched?'#f0f4ff':'#fff'};color:${_initTypeSched?'#0d1f3c':'#9ca3af'};font-size:11px;font-weight:700;cursor:pointer;">📋 Schedule Request</button>
+        <button id="ltTypeRefund" onclick="ltAddSetType('refund')" style="flex:1;padding:8px;border-radius:8px;border:2px solid ${_initTypeSched?'#e5e7eb':'#c9922a'};background:${_initTypeSched?'#fff':'#fffbeb'};color:${_initTypeSched?'#9ca3af':'#c9922a'};font-size:11px;font-weight:700;cursor:pointer;">💰 Refund Request</button>
       </div>
     </div>`;
   const selCount=window._ltAddSelFsps.size;
   ov.innerHTML=`<div style="background:#fff;border-radius:16px;padding:20px;width:460px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.25);">
-    <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">${isEdit?'✏️ Edit Client':'📋 New Schedule Request'}</h3>
+    <h3 style="margin:0 0 10px;font-size:14px;font-weight:800;color:#0d1f3c;">${isEdit?'✏️ Edit Client':_initTypeSched?'📋 New Schedule Request':'💰 New Refund Request'}</h3>
     ${uploadHtml}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px;">
       ${[['ltFName','First Name',v(existing?.clientName),''],['ltSName','Surname',v(existing?.surname),''],['ltId','ID Number',v(existing?.idNumber),'monospace'],['ltPhone','Phone',v(existing?.phone),''],['ltDept','Department',v(existing?.department),''],['ltFac','Facility',v(existing?.facility),''],['ltTown','Town / City',v(existing?.town),'']].map(([fid,lbl,val,extra])=>`<div><label style="font-size:10px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px;">${lbl}</label><input id="${fid}" value="${val}" style="width:100%;padding:7px 8px;font-size:12px;border:1px solid #e5e7eb;border-radius:7px;background:#f9f9f9;box-sizing:border-box;${extra?'font-family:'+extra+';':''}"/></div>`).join('')}
@@ -3408,10 +3430,10 @@ function ltSaveForm(){
     const clientName=(fn+' '+sn).trim();
     const now2=new Date().toISOString().slice(0,10);
     let entry;
+    const type=window._ltAddType||'schedule';
     if(isNewBiz){
-      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:true,createdAt:now2,companies:[]};
+      entry={_id:_ltGenId(),advisorCode:currentUser?.code||'',clientName:fn,surname:sn,idNumber:id,phone:ph,department:dept,facility:fac,town,notes,isNewBusiness:true,requestType:type,createdAt:now2,companies:[]};
     } else {
-      const type=window._ltAddType||'schedule';
       const emailMap=type==='refund'?FSP_REFUND_EMAILS:FSP_SCHEDULE_EMAILS;
       const emails=sel.map(n=>emailMap[n]).filter(Boolean);
       const noEmail=sel.filter(n=>!emailMap[n]);
