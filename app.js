@@ -2779,6 +2779,7 @@ let _ltAdvisorFilter='';
 let _ltExpandedCases=new Set();
 let _ltAllCases=[];
 let _ltCurrentType='schedule';
+let _ltStatusFilter='all';
 function saveLoaClient(name,idNumber){_loaClient={name,idNumber};try{sessionStorage.setItem('tl_loa_client',JSON.stringify(_loaClient));}catch(e){}}
 
 function showClientDetailStep(email,ccList){
@@ -3033,6 +3034,7 @@ function ltSetContractStatus(caseId,compIdx,status){
 }
 
 function renderAllLTWidgets(){renderLoaTrackerWidget();renderRefundTrackerWidget();}
+function ltSetStatusFilter(f,type){_ltStatusFilter=(_ltStatusFilter===f)?'all':f;renderLOATracker(type);}
 function renderRefundTracker(){return renderLOATracker('refund');}
 async function renderLOATracker(type){
   if(type)_ltCurrentType=type; else type=_ltCurrentType||'schedule';
@@ -3097,19 +3099,17 @@ async function renderLOATracker(type){
   const addLabel=isRefund?'+ New Refund Request':'+ New Schedule Request';
   const awaitingLabel=isRefund?'Awaiting Refund':'Awaiting Contracts';
   const doneLabel=isRefund?'Fully Refunded':'Fully Received';
-  // Summary row
+  // Summary counts (always from full unfiltered set)
   const total=cases.length;
   const emailsPending=cases.filter(c=>!c.isNewBusiness).reduce((s,c)=>s+c.companies.filter(co=>!co.emailSent).length,0);
   const contractsPending=cases.filter(c=>!c.isNewBusiness).reduce((s,c)=>s+c.companies.filter(co=>co.emailSent&&_ltStatus(co)!=='received').length,0);
   const fullyDone=cases.filter(c=>!c.isNewBusiness&&c.companies.length&&c.companies.every(co=>_ltStatus(co)==='received')).length;
   const newBizCount=cases.filter(c=>c.isNewBusiness).length;
+  // Stat cards — tappable filters
+  const statDefs=[['all','Clients',total,'#0d1f3c'],['newbiz','New Business',newBizCount,newBizCount?'#92400e':'#6b7280'],['emailspending','Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],['awaiting',awaitingLabel,contractsPending,contractsPending?'#d97706':'#6b7280'],['done',doneLabel,fullyDone,'#16a34a']];
   const summaryHtml=`
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:12px;">
-      ${[['Clients',total,'#0d1f3c'],['New Business',newBizCount,newBizCount?'#92400e':'#6b7280'],['Emails Pending',emailsPending,emailsPending?'#dc2626':'#6b7280'],[awaitingLabel,contractsPending,contractsPending?'#d97706':'#6b7280'],[doneLabel,fullyDone,'#16a34a']].map(([lbl,val,clr])=>`
-        <div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:10px 8px;text-align:center;">
-          <div style="font-size:20px;font-weight:800;color:${clr};">${val}</div>
-          <div style="font-size:10px;color:#6b7280;font-weight:600;margin-top:2px;">${lbl}</div>
-        </div>`).join('')}
+      ${statDefs.map(([fkey,lbl,val,clr])=>{const act=_ltStatusFilter===fkey;return`<div onclick="ltSetStatusFilter('${fkey}','${type}')" style="background:${act?'#f0f4ff':'#fff'};border:${act?`2px solid ${clr}`:'1px solid #e5e7eb'};border-radius:10px;padding:10px 8px;text-align:center;cursor:pointer;user-select:none;"><div style="font-size:20px;font-weight:800;color:${clr};">${val}</div><div style="font-size:10px;color:${act?clr:'#6b7280'};font-weight:600;margin-top:2px;">${lbl}</div></div>`;}).join('')}
     </div>
     <div style="margin-bottom:14px;">
       <button onclick="showLTAddForm(null,'${type}')" style="width:100%;padding:11px;background:${isRefund?'#92400e':'#0d1f3c'};color:#fff;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;">${addLabel}</button>
@@ -3119,6 +3119,16 @@ async function renderLOATracker(type){
     el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients tracked yet.<br><span style="font-size:11px;">Click ${addLabel} to get started.</span></div>`;
     return;
   }
+  // Apply status filter to displayed cases
+  let dispCases=cases;
+  if(_ltStatusFilter==='newbiz') dispCases=cases.filter(c=>c.isNewBusiness);
+  else if(_ltStatusFilter==='emailspending') dispCases=cases.filter(c=>!c.isNewBusiness&&c.companies.some(co=>!co.emailSent));
+  else if(_ltStatusFilter==='awaiting') dispCases=cases.filter(c=>!c.isNewBusiness&&c.companies.some(co=>co.emailSent&&_ltStatus(co)!=='received'));
+  else if(_ltStatusFilter==='done') dispCases=cases.filter(c=>!c.isNewBusiness&&c.companies.length&&c.companies.every(co=>_ltStatus(co)==='received'));
+  if(!dispCases.length){
+    el.innerHTML=summaryHtml+`<div style="text-align:center;padding:30px;color:#9ca3af;font-size:13px;">No clients match this filter.<br><span style="font-size:11px;text-decoration:underline;cursor:pointer;" onclick="ltSetStatusFilter('all','${type}')">Clear filter</span></div>`;
+    return;
+  }
 
   const _statusCfg={
     none:{label:'Pending',bg:'#f9f9f9',clr:'#9ca3af',border:'#e5e7eb'},
@@ -3126,7 +3136,7 @@ async function renderLOATracker(type){
     inprogress:{label:'🟠 In Progress',bg:'#fff7ed',clr:'#d97706',border:'#d97706'},
     received:{label:'🟢 Received',bg:'#dcfce7',clr:'#16a34a',border:'#16a34a'},
   };
-  const rows=cases.map((c,ci)=>{
+  const rows=dispCases.map((c,ci)=>{
     const st=co=>_ltStatus(co);
     const allRecv=!c.isNewBusiness&&c.companies.length&&c.companies.every(co=>st(co)==='received');
     const headerBg=c.isNewBusiness?'#fffbeb':allRecv?'#f0fdf4':'#f8f7f4';
