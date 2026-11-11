@@ -6972,8 +6972,10 @@ async function handleIMPUpload(input, mode){
     const mediaType = _fileMediaType(file);
 
     const roaPrompt = 'This is an IMP Final Recommendation or Summary screen from Sanlam Sky. Read every word carefully.\n\n1. TYPE: Look for a "Kept Cover", "Current Cover", or "Existing Cover" section alongside new cover — if it exists, type is "replacement". If there is only new cover with no existing/kept cover section shown, type is "new".\n\n2. NEW_PLAN: Read the EXACT plan name as printed on the screen (e.g. "All-in-One Plan", "Value Funeral Plan", "Enhanced Priority Funeral Plan", "Immediate Life Cover (ILC)", "Essential Med").\n\n3. NEW_LIVES: Extract EVERY life assured listed under the new/recommended cover. For each life get their exact full name as printed and their exact cover amount. For cover_type — on All-in-One Plan: main member and spouse usually have non-underwritten life cover, use "life"; children have funeral cover, use "funeral". On Value Funeral Plan or Enhanced Priority Funeral Plan: all lives use "funeral". On Immediate Life Cover (ILC): all lives use "life".\n\n4. KEPT_COVER_LIVES: If replacement, extract every life from the kept/current/existing cover section with name and cover amount. If new business, use [].\n\nReturn ONLY valid JSON with no markdown or extra text:\n{"type":"new","new_plan":"All-in-One Plan","new_lives":[{"role":"Main member","name":"John Smith","cover":"R500 000","cover_type":"life"},{"role":"Spouse","name":"Mary Smith","cover":"R300 000","cover_type":"life"},{"role":"Child 1","name":"Tom Smith","cover":"R30 000","cover_type":"funeral"}],"new_premium":"R450.00","kept_cover_lives":[],"total_cover":"R500 000","kept_premium":""}';
-    const clean = (await callClaudeVision(b64, mediaType, roaPrompt)).replace(/```json|```/g,'').trim();
-    const parsed = JSON.parse(clean||'{}');
+    const raw = (await callClaudeVision(b64, mediaType, roaPrompt, 2048)).replace(/```json|```/g,'').trim();
+    const _jStart=raw.indexOf('{');const _jEnd=raw.lastIndexOf('}');
+    const jsonStr=(_jStart>=0&&_jEnd>_jStart)?raw.slice(_jStart,_jEnd+1):'{}';
+    const parsed = JSON.parse(jsonStr);
 
     // Auto-switch form type based on detected type
     const detectedType = parsed.type || (mode === 'rep' ? 'replacement' : 'new');
@@ -7383,11 +7385,13 @@ function roaGenerate(){
       reasonNarrative=parts.join('\n\n');
     }
 
+    const residualPolNum=(document.getElementById('roa_residual_polnum')||{}).value?.trim()||'';
     let waitText;
     if(increase==='yes'){
-      waitText='All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month natural death waiting period applies on any additional cover taken up above the existing cover amount. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter.';
+      waitText='All waiting periods were discussed with the client. The waiting period has been waived on the replaced cover amount. A 6-month natural death waiting period applies on any additional cover taken up above the existing cover amount. The client was made aware that any cover increases — including top-ups — will carry a new 6-month waiting period for natural death claims. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter.';
     }else if(increase==='residual'){
-      waitText='All waiting periods were discussed with the client. At the time of replacement, the client\'s previous policy had not yet completed its 6-month statutory waiting period. The outstanding portion of that waiting period carries over and must still be served on the new policy before a natural death claim can be processed — for example, if the client had served 5 months on the previous policy, only 1 month remains and will still apply under the new policy. This residual waiting period was fully disclosed to the client and accepted in writing. The client was further informed that written proof of cancellation of the previous policy will be required by the underwriter for any natural death claim lodged within the initial 6-month period.';
+      const _rPolRef=residualPolNum?` (Policy ${residualPolNum})`:'';
+      waitText=`All waiting periods were discussed with the client. At the time of replacement, the client's previous policy${_rPolRef} had not yet completed its 6-month statutory waiting period. The outstanding portion of that waiting period carries over and must still be served on the new policy before a natural death claim can be processed — for example, if the client had served 5 months on the previous policy, only 1 month remains and will still apply under the new policy. This residual waiting period was fully disclosed to ${client} and accepted in writing. The client was further informed that written proof of cancellation of the previous policy will be required by the underwriter for any natural death claim lodged within the initial 6-month period.`;
     }else{
       waitText='All waiting periods were discussed with the client. The waiting period has been waived in full as the client has had continuous funeral cover for 31 or more days prior to commencement of the new policy. The client was informed that in the event of a natural death claim within the first 6 months, written proof of cancellation of the previous policy will be required by the underwriter to process the claim under the waiver provision.';
     }
@@ -7406,10 +7410,13 @@ function roaGenerate(){
     else if(qlink==='movement') qlinkText='Policy movements and/or cancellations have created the necessary space on the payslip to accommodate the new policies within the 15% bracket.';
     else if(qlink==='partial_dc') qlinkText='The Qlink calculation did not allow all policies onto the stop order. One or more policies have been placed on debit order. A DebiCheck mandate has been sent to the client. A 3-month bank statement is required for this application.';
 
+    const repDoubleDeductText=`${client} is aware that in the event of any double deductions they may contact their advisor directly for assistance, and the advisor will assist with the relevant refund processes. ${client} is further aware that in the event of a Qlink failure, the premium will be deducted from their bank account as an interim measure, and the advisor will thereafter initiate the process to restore the debit back onto the payslip via Qlink.`;
+    const repRetentionText=`${client} is aware that external insurance companies may contact them through retention departments with the aim of preventing the cancellation of their existing policies. ${client} acknowledges this and confirms that they will follow through with both the product replacement recommendations and all after-sales processes as advised. ${client} further confirms that they will avail themselves post-sale to assist with the cancellation of previous policies where required.`;
+
     const repParts=[`A Record of Advice was completed for ${client} regarding the replacement of their existing ${_repCoverLabel} cover policy.\n`,reasonNarrative];
     if(cancelText)repParts.push(cancelText);
     if(newPolBlocks)repParts.push(newPolBlocks);
-    repParts.push(waitText,repBenefitsText,repAgreementText);
+    repParts.push(waitText,repBenefitsText,repAgreementText,repDoubleDeductText,repRetentionText);
     if(qlinkText)repParts.push(qlinkText);
     if(repNotes)repParts.push(`Additional notes: ${repNotes}`);
     note=repParts.join('\n\n').trim();
