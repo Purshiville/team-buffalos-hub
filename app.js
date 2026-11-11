@@ -3516,79 +3516,107 @@ function renderPdfEditor(){
   _pdfEdFile=null;_pdfEdDeleted=new Set();_pdfEdPageCount=0;
   el.innerHTML=`
     <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:#075985;line-height:1.6;">
-      <strong>How to use:</strong> Upload a PDF — each page appears as a thumbnail. Tap a page to mark it for deletion (turns grey with ✕). Then tap <strong>Save PDF</strong> to download the edited file.
+      <strong>How to use:</strong> Upload a PDF — each page shows as a preview. Tap any page to mark it for removal (it turns red). Tap again to keep it. Then tap <strong>Save PDF</strong> to download the edited file.
     </div>
     <div onclick="document.getElementById('pdfEdInput').click()" ondragover="event.preventDefault();this.style.borderColor='#c9922a'" ondragleave="this.style.borderColor='#e5e7eb'" ondrop="pdfEdHandleDrop(event)" style="border:2px dashed #e5e7eb;border-radius:16px;padding:32px 20px;text-align:center;cursor:pointer;background:#fafafa;margin-bottom:16px;transition:border-color .2s;">
       <div style="font-size:36px;margin-bottom:8px;">✂️</div>
       <div style="font-size:14px;font-weight:700;color:#0d1f3c;margin-bottom:4px;">Tap to choose a PDF</div>
-      <div style="font-size:12px;color:#9ca3af;">Select the PDF you want to edit</div>
+      <div style="font-size:12px;color:#9ca3af;">or drag and drop it here</div>
       <input type="file" id="pdfEdInput" accept=".pdf,application/pdf" style="display:none;" onchange="pdfEdLoad(this.files[0])"/>
     </div>
-    <div id="pdfEdThumbs" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;"></div>
-    <button id="pdfEdSaveBtn" onclick="pdfEdSave()" style="display:none;width:100%;padding:13px;background:#065f46;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:8px;">Save PDF</button>
-    <button id="pdfEdResetBtn" onclick="renderPdfEditor()" style="display:none;width:100%;padding:9px;background:none;border:1.5px dashed #e5e7eb;border-radius:10px;font-size:12px;color:#9ca3af;cursor:pointer;">✕ Clear &amp; start over</button>`;
+    <div id="pdfEdStatus" style="display:none;text-align:center;padding:6px 12px;border-radius:8px;font-size:12px;font-weight:700;margin-bottom:12px;"></div>
+    <div id="pdfEdThumbs" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;"></div>
+    <button id="pdfEdSaveBtn" onclick="pdfEdSave()" style="display:none;width:100%;padding:14px;background:#065f46;color:#fff;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:10px;"></button>
+    <button id="pdfEdResetBtn" onclick="renderPdfEditor()" style="display:none;width:100%;padding:10px;background:none;border:1.5px dashed #e5e7eb;border-radius:10px;font-size:12px;color:#9ca3af;cursor:pointer;">✕ Clear &amp; start over</button>`;
 }
-function pdfEdHandleDrop(e){e.preventDefault();const f=e.dataTransfer?.files?.[0];if(f&&f.type==='application/pdf')pdfEdLoad(f);}
+function pdfEdHandleDrop(e){e.preventDefault();const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f&&f.type==='application/pdf')pdfEdLoad(f);}
 async function pdfEdLoad(file){
   if(!file||file.type!=='application/pdf'){alert('Please select a PDF file.');return;}
   _pdfEdFile=file;_pdfEdDeleted=new Set();
-  const statusEl=document.getElementById('pdfEdThumbs');
-  if(statusEl)statusEl.innerHTML='<div style="text-align:center;padding:20px;color:#6b7280;font-size:13px;grid-column:1/-1;">Loading pages…</div>';
-  document.getElementById('pdfEdSaveBtn').style.display='none';
-  document.getElementById('pdfEdResetBtn').style.display='block';
+  const thumbsEl=document.getElementById('pdfEdThumbs');
+  const statusEl=document.getElementById('pdfEdStatus');
+  if(thumbsEl)thumbsEl.innerHTML='<div style="text-align:center;padding:30px;color:#6b7280;font-size:13px;grid-column:1/-1;">⏳ Loading pages — this may take a moment…</div>';
+  if(statusEl){statusEl.style.display='none';}
+  const saveBtn=document.getElementById('pdfEdSaveBtn');
+  const resetBtn=document.getElementById('pdfEdResetBtn');
+  if(saveBtn)saveBtn.style.display='none';
+  if(resetBtn)resetBtn.style.display='block';
   try{
     await _loadPdfJs();
     const buf=await file.arrayBuffer();
     const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
     _pdfEdPageCount=pdf.numPages;
-    const thumbsEl=document.getElementById('pdfEdThumbs');
     if(!thumbsEl)return;
     thumbsEl.innerHTML='';
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i);
-      const vp=page.getViewport({scale:0.4});
+      const vp=page.getViewport({scale:0.7});
       const canvas=document.createElement('canvas');
       canvas.width=vp.width;canvas.height=vp.height;
       await page.render({canvasContext:canvas.getContext('2d'),viewport:vp}).promise;
-      const img=canvas.toDataURL('image/jpeg',0.75);
+      const img=canvas.toDataURL('image/jpeg',0.82);
       const pn=i;
-      const div=document.createElement('div');
-      div.id='pdfThumb_'+pn;
-      div.onclick=()=>pdfEdToggle(pn);
-      div.style.cssText='border:2px solid #e5e7eb;border-radius:10px;overflow:hidden;cursor:pointer;position:relative;background:#fff;transition:opacity .2s;';
-      div.innerHTML=`<img src="${img}" style="width:100%;display:block;"/><div style="text-align:center;font-size:10px;font-weight:700;color:#374151;padding:4px 0;background:#f9fafb;">Page ${pn}</div><div id="pdfDelMark_${pn}" style="display:none;position:absolute;inset:0;background:rgba(220,38,38,.55);display:none;align-items:center;justify-content:center;font-size:28px;font-weight:900;color:#fff;">✕</div>`;
-      thumbsEl.appendChild(div);
+      const wrapper=document.createElement('div');
+      wrapper.id='pdfThumb_'+pn;
+      wrapper.style.cssText='position:relative;border:3px solid #e5e7eb;border-radius:12px;overflow:hidden;cursor:pointer;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.08);';
+      wrapper.onclick=()=>pdfEdToggle(pn);
+      const imgEl=document.createElement('img');
+      imgEl.src=img;imgEl.style.cssText='width:100%;display:block;';
+      const label=document.createElement('div');
+      label.style.cssText='text-align:center;font-size:11px;font-weight:700;color:#374151;padding:5px 0 4px;background:#f9fafb;border-top:1px solid #e5e7eb;';
+      label.textContent='Page '+pn;
+      const overlay=document.createElement('div');
+      overlay.id='pdfDelMark_'+pn;
+      overlay.style.cssText='display:none;position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(220,38,38,.65);flex-direction:column;align-items:center;justify-content:center;';
+      overlay.innerHTML='<div style="font-size:40px;font-weight:900;color:#fff;line-height:1;">✕</div><div style="font-size:11px;font-weight:800;color:#fff;margin-top:4px;letter-spacing:.5px;">REMOVE</div>';
+      wrapper.appendChild(imgEl);
+      wrapper.appendChild(label);
+      wrapper.appendChild(overlay);
+      thumbsEl.appendChild(wrapper);
     }
     _pdfEdUpdateSaveBtn();
   }catch(e){
-    const t=document.getElementById('pdfEdThumbs');
-    if(t)t.innerHTML='<div style="color:#dc2626;padding:16px;grid-column:1/-1;">Could not load PDF: '+e.message+'</div>';
+    if(thumbsEl)thumbsEl.innerHTML='<div style="color:#dc2626;padding:16px;grid-column:1/-1;font-size:13px;">Could not load PDF: '+e.message+'</div>';
   }
 }
 function pdfEdToggle(pageNum){
-  if(_pdfEdDeleted.has(pageNum)){_pdfEdDeleted.delete(pageNum);}else{_pdfEdDeleted.add(pageNum);}
-  const thumb=document.getElementById('pdfThumb_'+pageNum);
-  const mark=document.getElementById('pdfDelMark_'+pageNum);
-  if(thumb){thumb.style.opacity=_pdfEdDeleted.has(pageNum)?'0.45':'1';thumb.style.borderColor=_pdfEdDeleted.has(pageNum)?'#dc2626':'#e5e7eb';}
-  if(mark){mark.style.display=_pdfEdDeleted.has(pageNum)?'flex':'none';}
+  if(_pdfEdDeleted.has(pageNum))_pdfEdDeleted.delete(pageNum);
+  else _pdfEdDeleted.add(pageNum);
+  const marked=_pdfEdDeleted.has(pageNum);
+  const wrapper=document.getElementById('pdfThumb_'+pageNum);
+  const overlay=document.getElementById('pdfDelMark_'+pageNum);
+  if(wrapper){wrapper.style.borderColor=marked?'#dc2626':'#e5e7eb';wrapper.style.opacity=marked?'0.72':'1';}
+  if(overlay){overlay.style.display=marked?'flex':'none';}
   _pdfEdUpdateSaveBtn();
 }
 function _pdfEdUpdateSaveBtn(){
   const btn=document.getElementById('pdfEdSaveBtn');
+  const statusEl=document.getElementById('pdfEdStatus');
   if(!btn)return;
   const remaining=_pdfEdPageCount-_pdfEdDeleted.size;
-  if(_pdfEdDeleted.size===0||remaining<=0){btn.style.display='none';}
-  else{btn.style.display='block';btn.textContent=`Save PDF — ${remaining} page${remaining===1?'':'s'} remaining`;}
+  const n=_pdfEdDeleted.size;
+  if(n===0||remaining<=0){
+    btn.style.display='none';
+    if(statusEl)statusEl.style.display='none';
+  } else {
+    btn.style.display='block';
+    btn.textContent='💾 Save PDF — '+remaining+' page'+(remaining===1?'':'s')+' remaining';
+    if(statusEl){
+      statusEl.style.display='block';
+      statusEl.style.background='#fee2e2';statusEl.style.color='#991b1b';
+      statusEl.textContent=n+' page'+(n===1?'':'s')+' marked for removal — tap Save PDF to download';
+    }
+  }
 }
 async function pdfEdSave(){
   if(!_pdfEdFile||_pdfEdDeleted.size===0)return;
   const btn=document.getElementById('pdfEdSaveBtn');
-  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  if(btn){btn.textContent='⏳ Saving…';btn.disabled=true;}
   try{
     await loadPdfLib();
     const {PDFDocument}=window.PDFLib;
     const buf=await _pdfEdFile.arrayBuffer();
-    const pdfDoc=await PDFDocument.load(buf);
+    const pdfDoc=await PDFDocument.load(buf,{ignoreEncryption:true});
     const sortedDel=[..._pdfEdDeleted].sort((a,b)=>b-a);
     sortedDel.forEach(pn=>pdfDoc.removePage(pn-1));
     const bytes=await pdfDoc.save();
@@ -3596,10 +3624,11 @@ async function pdfEdSave(){
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
     a.href=url;a.download=(_pdfEdFile.name||'document').replace(/\.pdf$/i,'')+'_edited.pdf';
-    a.click();setTimeout(()=>URL.revokeObjectURL(url),5000);
-    if(btn){btn.textContent=`Saved!`;btn.disabled=false;}
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url),10000);
+    if(btn){btn.textContent='✅ Saved! Tap to save again';btn.disabled=false;}
   }catch(e){
-    if(btn){btn.textContent='Error — try again';btn.disabled=false;}
+    if(btn){btn.textContent='❌ Error — try again';btn.disabled=false;}
     alert('Could not save PDF: '+e.message);
   }
 }
