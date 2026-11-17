@@ -15560,6 +15560,120 @@ function csoRender(){
 }
 // ── END CSO WORKSITE DIRECTORY ────────────────────────────────────────────────
 
+// ── CSO DOC REQUIREMENTS ─────────────────────────────────────────────────────
+// nb:1 = STO mandate & Payslip required | nb:0 = Electronic / no lodgement docs required
+const CSO_DOC_REQS=[
+  {n:'ANCHOR YEAST RYMCO PTY LTD',nb:1},
+  {n:'BA-PHALABORWA LOCAL MUNICIPALITY',nb:1},
+  {n:'BITOU MUNICIPALITY - SALARIES',nb:1},
+  {n:'BUSHBUCKRIDGE LOCAL MUNICIPALITY',nb:1},
+  {n:'CENTLEC (SOC- STATE OWNED COMPANY)',nb:1},
+  {n:'CENTRAL UNIVERSITY OF TECHNOLOGY',nb:1},
+  {n:'CITY OF TSHWANE ~ SAMWU',nb:0},
+  {n:'CLOVER SA',nb:0},
+  {n:'COMPANIES AND INTELLECTUAL PROPERTY COMMISSION',nb:1},
+  {n:'DAWID KRUIPER MUNICIPALITY (KHARA HAIS MUNICIPALITY)',nb:1},
+  {n:'DEFY APPLIANCES ~ JACOBS',nb:1},
+  {n:'DEFY APPLIANCES LADYSMITH KZN',nb:1},
+  {n:'DSV SOUTH AFRICA PTY LTD (UTI) - SALARIES',nb:0},
+  {n:'DUTTON PLASTICS ENG ~ ALRODE',nb:1},
+  {n:'DUTTON PLASTICS ENG ~ SALARIES',nb:1},
+  {n:'EMTHANJENI MUNICIPALITY',nb:1},
+  {n:'ENGEN ~ PETROLEUM CAPE TOWN',nb:1},
+  {n:'FORD MOTOR COMPANY OF SA',nb:0},
+  {n:'GROUP FIVE CORPORATE & BUSINESS SERVICES',nb:1},
+  {n:'LASER TRANSPORT ~ WAGES',nb:1},
+  {n:'MAMBA CEMENT',nb:1},
+  {n:'MAPHUMULO LOCAL MUNICIPALITY',nb:1},
+  {n:'MERCURIUS MOTORS',nb:1},
+  {n:'MNQUMA LOCAL MUNICIPALITY',nb:1},
+  {n:'MOQHAKA LOCAL MUNICIPALITY',nb:1},
+  {n:'NAMPAK ~ MANAGEMENT SERVICES',nb:0},
+  {n:'NAMPAK CORRUGATED',nb:0},
+  {n:'NAMPAK TISSUE',nb:0},
+  {n:'NISSAN ~ SALARIES',nb:1},
+  {n:'NISSAN S A PTY LTD ~ WAGES',nb:1},
+  {n:'NU WORLD INDUSTRIES PTY LTD',nb:1},
+  {n:'PETERS PAPERS',nb:1},
+  {n:'PIXLEY KA SEME MUNICIPALITY',nb:1},
+  {n:'ROAD ACCIDENT FUND (RA POLICIES ONLY)',nb:0},
+  {n:'S A WEATHER SERVICES',nb:1},
+  {n:'SA NATIONAL PARKS',nb:1},
+  {n:'SA RESERVE BANK PRETORIA',nb:1},
+  {n:'SABC AUCKLAND PARK',nb:0},
+  {n:'SAMWU - GERMISTON TLC',nb:0},
+  {n:'SAMWU ~ ALBERTON',nb:0},
+  {n:'SAMWU ~ BENONI',nb:0},
+  {n:'SAMWU ~ BOKSBURG',nb:0},
+  {n:'SAMWU ~ BRAKPAN',nb:0},
+  {n:'SAMWU ~ EDENVALE',nb:0},
+  {n:'SAMWU ~ KEMPTON PARK',nb:0},
+  {n:'SAMWU ~ NIGEL',nb:0},
+  {n:'SAMWU ~ SPRINGS',nb:0},
+  {n:'SAMWU EKURHULENI',nb:0},
+  {n:'SASOL ~ SYNTHETIC FUELS',nb:0},
+  {n:'SENTRAALWES KO-OP BPK',nb:1},
+  {n:'SIKHULA SONKE EARLY CHILDHOOD DEVELOPMENT',nb:1},
+  {n:'SPF ADVISERS (AGT)',nb:0},
+  {n:'STATE SECURITY AGENCY',nb:1},
+  {n:'STEVE TSHWETE LOCAL MUNICIPALITY',nb:1},
+  {n:'SYNREC - PICK N PAY',nb:1},
+  {n:'SYNREC - PIONEER FOODS',nb:1},
+  {n:'SYNREC QUANTUM FOODS',nb:1},
+  {n:'UBUNTU MUNICIPALITY',nb:1},
+  {n:'UMDONI MUNICIPALITY - SCOTTBURGH',nb:1},
+  {n:'UNIVERSITY - PRETORIA',nb:0},
+  {n:'VAAL UNIVERSITY OF TECHNOLOGY',nb:1},
+  {n:'VENTURE DIVERSIFIED PRODUCTS PTY LTD (VENTURE S.A)',nb:1},
+  {n:'Z.F. MGCAWU - SIYANDA DISTRICT MUNICIPALITY',nb:1},
+];
+let _csoDocFilter='all';
+function csoSwitchTab(tab){
+  const qp=document.getElementById('csoPanel-quality');
+  const dp=document.getElementById('csoPanel-docs');
+  if(qp)qp.style.display=tab==='quality'?'':'none';
+  if(dp)dp.style.display=tab==='docs'?'':'none';
+  ['quality','docs'].forEach(t=>{
+    const b=document.getElementById('csoTab-'+t);
+    if(b)b.classList.toggle('active',t===tab);
+  });
+  if(tab==='docs')csoDocRender();
+}
+function csoDocFilter(f){
+  _csoDocFilter=f;
+  document.querySelectorAll('.cso-doc-f').forEach(b=>b.classList.remove('active'));
+  document.getElementById('csoDocF-'+f)?.classList.add('active');
+  csoDocRender();
+}
+function csoDocRender(){
+  const q=(document.getElementById('csoDocSearch')?.value||'').toLowerCase().trim();
+  const data=CSO_DOC_REQS.filter(w=>{
+    if(q&&!w.n.toLowerCase().includes(q))return false;
+    if(_csoDocFilter==='sto'&&!w.nb)return false;
+    if(_csoDocFilter==='elec'&&w.nb)return false;
+    return true;
+  });
+  const el=document.getElementById('csoDocList');if(!el)return;
+  if(!data.length){el.innerHTML='<div style="text-align:center;color:#9ca3af;font-size:13px;padding:2rem;background:#f9fafb;border-radius:12px;border:1px dashed #e5e7eb;">No facilities match.</div>';return;}
+  el.innerHTML=data.map(w=>{
+    const bc=w.nb?'#f59e0b':'#16a34a';
+    const nbChip=w.nb
+      ?`<span style="font-size:10.5px;background:#fef3c7;color:#92400e;border-radius:6px;padding:3px 8px;font-weight:700;">📄 STO mandate &amp; Payslip</span>`
+      :`<span style="font-size:10.5px;background:#dcfce7;color:#166534;border-radius:6px;padding:3px 8px;font-weight:700;">✅ Electronic — no docs required</span>`;
+    const raChip=w.nb
+      ?`<span style="font-size:10.5px;background:#fef3c7;color:#92400e;border-radius:6px;padding:3px 8px;font-weight:700;">📄 STO (fully completed) &amp; Payslip</span>`
+      :`<span style="font-size:10.5px;background:#f3f4f6;color:#6b7280;border-radius:6px;padding:3px 8px;font-weight:700;">— None</span>`;
+    return`<div style="background:#fff;border:1px solid #e8e4db;border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:4px solid ${bc};">
+      <div style="font-size:13.5px;font-weight:700;color:#0d1f3c;line-height:1.3;">${_csoTitleCase(w.n)}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px;">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:10.5px;color:#6b7280;font-weight:700;min-width:22px;">NB</span>${nbChip}</div>
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;"><span style="font-size:10.5px;color:#6b7280;font-weight:700;min-width:22px;">RA</span>${raChip}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+// ── END CSO DOC REQUIREMENTS ──────────────────────────────────────────────────
+
 // ── HUB TOUR ────────────────────────────────────────────────────────────────
 let _tourIdx=0,_tourActive=false,_tourSteps=[],_tourForcedEl=null,_tourForcedPrevDisplay='',_tourForcedPrevMinH='';
 const TOUR_STEPS=[
