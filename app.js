@@ -1947,6 +1947,7 @@ function renderYTDStats(){
       });
       els.forEach(el=>_renderYTDStatsInner(el));
       _initBonusSection();
+      renderHubPeriodBar(); // re-render now that historical months are in localStorage
     }).catch(()=>{});
   }
 }
