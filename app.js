@@ -6204,15 +6204,7 @@ function saveTop3Data(d){localStorage.setItem('tl_top3',JSON.stringify(d));}
 
 function renderTop3(){
   const el=document.getElementById('hubTop3');if(!el)return;
-  // Sync Firebase user photos before rendering so remote profile photos are available
-  if(window.FB_READY&&window.FB.getAllUsers){
-    window.FB.getAllUsers().then(fbUsers=>{
-      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
-      _renderTop3Inner(el);
-    }).catch(()=>_renderTop3Inner(el));
-  } else {
-    _renderTop3Inner(el);
-  }
+  _renderTop3Inner(el);
 }
 function _renderTop3Inner(el){
   const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
