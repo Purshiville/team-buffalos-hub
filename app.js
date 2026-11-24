@@ -1588,6 +1588,8 @@ async function saveAdvisorStats(){
       _stored.advisors[code]=data;
       localStorage.setItem(_k,JSON.stringify(_stored));
       if(typeof renderYTDStats==='function')renderYTDStats();
+      if(typeof renderProdStats==='function')renderProdStats(_stored,period);
+      if(typeof renderTop3==='function')renderTop3();
       const fb=document.getElementById('statsSaveFeedback');
       if(fb){fb.style.display='block';setTimeout(()=>fb.style.display='none',2500);}
       // Notify the advisor their stats were updated
