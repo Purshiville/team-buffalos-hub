@@ -1940,8 +1940,8 @@ function renderYTDStats(){
         const k='tl_prod_stats_'+period;
         try{
           const local=JSON.parse(localStorage.getItem(k)||'{"advisors":{}}');
-          local.advisors=Object.assign({},local.advisors||{},data.advisors||{});
-          localStorage.setItem(k,JSON.stringify({...local,...data}));
+          const merged=Object.assign({},local.advisors||{},data.advisors||{});
+          localStorage.setItem(k,JSON.stringify({...local,...data,advisors:merged}));
         }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
       els.forEach(el=>_renderYTDStatsInner(el));
