@@ -1940,9 +1940,8 @@ function renderYTDStats(){
         const k='tl_prod_stats_'+period;
         try{
           const local=JSON.parse(localStorage.getItem(k)||'{"advisors":{}}');
-          Object.assign(local.advisors||{},data.advisors||{});
-          local.advisors=Object.assign({},data.advisors||{},local.advisors);
-          localStorage.setItem(k,JSON.stringify({...data,...local}));
+          local.advisors=Object.assign({},local.advisors||{},data.advisors||{});
+          localStorage.setItem(k,JSON.stringify({...local,...data}));
         }catch(e){localStorage.setItem('tl_prod_stats_'+period,JSON.stringify(data));}
       });
       els.forEach(el=>_renderYTDStatsInner(el));
@@ -1976,16 +1975,17 @@ function _renderYTDStatsInner(el){
   const myRankPrem=my?byPrem.findIndex(a=>a.code===currentUser.code)+1:0;
   const myRankCases=my?byCases.findIndex(a=>a.code===currentUser.code)+1:0;
   const yr=new Date().getFullYear();
+  const monthsElapsed=new Date().getMonth()+1;
   const myCard=my?`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:stretch;">
     <div style="flex:1;text-align:center;padding:0 8px;"><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">YTD Cases</div><div style="font-size:26px;font-weight:800;color:#0d1f3c;">${my.cases}</div><div style="font-size:10px;color:#6b7280;">#${myRankCases} of ${n}</div></div>
     <div style="width:1px;background:#f4f2ed;margin:0 4px;"></div>
     <div style="flex:1;text-align:center;padding:0 8px;"><div style="font-size:10px;color:#9ca3af;font-weight:700;text-transform:uppercase;margin-bottom:3px;">YTD Premium</div><div style="font-size:20px;font-weight:800;color:#c9922a;">R${my.premium.toLocaleString()}</div><div style="font-size:10px;color:#6b7280;">#${myRankPrem} of ${n}</div></div>
   </div>`:'' ;
   const ytdTotalPrem=byPrem.reduce((s,a)=>s+a.premium,0);
-  const ytdTotalAPI=ytdTotalPrem*12;
+  const ytdTotalAPI=Math.round(ytdTotalPrem/monthsElapsed*12);
   const ytdTotalCases=byCases.reduce((s,a)=>s+a.cases,0);
   const _inactiveTag='<span style="font-size:9px;font-weight:700;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;border-radius:5px;padding:1px 5px;margin-left:4px;vertical-align:middle;">Inactive</span>';
-  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;const api=a.premium*12;return`<tr style="${a.inactive?'opacity:0.7;':isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${a.inactive?_inactiveTag:_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td><td style="padding:7px 8px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td></tr>`;}).join('');
+  const premRows=byPrem.map((a,i)=>{const isMe=a.code===currentUser.code;const api=Math.round(a.premium/monthsElapsed*12);return`<tr style="${a.inactive?'opacity:0.7;':isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${a.inactive?_inactiveTag:_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#c9922a;">R${a.premium.toLocaleString()}</td><td style="padding:7px 8px;font-size:11px;font-weight:600;color:#7c3aed;">R${api.toLocaleString()}</td></tr>`;}).join('');
   const caseRows=byCases.map((a,i)=>{const isMe=a.code===currentUser.code;return`<tr style="${a.inactive?'opacity:0.7;':isMe?'background:#fdf6ed;':''}"><td style="padding:7px 8px;font-size:13px;text-align:center;">${medals[i]||i+1}</td><td style="padding:7px 8px;font-size:12px;font-weight:${isMe?700:500};color:#0d1f3c;">${a.name}${isMe?' <span style="color:#f59e0b;">★</span>':''}${a.inactive?_inactiveTag:_newBadge(a.code)}</td><td style="padding:7px 8px;font-size:12px;font-weight:700;color:#0d1f3c;">${a.cases}</td></tr>`;}).join('');
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">📅 ${yr} Year-to-Date</div>`+myCard+
     `<div class="team-stats-card" style="margin-bottom:8px;"><div class="team-stats-hd" style="padding:10px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;"><div><div style="color:#f5d98b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin-bottom:1px;">💰 ${yr} YTD</div><div style="color:#fff;font-size:13px;font-weight:700;">Most Premiums</div></div><div style="text-align:right;flex-shrink:0;"><div style="color:#f5d98b;font-size:12px;font-weight:800;">R${ytdTotalPrem.toLocaleString()}</div><div style="color:#c4b5fd;font-size:10px;font-weight:700;margin-top:1px;">API R${ytdTotalAPI.toLocaleString()}</div></div></div><div style="overflow-x:auto;"><table class="team-stats-tbl"><thead><tr><th>#</th><th>Advisor</th><th>Premium</th><th>API</th></tr></thead><tbody>${premRows}</tbody></table></div></div>`+
@@ -2084,15 +2084,7 @@ function renderBonusSummary(){
 function renderYTDTop3(){
   const els=['stdYTDTop3'].map(id=>document.getElementById(id)).filter(Boolean);
   if(!els.length)return;
-  // Sync user photos from Firebase then render
-  if(window.FB_READY&&window.FB.getAllUsers){
-    window.FB.getAllUsers().then(fbUsers=>{
-      if(fbUsers&&Object.keys(fbUsers).length){const local=getUsers();Object.keys(fbUsers).forEach(k=>{local[k]={...(local[k]||{}),...fbUsers[k]};});saveUsers(local);}
-      _renderYTDTop3Inner(els);
-    }).catch(()=>_renderYTDTop3Inner(els));
-  } else {
-    _renderYTDTop3Inner(els);
-  }
+  _renderYTDTop3Inner(els);
 }
 function _renderYTDTop3Inner(els){
   const stats=getYTDStats();
